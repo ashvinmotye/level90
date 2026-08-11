@@ -1,0 +1,191 @@
+{
+  "app": {
+    "name": "Level 90",
+    "challengeDays": 90,
+    "version": 1
+  },
+  "difficulty": {
+    "tiny": {
+      "label": "Tiny",
+      "xp": 5,
+      "icon": "\u26aa"
+    },
+    "easy": {
+      "label": "Easy",
+      "xp": 10,
+      "icon": "\ud83d\udfe2"
+    },
+    "medium": {
+      "label": "Medium",
+      "xp": 20,
+      "icon": "\ud83d\udd35"
+    },
+    "hard": {
+      "label": "Hard",
+      "xp": 40,
+      "icon": "\ud83d\udfe0"
+    },
+    "major": {
+      "label": "Major",
+      "xp": 75,
+      "icon": "\ud83d\udd34"
+    },
+    "epic": {
+      "label": "Epic",
+      "xp": 100,
+      "icon": "\ud83d\udfe3"
+    }
+  },
+  "categories": [
+    {
+      "id": "body",
+      "name": "Body",
+      "icon": "\ud83d\udcaa",
+      "description": "Strength, cardio, mobility and movement"
+    },
+    {
+      "id": "mind",
+      "name": "Mind",
+      "icon": "\ud83e\udde0",
+      "description": "Reading, learning and mental reset"
+    },
+    {
+      "id": "career",
+      "name": "Career",
+      "icon": "\ud83d\udcbb",
+      "description": "Salesforce, coding, learning and building"
+    },
+    {
+      "id": "money",
+      "name": "Money",
+      "icon": "\ud83d\udcb0",
+      "description": "Side income, finance and money experiments"
+    },
+    {
+      "id": "health",
+      "name": "Health",
+      "icon": "\ud83e\udd57",
+      "description": "Food, water, sleep and recovery"
+    },
+    {
+      "id": "discipline",
+      "name": "Discipline",
+      "icon": "\u26a1",
+      "description": "Consistency, routines and getting things done"
+    }
+  ],
+  "quests": [
+    {
+      "id": "q_strength",
+      "title": "Strength workout",
+      "categoryId": "body",
+      "difficulty": "hard",
+      "type": "recurring",
+      "schedule": {
+        "mode": "weekdays",
+        "days": [
+          1,
+          3,
+          5
+        ]
+      },
+      "active": true
+    },
+    {
+      "id": "q_walk",
+      "title": "Walk 30 minutes",
+      "categoryId": "body",
+      "difficulty": "medium",
+      "type": "recurring",
+      "schedule": {
+        "mode": "daily"
+      },
+      "active": true
+    },
+    {
+      "id": "q_mobility",
+      "title": "Mobility 10 minutes",
+      "categoryId": "body",
+      "difficulty": "easy",
+      "type": "recurring",
+      "schedule": {
+        "mode": "daily"
+      },
+      "active": true
+    },
+    {
+      "id": "q_water",
+      "title": "Hit water target",
+      "categoryId": "health",
+      "difficulty": "easy",
+      "type": "recurring",
+      "schedule": {
+        "mode": "daily"
+      },
+      "active": true
+    },
+    {
+      "id": "q_salesforce",
+      "title": "Learn or build in Salesforce",
+      "categoryId": "career",
+      "difficulty": "medium",
+      "type": "recurring",
+      "schedule": {
+        "mode": "weekdays",
+        "days": [
+          2,
+          4
+        ]
+      },
+      "active": true
+    },
+    {
+      "id": "q_sideproject",
+      "title": "Work on a side project",
+      "categoryId": "money",
+      "difficulty": "hard",
+      "type": "recurring",
+      "schedule": {
+        "mode": "weekdays",
+        "days": [
+          6,
+          0
+        ]
+      },
+      "active": true
+    },
+    {
+      "id": "q_sleep",
+      "title": "Protect bedtime",
+      "categoryId": "health",
+      "difficulty": "easy",
+      "type": "recurring",
+      "schedule": {
+        "mode": "daily"
+      },
+      "active": true
+    },
+    {
+      "id": "q_dead_hang",
+      "title": "Reach a 20-second dead hang",
+      "categoryId": "body",
+      "difficulty": "major",
+      "type": "oneoff",
+      "schedule": {
+        "mode": "once"
+      },
+      "active": true
+    },
+    {
+      "id": "q_ship",
+      "title": "Ship a project milestone",
+      "categoryId": "career",
+      "difficulty": "epic",
+      "type": "oneoff",
+      "schedule": {
+        "mode": "once"
+      },
+      "active": true
+    }
+  ]
+}

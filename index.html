@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1020" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Level 90" />
+  <title>Level 90</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div id="appShell" class="app-shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow" id="challengeEyebrow">90 DAY ASCENT</div>
+        <h1>LEVEL <span class="title-accent">90</span></h1>
+      </div>
+      <div class="topbar-actions">
+        <button id="themeBtn" class="icon-btn" aria-label="Toggle theme">☾</button>
+        <button id="menuBtn" class="icon-btn" aria-label="Open menu">⋯</button>
+      </div>
+    </header>
+
+    <main>
+      <section id="view-today" class="view active">
+        <div class="hero-card panel">
+          <div class="hero-orbit" aria-hidden="true"></div>
+          <div class="hero-top">
+            <div>
+              <span class="kicker">CURRENT RUN</span>
+              <h2 id="dayTitle">Day 1 / 90</h2>
+              <p id="dateLabel">Ready to begin.</p>
+            </div>
+            <div class="level-badge">
+              <span>LVL</span>
+              <strong id="levelNumber">1</strong>
+            </div>
+          </div>
+
+          <div class="xp-row">
+            <div class="xp-label">
+              <span id="xpText">0 / 100 XP</span>
+              <span id="nextLevelText">100 to next level</span>
+            </div>
+            <div class="progress-track">
+              <div id="xpBar" class="progress-fill"></div>
+            </div>
+          </div>
+
+          <div class="score-grid">
+            <div class="score-card">
+              <span>DAILY SCORE</span>
+              <strong id="dailyScore">0</strong>
+              <small>/100</small>
+            </div>
+            <div class="score-card">
+              <span>TODAY XP</span>
+              <strong id="todayXp">0</strong>
+              <small>earned</small>
+            </div>
+            <div class="score-card">
+              <span>MOMENTUM</span>
+              <strong id="momentumScore">0%</strong>
+              <small>7 days</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-heading">
+          <div>
+            <span class="kicker">TODAY'S LOADOUT</span>
+            <h3>Quests</h3>
+          </div>
+          <button id="quickAddBtn" class="pill-btn">＋ New quest</button>
+        </div>
+        <div id="todayQuests" class="quest-list"></div>
+
+        <div class="section-heading">
+          <div>
+            <span class="kicker">CHARACTER BUILD</span>
+            <h3>Category stats</h3>
+          </div>
+        </div>
+        <div id="categoryStats" class="stat-grid"></div>
+      </section>
+
+      <section id="view-quests" class="view">
+        <div class="page-heading">
+          <span class="kicker">QUEST LOG</span>
+          <h2>Build your routine</h2>
+          <p>Create repeatable habits or one-time missions. XP is automatically tied to difficulty.</p>
+        </div>
+        <button id="addQuestBtn" class="primary-btn wide">＋ Create quest</button>
+        <div class="filter-row">
+          <button class="filter-chip active" data-filter="all">All</button>
+          <button class="filter-chip" data-filter="recurring">Recurring</button>
+          <button class="filter-chip" data-filter="oneoff">One-off</button>
+        </div>
+        <div id="questLibrary" class="quest-list"></div>
+      </section>
+
+      <section id="view-journey" class="view">
+        <div class="page-heading">
+          <span class="kicker">THE 90-DAY MAP</span>
+          <h2>Your ascent</h2>
+          <p>Every completed day leaves a mark. Keep moving forward.</p>
+        </div>
+        <div class="journey-legend panel">
+          <div><i class="dot done"></i> Strong day</div>
+          <div><i class="dot partial"></i> Partial</div>
+          <div><i class="dot future"></i> Ahead</div>
+        </div>
+        <div id="journeyGrid" class="journey-grid"></div>
+      </section>
+
+      <section id="view-character" class="view">
+        <div class="page-heading">
+          <span class="kicker">CHARACTER SHEET</span>
+          <h2 id="characterLevelTitle">Level 1</h2>
+          <p>Your XP shows what you actually invest in.</p>
+        </div>
+        <div id="characterStats" class="character-list"></div>
+        <div class="panel achievement-card">
+          <span class="kicker">RUN TOTALS</span>
+          <div class="achievement-grid">
+            <div><strong id="totalXpStat">0</strong><span>Total XP</span></div>
+            <div><strong id="completedQuestStat">0</strong><span>Quest clears</span></div>
+            <div><strong id="strongDayStat">0</strong><span>80+ days</span></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-view="today"><span>⚔️</span><small>Today</small></button>
+      <button class="nav-btn" data-view="quests"><span>📜</span><small>Quests</small></button>
+      <button class="nav-btn" data-view="journey"><span>🗺️</span><small>Journey</small></button>
+      <button class="nav-btn" data-view="character"><span>🧬</span><small>Character</small></button>
+    </nav>
+  </div>
+
+  <dialog id="questDialog" class="modal">
+    <form id="questForm" method="dialog">
+      <div class="modal-head">
+        <div>
+          <span class="kicker">NEW MISSION</span>
+          <h3>Create quest</h3>
+        </div>
+        <button type="button" class="icon-btn" id="closeQuestDialog">×</button>
+      </div>
+
+      <label>
+        Quest name
+        <input id="questTitle" required maxlength="70" placeholder="e.g. Read for 20 minutes" />
+      </label>
+
+      <label>
+        Category
+        <select id="questCategory"></select>
+      </label>
+
+      <div>
+        <span class="field-label">Difficulty</span>
+        <div id="difficultyPicker" class="difficulty-grid"></div>
+        <div id="difficultyXpHint" class="xp-hint"></div>
+      </div>
+
+      <div>
+        <span class="field-label">Quest type</span>
+        <div class="segmented">
+          <button type="button" data-type="recurring" class="segment active">Recurring</button>
+          <button type="button" data-type="oneoff" class="segment">One-off</button>
+        </div>
+      </div>
+
+      <div id="scheduleFields">
+        <span class="field-label">Repeats</span>
+        <div class="segmented schedule-mode">
+          <button type="button" data-schedule="daily" class="segment active">Daily</button>
+          <button type="button" data-schedule="weekdays" class="segment">Days</button>
+        </div>
+        <div id="weekdayPicker" class="weekday-picker hidden">
+          <button type="button" data-day="1">M</button>
+          <button type="button" data-day="2">T</button>
+          <button type="button" data-day="3">W</button>
+          <button type="button" data-day="4">T</button>
+          <button type="button" data-day="5">F</button>
+          <button type="button" data-day="6">S</button>
+          <button type="button" data-day="0">S</button>
+        </div>
+      </div>
+
+      <button class="primary-btn wide" type="submit">Create quest</button>
+    </form>
+  </dialog>
+
+  <dialog id="settingsDialog" class="modal">
+    <div class="modal-head">
+      <div>
+        <span class="kicker">SYSTEM</span>
+        <h3>Settings</h3>
+      </div>
+      <button type="button" class="icon-btn" id="closeSettings">×</button>
+    </div>
+    <div class="settings-stack">
+      <button id="startChallengeBtn" class="settings-btn">🚀 Restart 90-day challenge</button>
+      <button id="exportBtn" class="settings-btn">⬇️ Export JSON backup</button>
+      <label class="settings-btn file-label">⬆️ Import JSON backup<input id="importInput" type="file" accept=".json,application/json" hidden /></label>
+      <button id="resetBtn" class="settings-btn danger">♻️ Reset all app data</button>
+    </div>
+  </dialog>
+
+  <div id="toast" class="toast"></div>
+  <div id="levelUpOverlay" class="level-up-overlay" aria-hidden="true">
+    <div class="level-up-card">
+      <span>LEVEL UP</span>
+      <strong id="levelUpNumber">2</strong>
+      <small>Keep ascending.</small>
+    </div>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
