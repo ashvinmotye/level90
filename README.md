@@ -2,6 +2,28 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 14 glow refinement
+- Restores the original slow breathing animation on the Level number.
+- Gives the internal glow genuinely randomized destinations and timing instead of a repeating geometric route.
+- Replaces the visible white glow spot with two broad, low-opacity theme-color mists.
+- Stops both breathing and glow movement when reduced motion is enabled.
+
+## Version 13 orb refinement
+- Removes the rank subtitle from inside the Level orb so the number becomes the single focal point.
+- Moves a concentrated highlight around inside the Level number while retaining its slow breathing glow.
+- Adds safe text spacing around the number so its gradient and glow are no longer clipped.
+
+## Version 12 visual refinement
+- Centers and enlarges the completed quest checkmark for a clearer success state.
+- Removes the Level orb's inner background and inset shading so the animated halos can breathe.
+- Gives the Level number a theme-aware dimensional gradient, layered glow and slow breathing emphasis.
+
+## Version 11 improvements
+- Asks for a display name in a dedicated first-launch popup instead of preloading Ashvin for every user.
+- Makes all Data & Journey action labels the same size, including Import JSON backup.
+- Removes level progress from the animated orb and moves it to a slim horizontal bar below the orb.
+- Keeps “NEXT · LEVEL 2” and the exact stage XP counter aligned with the new progress bar.
+
 ## Version 10 refinement
 - Removes the Level orb’s inner border, inner decorative ring and Home’s dotted level road for a cleaner composition. The detailed road remains in Character.
 - Replaces “80 XP to level 2” with a compact “NEXT · LEVEL 2” target plus the existing stage XP counter.

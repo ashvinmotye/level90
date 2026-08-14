@@ -6,6 +6,7 @@ let questFilter = "all";
 let reorderMode = false;
 let selectedHistoryDate = null;
 let historyMonth = null;
+let levelGlowAnimation = null;
 const PALETTES = ["arctic","jade","aurora","rose"];
 const ICON_LIBRARY = [
   ["✨","sparkle magic default"],["⚡","energy discipline focus"],["✅","check done complete"],
@@ -57,7 +58,49 @@ async function bootstrap() {
   save();
   bindEvents();
   renderAll();
+  startLevelNumberGlow();
   registerSW();
+}
+
+function startLevelNumberGlow() {
+  const number = $("#levelNumber");
+  if (!number) return;
+  const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  if (typeof number.animate !== "function") {
+    if (!motion.matches) number.classList.add("css-glow-drift");
+    return;
+  }
+
+  let current = [-24,28,116,76];
+  const position = ([x1,y1,x2,y2]) => `${x1}% ${y1}%,${x2}% ${y2}%,center`;
+  const random = (min,max) => Math.round(min + Math.random() * (max-min));
+
+  const stop = () => {
+    levelGlowAnimation?.cancel();
+    levelGlowAnimation = null;
+  };
+  const drift = () => {
+    if (motion.matches || levelGlowAnimation) return;
+    const next = [random(-28,118),random(-22,118),random(-24,120),random(-20,116)];
+    levelGlowAnimation = number.animate(
+      [{backgroundPosition:position(current)},{backgroundPosition:position(next)}],
+      {duration:random(2800,5600),easing:"cubic-bezier(.42,0,.24,1)",fill:"forwards"}
+    );
+    levelGlowAnimation.onfinish = () => {
+      number.style.backgroundPosition = position(next);
+      current = next;
+      levelGlowAnimation.cancel();
+      levelGlowAnimation = null;
+      drift();
+    };
+  };
+  const syncMotion = () => {
+    if (motion.matches) stop();
+    else drift();
+  };
+  if (motion.addEventListener) motion.addEventListener("change",syncMotion);
+  else motion.addListener(syncMotion);
+  syncMotion();
 }
 function freshState() {
   return {
@@ -67,7 +110,7 @@ function freshState() {
     completions: {},
     theme: "dark",
     palette: "arctic",
-    profileName: "Ashvin"
+    profileName: ""
   };
 }
 function migrateState() {
@@ -77,7 +120,7 @@ function migrateState() {
   state.startedOn ||= localDateKey();
   state.theme ||= "dark";
   if (!PALETTES.includes(state.palette)) state.palette = "arctic";
-  state.profileName ||= "Ashvin";
+  state.profileName = typeof state.profileName === "string" ? state.profileName.trim() : "";
   state.categories.forEach(c=>{ c.icon ||= "✨"; });
   state.quests.forEach(q=>{ delete q.icon; });
   selectedHistoryDate ||= localDateKey();
@@ -85,6 +128,14 @@ function migrateState() {
   applyTheme();
 }
 function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+function requestNameIfNeeded() {
+  const dialog=$("#nameDialog");
+  if(state.profileName || !dialog || dialog.open || $("#settingsDialog")?.open) return;
+  $("#nameInput").value="";
+  dialog.showModal();
+  setTimeout(()=>$("#nameInput").focus(),0);
+}
 
 function applyTheme() {
   document.body.classList.toggle("light", state.theme === "light");
@@ -211,6 +262,7 @@ function renderAll() {
   renderHistory();
   renderCharacter();
   renderDifficulty();
+  requestNameIfNeeded();
 }
 function renderHeader() {
   const xp = totalXp();
@@ -221,13 +273,13 @@ function renderHeader() {
   const currentRank = rankForLevel(p.lvl);
   document.body.dataset.rankTier = String(currentRank.level);
   $("#levelNumber").textContent = p.lvl;
-  $("#levelRank").textContent = currentRank.title;
-  $("#greetingName").textContent = state.profileName;
+  $("#greetingName").textContent = state.profileName || "Player";
   $("#profileNameInput").value = state.profileName;
   $("#characterLevelTitle").textContent = `Level ${p.lvl}`;
   $("#xpText").textContent = p.maxed ? `${xp} TOTAL XP` : `${xp - p.start} / ${p.end - p.start} XP`;
   $("#nextLevelText").textContent = p.maxed ? "LEVEL 90 · ASCENDED" : `NEXT · LEVEL ${p.lvl + 1}`;
-  $("#levelOrb").style.setProperty("--level-progress",`${p.pct * 3.6}deg`);
+  $("#levelProgressFill").style.width=`${p.pct}%`;
+  $("#levelProgressTrack").setAttribute("aria-valuenow",String(Math.round(p.pct)));
   $("#journeyDayLabel").textContent = `JOURNEY DAY ${day}`;
   $("#levelPrompt").textContent = p.maxed ? "LEVEL 90 REACHED · KEEP BUILDING YOUR CHARACTER" : nextQuest
     ? `NEXT MOVE · ${nextQuest.title.toUpperCase()} · +${xpForQuest(nextQuest)} XP`
@@ -770,11 +822,26 @@ function bindEvents() {
 
   $("#menuBtn").addEventListener("click",()=>$("#settingsDialog").showModal());
   $("#profileGreetingBtn").addEventListener("click",()=>$("#settingsDialog").showModal());
-  $("#closeSettings").addEventListener("click",()=>$("#settingsDialog").close());
+  $("#closeSettings").addEventListener("click",()=>{
+    $("#settingsDialog").close();
+    requestNameIfNeeded();
+  });
   $("#profileNameInput").addEventListener("input",e=>{
-    state.profileName=e.target.value.trimStart() || "Player";
-    $("#greetingName").textContent=state.profileName;
+    state.profileName=e.target.value.trimStart();
+    $("#greetingName").textContent=state.profileName || "Player";
     save();
+  });
+  $("#nameDialog").addEventListener("cancel",e=>e.preventDefault());
+  $("#nameForm").addEventListener("submit",e=>{
+    e.preventDefault();
+    const name=$("#nameInput").value.trim();
+    if(!name) return;
+    state.profileName=name;
+    $("#greetingName").textContent=name;
+    $("#profileNameInput").value=name;
+    save();
+    $("#nameDialog").close();
+    showToast(`Welcome, ${name}`);
   });
 
   $("#exportBtn").addEventListener("click",()=>{
@@ -790,7 +857,7 @@ function bindEvents() {
     try{
       const incoming=JSON.parse(await file.text());
       if(!incoming.quests || !incoming.categories) throw new Error();
-      state=incoming; selectedHistoryDate=localDateKey(); historyMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1); migrateState(); save(); renderAll(); $("#settingsDialog").close(); showToast("Backup restored");
+      state=incoming; selectedHistoryDate=localDateKey(); historyMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1); migrateState(); save(); $("#settingsDialog").close(); renderAll(); showToast("Backup restored");
     }catch{ alert("That file does not look like a valid Level 90 backup."); }
     e.target.value="";
   });
@@ -803,7 +870,7 @@ function bindEvents() {
 
   $("#resetBtn").addEventListener("click",()=>{
     if(confirm("Reset everything to the original Level 90 starter data?")){
-      state=freshState(); selectedHistoryDate=localDateKey(); historyMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1); save(); document.body.classList.remove("light"); renderAll(); $("#settingsDialog").close(); showToast("App reset");
+      state=freshState(); selectedHistoryDate=localDateKey(); historyMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1); save(); document.body.classList.remove("light"); $("#settingsDialog").close(); renderAll(); showToast("App reset");
     }
   });
 }

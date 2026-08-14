@@ -17,7 +17,7 @@
   <div id="appShell" class="app-shell">
     <header class="topbar">
       <button id="profileGreetingBtn" class="profile-greeting" aria-label="Open settings">
-        <strong>Level up, <span id="greetingName" class="greeting-name">Ashvin</span>!</strong><span class="greeting-wave" aria-hidden="true">👋</span>
+        <strong>Level up, <span id="greetingName" class="greeting-name">Player</span>!</strong><span class="greeting-wave" aria-hidden="true">👋</span>
       </button>
       <div class="topbar-actions">
         <button id="themeBtn" class="icon-btn" aria-label="Toggle theme">☾</button>
@@ -33,18 +33,22 @@
             <span id="dateLabel">Ready to begin.</span>
           </div>
 
-          <div id="levelOrb" class="level-orb" style="--level-progress:0deg">
+          <div id="levelOrb" class="level-orb">
             <div class="level-halos" aria-hidden="true"><i></i><i></i><i></i></div>
             <div class="level-orb-inner">
               <span>LEVEL</span>
               <strong id="levelNumber">1</strong>
-              <small id="levelRank">THE ASCENT BEGINS</small>
             </div>
           </div>
 
           <div class="next-level-copy">
-            <strong id="nextLevelText">NEXT · LEVEL 2</strong>
-            <small id="xpText">0 / 80 XP</small>
+            <div class="level-progress-labels">
+              <strong id="nextLevelText">NEXT · LEVEL 2</strong>
+              <small id="xpText">0 / 80 XP</small>
+            </div>
+            <div id="levelProgressTrack" class="level-progress-track" role="progressbar" aria-label="Current level progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <i id="levelProgressFill"></i>
+            </div>
           </div>
           <div id="levelPrompt" class="next-move-copy">Clear a quest to begin your climb.</div>
 
@@ -250,6 +254,20 @@
     </form>
   </dialog>
 
+  <dialog id="nameDialog" class="modal name-dialog">
+    <form id="nameForm">
+      <div class="name-dialog-mark" aria-hidden="true">90</div>
+      <span class="kicker">WELCOME TO LEVEL 90</span>
+      <h3>What should I call you?</h3>
+      <p class="modal-intro">Your name personalizes the journey and can be changed later in Settings.</p>
+      <label>
+        Display name
+        <input id="nameInput" required maxlength="30" autocomplete="name" enterkeyhint="done" placeholder="Enter your name" />
+      </label>
+      <button class="primary-btn wide" type="submit">Begin the ascent</button>
+    </form>
+  </dialog>
+
   <dialog id="settingsDialog" class="modal">
     <div class="modal-head">
       <div>
@@ -263,7 +281,7 @@
         <span class="kicker">APPEARANCE</span>
         <p>Choose the atmosphere for your ascent.</p>
       </div>
-      <label class="profile-name-field">Display name<input id="profileNameInput" maxlength="30" value="Ashvin" /></label>
+      <label class="profile-name-field">Display name<input id="profileNameInput" maxlength="30" /></label>
       <div id="themeModePicker" class="theme-mode-picker">
         <button type="button" data-theme-mode="dark">☾ Dark</button>
         <button type="button" data-theme-mode="light">☀ Light</button>
