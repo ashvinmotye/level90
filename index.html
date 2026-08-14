@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0b1020" />
+  <meta name="theme-color" content="#193546" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Level 90" />
@@ -16,10 +16,9 @@
 <body>
   <div id="appShell" class="app-shell">
     <header class="topbar">
-      <div>
-        <div class="eyebrow" id="challengeEyebrow">90 DAY ASCENT</div>
-        <h1>LEVEL <span class="title-accent">90</span></h1>
-      </div>
+      <button id="profileGreetingBtn" class="profile-greeting" aria-label="Open settings">
+        <strong>Level up, <span id="greetingName" class="greeting-name">Ashvin</span>!</strong><span class="greeting-wave" aria-hidden="true">👋</span>
+      </button>
       <div class="topbar-actions">
         <button id="themeBtn" class="icon-btn" aria-label="Toggle theme">☾</button>
         <button id="menuBtn" class="icon-btn" aria-label="Open menu">⋯</button>
@@ -28,46 +27,31 @@
 
     <main>
       <section id="view-today" class="view active">
-        <div class="hero-card panel">
-          <div class="hero-orbit" aria-hidden="true"></div>
-          <div class="hero-top">
-            <div>
-              <span class="kicker">CURRENT RUN</span>
-              <h2 id="dayTitle">Day 1 / 90</h2>
-              <p id="dateLabel">Ready to begin.</p>
-            </div>
-            <div class="level-badge">
-              <span>LVL</span>
+        <div class="mock-home">
+          <div class="journey-meta minimal-meta">
+            <span id="journeyDayLabel">JOURNEY DAY 1</span>
+            <span id="dateLabel">Ready to begin.</span>
+          </div>
+
+          <div id="levelOrb" class="level-orb" style="--level-progress:0deg">
+            <div class="level-halos" aria-hidden="true"><i></i><i></i><i></i></div>
+            <div class="level-orb-inner">
+              <span>LEVEL</span>
               <strong id="levelNumber">1</strong>
+              <small id="levelRank">THE ASCENT BEGINS</small>
             </div>
           </div>
 
-          <div class="xp-row">
-            <div class="xp-label">
-              <span id="xpText">0 / 100 XP</span>
-              <span id="nextLevelText">100 to next level</span>
-            </div>
-            <div class="progress-track">
-              <div id="xpBar" class="progress-fill"></div>
-            </div>
+          <div class="next-level-copy">
+            <strong id="nextLevelText">NEXT · LEVEL 2</strong>
+            <small id="xpText">0 / 80 XP</small>
           </div>
+          <div id="levelPrompt" class="next-move-copy">Clear a quest to begin your climb.</div>
 
-          <div class="score-grid">
-            <div class="score-card">
-              <span>DAILY SCORE</span>
-              <strong id="dailyScore">0</strong>
-              <small>/100</small>
-            </div>
-            <div class="score-card">
-              <span>TODAY XP</span>
-              <strong id="todayXp">0</strong>
-              <small>earned</small>
-            </div>
-            <div class="score-card">
-              <span>MOMENTUM</span>
-              <strong id="momentumScore">0%</strong>
-              <small>7 days</small>
-            </div>
+          <div class="home-stats">
+            <span><strong id="dailyScore">0</strong> score</span>
+            <span><strong id="todayXp">0</strong> XP today</span>
+            <span><strong id="momentumScore">0%</strong> momentum</span>
           </div>
         </div>
 
@@ -78,24 +62,22 @@
           </div>
           <button id="quickAddBtn" class="pill-btn">＋ New quest</button>
         </div>
-        <div id="todayQuests" class="quest-list"></div>
+        <div id="todayQuests" class="quest-list today-quest-grid"></div>
 
-        <div class="section-heading">
-          <div>
-            <span class="kicker">CHARACTER BUILD</span>
-            <h3>Category stats</h3>
-          </div>
-        </div>
-        <div id="categoryStats" class="stat-grid"></div>
       </section>
 
       <section id="view-quests" class="view">
         <div class="page-heading">
           <span class="kicker">QUEST LOG</span>
           <h2>Build your routine</h2>
-          <p>Create repeatable habits or one-time missions. XP is automatically tied to difficulty.</p>
+          <p>Create repeatable habits or one-time missions, then arrange them in the order that works for you.</p>
         </div>
-        <button id="addQuestBtn" class="primary-btn wide">＋ Create quest</button>
+        <div class="quest-library-actions">
+          <button id="addQuestBtn" class="primary-btn">＋ Create quest</button>
+          <button id="manageCategoriesBtn" class="secondary-btn">◫ Categories</button>
+          <button id="reorderBtn" class="secondary-btn">↕ Reorder</button>
+        </div>
+        <div id="reorderHint" class="reorder-hint hidden">Use the arrows to arrange your quests. The Today screen follows this order.</div>
         <div class="filter-row">
           <button class="filter-chip active" data-filter="all">All</button>
           <button class="filter-chip" data-filter="recurring">Recurring</button>
@@ -106,16 +88,40 @@
 
       <section id="view-journey" class="view">
         <div class="page-heading">
-          <span class="kicker">THE 90-DAY MAP</span>
-          <h2>Your ascent</h2>
-          <p>Every completed day leaves a mark. Keep moving forward.</p>
+          <span class="kicker">DAILY HISTORY</span>
+          <h2>Review your ascent</h2>
+          <p>Choose any day to see which quests you cleared and when you completed them.</p>
         </div>
-        <div class="journey-legend panel">
-          <div><i class="dot done"></i> Strong day</div>
-          <div><i class="dot partial"></i> Partial</div>
-          <div><i class="dot future"></i> Ahead</div>
+        <div class="history-calendar panel">
+          <div class="calendar-head">
+            <button id="previousMonthBtn" class="icon-btn" aria-label="Previous month">‹</button>
+            <div><span class="kicker">ACTIVITY CALENDAR</span><h3 id="historyMonthLabel">Month</h3></div>
+            <button id="nextMonthBtn" class="icon-btn" aria-label="Next month">›</button>
+          </div>
+          <div class="calendar-weekdays"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+          <div id="historyCalendar" class="history-calendar-grid"></div>
+          <div class="calendar-legend">
+            <span><i class="dot done"></i>80+ score</span>
+            <span><i class="dot partial"></i>In progress</span>
+            <span><i class="dot future"></i>No activity</span>
+          </div>
         </div>
-        <div id="journeyGrid" class="journey-grid"></div>
+        <div class="day-review panel">
+          <div class="day-review-nav">
+            <button id="previousDayBtn" class="icon-btn" aria-label="Previous day">‹</button>
+            <div>
+              <span id="reviewDayLabel" class="kicker">JOURNEY DAY 1</span>
+              <h3 id="reviewDateLabel">Today</h3>
+            </div>
+            <button id="nextDayBtn" class="icon-btn" aria-label="Next day">›</button>
+          </div>
+          <div class="review-score-row">
+            <div><strong id="reviewScore">0</strong><span>Daily score</span></div>
+            <div><strong id="reviewXp">0</strong><span>XP earned</span></div>
+            <div><strong id="reviewClears">0/0</strong><span>Quests cleared</span></div>
+          </div>
+          <div id="reviewQuestList" class="review-quest-list"></div>
+        </div>
       </section>
 
       <section id="view-character" class="view">
@@ -123,6 +129,15 @@
           <span class="kicker">CHARACTER SHEET</span>
           <h2 id="characterLevelTitle">Level 1</h2>
           <p>Your XP shows what you actually invest in.</p>
+        </div>
+        <div class="panel next-rank-card">
+          <span class="kicker">NEXT TITLE</span>
+          <strong id="nextMilestoneTitle">Momentum Builder</strong>
+          <p id="nextMilestoneText">Reach Level 5 to unlock this rank.</p>
+        </div>
+        <div class="panel character-road-card">
+          <div class="level-road-label"><span>LEVEL ROAD</span><small>Level 90 is the ultimate rank</small></div>
+          <div id="levelRoad" class="level-road"></div>
         </div>
         <div id="characterStats" class="character-list"></div>
         <div class="panel achievement-card">
@@ -139,7 +154,7 @@
     <nav class="bottom-nav">
       <button class="nav-btn active" data-view="today"><span>⚔️</span><small>Today</small></button>
       <button class="nav-btn" data-view="quests"><span>📜</span><small>Quests</small></button>
-      <button class="nav-btn" data-view="journey"><span>🗺️</span><small>Journey</small></button>
+      <button class="nav-btn" data-view="journey"><span>🗓️</span><small>History</small></button>
       <button class="nav-btn" data-view="character"><span>🧬</span><small>Character</small></button>
     </nav>
   </div>
@@ -148,8 +163,8 @@
     <form id="questForm" method="dialog">
       <div class="modal-head">
         <div>
-          <span class="kicker">NEW MISSION</span>
-          <h3>Create quest</h3>
+          <span id="questDialogKicker" class="kicker">NEW MISSION</span>
+          <h3 id="questDialogTitle">Create quest</h3>
         </div>
         <button type="button" class="icon-btn" id="closeQuestDialog">×</button>
       </div>
@@ -195,7 +210,43 @@
         </div>
       </div>
 
-      <button class="primary-btn wide" type="submit">Create quest</button>
+      <button id="questSubmitBtn" class="primary-btn wide" type="submit">Create quest</button>
+    </form>
+  </dialog>
+
+  <dialog id="categoryDialog" class="modal">
+    <div class="modal-head">
+      <div>
+        <span class="kicker">LOADOUT SETUP</span>
+        <h3>Categories</h3>
+      </div>
+      <button type="button" class="icon-btn" id="closeCategoryDialog">×</button>
+    </div>
+    <p class="modal-intro">Create and personalize categories. A category in use cannot be deleted until its quests are reassigned.</p>
+    <div id="categoryList" class="category-manager-list"></div>
+    <form id="categoryForm" class="category-form">
+      <span id="categoryFormKicker" class="kicker">ADD CATEGORY</span>
+      <label>
+        Category name
+        <input id="categoryNameInput" required maxlength="32" placeholder="e.g. Creativity" />
+      </label>
+      <div class="icon-field">
+        <span class="field-label">Category icon</span>
+        <div class="icon-input-row">
+          <input id="categoryIconInput" maxlength="12" aria-label="Category icon" placeholder="🎨" />
+          <input id="categoryIconSearch" type="search" aria-label="Search category icons" placeholder="Search icons" />
+        </div>
+        <div id="categoryIconPicker" class="icon-picker" aria-label="Category icon choices"></div>
+        <small class="field-help">Choose one or paste any emoji.</small>
+      </div>
+      <label>
+        Description <span class="optional-label">optional</span>
+        <input id="categoryDescriptionInput" maxlength="90" placeholder="What this category develops" />
+      </label>
+      <div class="form-actions">
+        <button id="categoryCancelEditBtn" class="secondary-btn hidden" type="button">Cancel</button>
+        <button id="categorySubmitBtn" class="primary-btn" type="submit">Add category</button>
+      </div>
     </form>
   </dialog>
 
@@ -207,8 +258,38 @@
       </div>
       <button type="button" class="icon-btn" id="closeSettings">×</button>
     </div>
-    <div class="settings-stack">
-      <button id="startChallengeBtn" class="settings-btn">🚀 Restart 90-day challenge</button>
+    <div class="settings-section">
+      <div class="settings-section-head">
+        <span class="kicker">APPEARANCE</span>
+        <p>Choose the atmosphere for your ascent.</p>
+      </div>
+      <label class="profile-name-field">Display name<input id="profileNameInput" maxlength="30" value="Ashvin" /></label>
+      <div id="themeModePicker" class="theme-mode-picker">
+        <button type="button" data-theme-mode="dark">☾ Dark</button>
+        <button type="button" data-theme-mode="light">☀ Light</button>
+      </div>
+      <div id="palettePicker" class="palette-picker">
+        <button type="button" class="palette-option palette-arctic" data-palette="arctic">
+          <span class="palette-swatches"><i></i><i></i><i></i><i></i></span>
+          <strong>Arctic Depths</strong><small>Cyan · blue · deep ocean</small>
+        </button>
+        <button type="button" class="palette-option palette-jade" data-palette="jade">
+          <span class="palette-swatches"><i></i><i></i><i></i><i></i></span>
+          <strong>Jade Horizon</strong><small>Fresh · calm · grounded</small>
+        </button>
+        <button type="button" class="palette-option palette-aurora" data-palette="aurora">
+          <span class="palette-swatches"><i></i><i></i><i></i><i></i></span>
+          <strong>Aurora Blossom</strong><small>Deep blue · luminous pink</small>
+        </button>
+        <button type="button" class="palette-option palette-rose" data-palette="rose">
+          <span class="palette-swatches"><i></i><i></i><i></i><i></i></span>
+          <strong>Rosé Sunrise</strong><small>Warm red · soft pink glow</small>
+        </button>
+      </div>
+    </div>
+    <div class="settings-section settings-stack">
+      <span class="kicker">DATA &amp; JOURNEY</span>
+      <button id="startChallengeBtn" class="settings-btn">🚀 Start a fresh journey</button>
       <button id="exportBtn" class="settings-btn">⬇️ Export JSON backup</button>
       <label class="settings-btn file-label">⬆️ Import JSON backup<input id="importInput" type="file" accept=".json,application/json" hidden /></label>
       <button id="resetBtn" class="settings-btn danger">♻️ Reset all app data</button>

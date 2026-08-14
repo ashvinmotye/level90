@@ -1,12 +1,12 @@
 {
-  "name": "Level 90 \u2013 90 Day Gamified Improvement",
+  "name": "Level 90 \u2013 Personal Progression",
   "short_name": "Level 90",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#07101f",
-  "theme_color": "#0b1020",
-  "description": "Turn 90 days of progress into quests, XP and levels.",
+  "background_color": "#193546",
+  "theme_color": "#193546",
+  "description": "Complete real-life quests, earn XP and keep climbing toward Level 90.",
   "icons": [
     {
       "src": "./icons/icon-192.png",

@@ -1,8 +1,8 @@
 {
   "app": {
     "name": "Level 90",
-    "challengeDays": 90,
-    "version": 1
+    "maxLevel": 90,
+    "version": 10
   },
   "difficulty": {
     "tiny": {
