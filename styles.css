@@ -132,6 +132,38 @@ button, input, select { font: inherit; }
 button { color: inherit; }
 button:active { transform: scale(.97); }
 
+.auth-screen {
+  position:relative; z-index:2; min-height:100dvh; display:grid; place-items:center;
+  padding:calc(24px + env(safe-area-inset-top)) 18px calc(24px + env(safe-area-inset-bottom));
+}
+.auth-screen[hidden] { display:none; }
+.auth-card {
+  width:min(100%,430px); padding:28px; border:1px solid var(--line); border-radius:30px;
+  background:var(--panel); box-shadow:var(--shadow); backdrop-filter:blur(24px); text-align:center;
+}
+.auth-mark {
+  width:84px; height:84px; display:grid; place-items:center; margin:0 auto 20px; border-radius:50%;
+  color:var(--text); font-size:31px; font-weight:950; background:radial-gradient(circle,rgb(var(--gold-rgb) / .20),rgb(var(--accent-rgb) / .11) 58%,var(--panel-strong));
+  border:1px solid rgb(var(--accent-rgb) / .20); box-shadow:0 0 45px rgb(var(--accent-rgb) / .24);
+}
+.auth-card h1 { margin:8px 0; font-size:29px; letter-spacing:-.04em; }
+.auth-card > p { margin:0 auto 22px; max-width:330px; color:var(--muted); font-size:12px; line-height:1.55; }
+.auth-loading { min-height:86px; display:flex; align-items:center; justify-content:center; gap:10px; color:var(--muted); font-size:12px; font-weight:800; }
+.auth-spinner { width:18px; height:18px; border:2px solid var(--line); border-top-color:var(--accent); border-radius:50%; animation:authSpin .8s linear infinite; }
+@keyframes authSpin { to { transform:rotate(360deg); } }
+.auth-mode-switch { display:grid; grid-template-columns:repeat(2,1fr); gap:6px; padding:5px; margin-bottom:16px; border:1px solid var(--line); border-radius:17px; background:rgba(255,255,255,.025); }
+.auth-mode-button { padding:10px; border:0; border-radius:12px; background:transparent; color:var(--muted); cursor:pointer; font-size:11px; font-weight:850; }
+.auth-mode-button.is-active { color:var(--text); background:rgb(var(--accent-rgb) / .13); box-shadow:inset 0 0 0 1px rgb(var(--accent-rgb) / .18); }
+.auth-card form { display:grid; gap:12px; text-align:left; }
+.auth-card label { color:var(--muted); font-size:10px; font-weight:850; }
+.auth-card input { width:100%; margin-top:6px; padding:13px 14px; border-radius:15px; border:1px solid var(--line); background:rgba(255,255,255,.05); color:var(--text); outline:none; }
+.auth-card input:focus { border-color:rgb(var(--accent-rgb) / .62); box-shadow:0 0 0 3px rgb(var(--accent-rgb) / .11); }
+.auth-card label small { display:block; margin-top:6px; color:var(--muted); font-size:8px; font-weight:650; }
+.auth-message { min-height:18px; margin:13px 0 0; color:var(--muted); font-size:10px; line-height:1.45; }
+.auth-message.is-error,.account-message.is-error { color:var(--danger); }
+.auth-message.is-success { color:var(--accent-soft); }
+.auth-offline-note { display:block; margin-top:10px; color:var(--muted); font-size:8px; line-height:1.45; }
+
 .app-shell {
   position:relative;
   z-index:1;
@@ -640,6 +672,26 @@ body.light .bottom-nav { background:rgba(255,255,255,.84); }
 .settings-section { padding:15px 0; border-top:1px solid var(--line); }
 .modal-head + .settings-section { border-top:0; padding-top:0; }
 .settings-section-head p { color:var(--muted); font-size:11px; margin:6px 0 13px; }
+.account-settings-section { padding-bottom:18px; }
+.account-settings-head { display:flex; align-items:start; justify-content:space-between; gap:12px; }
+.account-settings-head p { margin-bottom:10px; }
+.account-status { flex:0 0 auto; padding:6px 8px; border-radius:999px; color:var(--accent-soft); background:rgb(var(--accent-rgb) / .10); border:1px solid rgb(var(--accent-rgb) / .18); font-size:8px; font-weight:900; }
+.account-status.is-offline { color:var(--gold); background:rgb(var(--gold-rgb) / .08); border-color:rgb(var(--gold-rgb) / .16); }
+.account-summary-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px; border:1px solid var(--line); border-radius:16px; background:rgba(255,255,255,.025); }
+.account-summary-row small,.account-summary-row strong { display:block; }
+.account-summary-row small { color:var(--muted); font-size:8px; margin-bottom:3px; }
+.account-summary-row strong { max-width:300px; overflow:hidden; text-overflow:ellipsis; font-size:11px; }
+.cloud-sync-row { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:12px; margin-top:9px; padding:12px; border:1px solid var(--line); border-radius:16px; background:rgba(255,255,255,.025); }
+.cloud-sync-row strong,.cloud-sync-row span,.cloud-sync-row small { display:block; }
+.cloud-sync-row strong { font-size:11px; }
+.cloud-sync-row span { margin-top:4px; color:var(--muted); font-size:9px; font-weight:800; }
+.cloud-sync-row span.is-waiting { color:var(--gold); }
+.cloud-sync-row span.is-success { color:var(--accent-soft); }
+.cloud-sync-row span.is-error { color:var(--danger); }
+.cloud-sync-row small { margin-top:4px; color:var(--muted); font-size:8px; line-height:1.4; }
+.cloud-migration-row { background:rgb(var(--accent-rgb) / .055); border-color:rgb(var(--accent-rgb) / .16); }
+.cloud-action-btn { padding:9px 11px; border-radius:12px; white-space:nowrap; font-size:9px; }
+.account-message { min-height:13px; margin:8px 2px 0; color:var(--muted); font-size:9px; }
 .profile-name-field { margin-bottom:12px !important; }
 .profile-name-field input { font-size:14px; color:var(--text); }
 .theme-mode-picker { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:12px; }
@@ -749,8 +801,11 @@ body.light .bottom-nav { background:rgba(255,255,255,.84); }
   .icon-picker { grid-template-columns:repeat(7,1fr); }
   .category-manager-item { grid-template-columns:auto minmax(0,1fr); }
   .category-manager-actions { grid-column:1/-1; justify-content:flex-end; }
+  .auth-card { padding:23px 18px; border-radius:25px; }
+  .cloud-sync-row { grid-template-columns:1fr; }
+  .cloud-action-btn { width:100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  body::before,body::after,.level-halos i,.level-orb-inner strong { animation:none; }
+  body::before,body::after,.level-halos i,.level-orb-inner strong,.auth-spinner { animation:none; }
 }

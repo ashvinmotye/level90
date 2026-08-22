@@ -1,8 +1,9 @@
-const CACHE = "level90-v15";
+const CACHE = "level90-v16";
 const ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
+  "./cloud.js",
   "./app.js",
   "./data/initial-data.json",
   "./manifest.webmanifest",
@@ -24,6 +25,11 @@ self.addEventListener("activate", event => {
 
 self.addEventListener("fetch", event => {
   if (event.request.method !== "GET") return;
+  const requestUrl = new URL(event.request.url);
+  if (requestUrl.hostname.endsWith(".supabase.co")) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
   event.respondWith(
     caches.match(event.request).then(cached => cached || fetch(event.request).then(response => {
       const copy = response.clone();

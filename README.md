@@ -2,6 +2,32 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 16 Supabase sync
+- Uses the same Supabase project and email/password account as Workout.
+- Keeps Level90 local-first, including offline completions and edits that queue for automatic retry.
+- Synchronizes profile settings, categories, quest definitions, custom quest order, completions and completion snapshots.
+- Rebuilds XP and streaks consistently from synchronized completion history.
+- Protects the first cloud pull from clearing or overwriting existing browser data.
+- Offers a one-time **Upload existing data** action for an established local journey.
+- Uses client timestamps and conflict-safe database triggers so an older delayed update cannot replace a newer edit.
+- Propagates quest, category and completion deletion through soft-delete records while preserving historical completion XP.
+- Shows account, connection, pending-change and last-sync information in Settings.
+- Refreshes automatically after edits, app focus, visibility changes and reconnection, with **Sync now** as a fallback.
+- Bypasses the PWA cache for Supabase API reads so cloud pulls never use stale cached responses.
+
+### Supabase setup
+
+1. Open the SQL Editor in the same Supabase project used by Workout.
+2. Run `supabase/migrations/20260822_create_level90_sync.sql` once.
+3. Deploy every file in this ZIP to the Level90 site.
+4. Sign in with the same account used by Workout.
+5. On the device containing the current Level90 journey, open **Settings → Account & Cloud** and choose **Upload existing data**.
+6. After it reports a successful sync, sign in on the second device and use **Sync now** if the automatic pull has not already completed.
+
+The migration creates four Level90-only tables with per-user composite keys and Row Level Security. It does not modify Workout tables. Existing Level90 browser data remains stored under the same local-storage key and is migrated in place before cloud sync begins.
+
+Run `node tests/state-and-sync.test.cjs` to check legacy-data migration, streak continuity, historical XP, queue compaction, quest-order sync, composite upserts, first-upload protection and cloud tombstones.
+
 ## Version 15 streaks and Today flow
 - Calculates current and best recurring-quest streaks from existing completion history.
 - Shows a compact `🔥 7`-style current streak on recurring quest tiles.

@@ -7,6 +7,7 @@ let reorderMode = false;
 let selectedHistoryDate = null;
 let historyMonth = null;
 let levelGlowAnimation = null;
+let lastSavedStateJson = "";
 const PALETTES = ["arctic","jade","aurora","rose"];
 const ICON_LIBRARY = [
   ["✨","sparkle magic default"],["⚡","energy discipline focus"],["✅","check done complete"],
@@ -55,11 +56,12 @@ async function bootstrap() {
   }
   if (!state) state = freshState();
   migrateState();
-  save();
+  save({queue:false});
   bindEvents();
   renderAll();
   startLevelNumberGlow();
   registerSW();
+  if (typeof initializeLevel90Cloud === "function") await initializeLevel90Cloud();
 }
 
 function startLevelNumberGlow() {
@@ -104,7 +106,7 @@ function startLevelNumberGlow() {
 }
 function freshState() {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     startedOn: localDateKey(),
     quests: structuredClone(CONFIG.quests),
     categories: structuredClone(CONFIG.categories),
@@ -119,24 +121,54 @@ function migrateState() {
   state.categories ||= structuredClone(CONFIG.categories);
   state.completions ||= {};
   state.startedOn ||= localDateKey();
-  state.schemaVersion = 2;
+  state.schemaVersion = 3;
   state.theme ||= "dark";
   if (!PALETTES.includes(state.palette)) state.palette = "arctic";
   state.profileName = typeof state.profileName === "string" ? state.profileName.trim() : "";
-  state.categories.forEach(c=>{ c.id ||= categoryUid(); c.icon ||= "✨"; });
+  const migrationTimestamp = new Date().toISOString();
+  state.categories.forEach(c=>{
+    c.id ||= categoryUid();
+    c.icon ||= "✨";
+    c.createdAt ||= migrationTimestamp;
+  });
   state.quests.forEach(q=>{
     q.id ||= uid();
     q.createdOn ||= earliestCompletionKey(q.id) || state.startedOn;
+    q.createdAt ||= migrationTimestamp;
     delete q.icon;
+  });
+  Object.entries(state.completions).forEach(([dateKey,day])=>{
+    if (!day || typeof day !== "object") {
+      delete state.completions[dateKey];
+      return;
+    }
+    Object.entries(day).forEach(([questId,value])=>{
+      if (!value) {
+        delete day[questId];
+        return;
+      }
+      const quest = state.quests.find(q=>q.id===questId) || null;
+      day[questId] = normalizeCompletionRecord(value,quest,dateKey);
+    });
+    if (!Object.keys(day).length) delete state.completions[dateKey];
   });
   selectedHistoryDate ||= localDateKey();
   historyMonth ||= new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   applyTheme();
 }
-function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function save(options={}) {
+  const previous = lastSavedStateJson ? JSON.parse(lastSavedStateJson) : null;
+  const nextJson = JSON.stringify(state);
+  localStorage.setItem(STORAGE_KEY,nextJson);
+  lastSavedStateJson = nextJson;
+  if (options.queue !== false && previous && typeof queueLevel90StateChanges === "function") {
+    queueLevel90StateChanges(previous,JSON.parse(nextJson));
+  }
+}
 
 function requestNameIfNeeded() {
   const dialog=$("#nameDialog");
+  if (typeof canRequestLevel90Name === "function" && !canRequestLevel90Name()) return;
   if(state.profileName || !dialog || dialog.open || $("#settingsDialog")?.open) return;
   $("#nameInput").value="";
   dialog.showModal();
@@ -160,6 +192,39 @@ function category(id) { return state.categories.find(c => c.id === id) || {name:
 
 function xpForQuest(q) { return difficulty(q.difficulty).xp; }
 
+function completionFallbackTimestamp(dateKey) {
+  const parsed = parseLocalDate(dateKey);
+  parsed.setHours(12,0,0,0);
+  return parsed.toISOString();
+}
+
+function normalizeCompletionRecord(value,quest,dateKey) {
+  const source = value && typeof value === "object" ? value : {};
+  const rawCompletedAt = typeof value === "string" ? value : source.completedAt;
+  const completedAt = Number.isNaN(Date.parse(rawCompletedAt)) ? completionFallbackTimestamp(dateKey) : new Date(rawCompletedAt).toISOString();
+  const requestedDifficulty = typeof source.difficulty === "string" ? source.difficulty : (quest?.difficulty || "easy");
+  const difficultyId = Object.hasOwn(CONFIG.difficulty,requestedDifficulty) ? requestedDifficulty : "easy";
+  const awarded = Number(source.xpAwarded);
+  return {
+    completedAt,
+    questTitle: typeof source.questTitle === "string" ? source.questTitle : (quest?.title || "Deleted quest"),
+    categoryId: typeof source.categoryId === "string" ? source.categoryId : (quest?.categoryId || ""),
+    difficulty: difficultyId,
+    xpAwarded: Number.isFinite(awarded) && awarded >= 0 ? Math.round(awarded) : difficulty(difficultyId).xp
+  };
+}
+
+function completionRecord(id,dateKey=localDateKey()) {
+  const value = state.completions?.[dateKey]?.[id];
+  if (!value) return null;
+  const quest = state.quests.find(q=>q.id===id) || null;
+  return normalizeCompletionRecord(value,quest,dateKey);
+}
+
+function completionXp(id,dateKey=localDateKey()) {
+  return completionRecord(id,dateKey)?.xpAwarded || 0;
+}
+
 function isScheduledOn(q, date) {
   if (!q.active) return false;
   if (q.type === "oneoff") {
@@ -178,9 +243,9 @@ function completionValue(id, dateKey=localDateKey()) {
   return state.completions?.[dateKey]?.[id];
 }
 function completionTimeLabel(id, dateKey) {
-  const value = completionValue(id, dateKey);
-  if (typeof value !== "string") return "Completed";
-  const completedAt = new Date(value);
+  const value = completionRecord(id,dateKey);
+  if (!value?.completedAt) return "Completed";
+  const completedAt = new Date(value.completedAt);
   if (Number.isNaN(completedAt.getTime())) return "Completed";
   return `Completed at ${new Intl.DateTimeFormat(undefined,{hour:"numeric",minute:"2-digit"}).format(completedAt)}`;
 }
@@ -234,7 +299,7 @@ function plannedQuestsFor(date) {
 }
 function completedXpForDate(date) {
   const key = localDateKey(date);
-  return plannedQuestsFor(date).reduce((sum,q) => sum + (isCompleted(q.id,key) ? xpForQuest(q) : 0), 0);
+  return Object.entries(state.completions?.[key] || {}).reduce((sum,[id,value]) => sum + (value ? completionXp(id,key) : 0), 0);
 }
 function plannedXpForDate(date) {
   return plannedQuestsFor(date).reduce((sum,q) => sum + xpForQuest(q), 0);
@@ -242,16 +307,13 @@ function plannedXpForDate(date) {
 function dailyScoreFor(date) {
   const planned = plannedXpForDate(date);
   if (!planned) return 0;
-  return Math.round((completedXpForDate(date) / planned) * 100);
+  return Math.min(100,Math.round((completedXpForDate(date) / planned) * 100));
 }
 function totalXp() {
   let total = 0;
   Object.entries(state.completions).forEach(([dateKey, completions]) => {
     Object.keys(completions).forEach(id => {
-      if (completions[id]) {
-        const q = state.quests.find(x=>x.id===id);
-        if (q) total += xpForQuest(q);
-      }
+      if (completions[id]) total += completionXp(id,dateKey);
     });
   });
   return total;
@@ -280,10 +342,10 @@ function levelProgress(xp) {
 }
 function categoryXp(catId) {
   let total = 0;
-  Object.values(state.completions).forEach(day => {
+  Object.entries(state.completions).forEach(([dateKey,day]) => {
     Object.entries(day).forEach(([id,done]) => {
-      const q = state.quests.find(x=>x.id===id);
-      if (done && q?.categoryId === catId) total += xpForQuest(q);
+      const record = done ? completionRecord(id,dateKey) : null;
+      if (record?.categoryId === catId) total += record.xpAwarded;
     });
   });
   return total;
@@ -478,8 +540,25 @@ function questsForReview(date) {
   const key = localDateKey(date);
   const planned = plannedQuestsFor(date);
   const completedIds = Object.entries(state.completions?.[key] || {}).filter(([,done])=>!!done).map(([id])=>id);
-  const extras = state.quests.filter(q => completedIds.includes(q.id) && !planned.some(p=>p.id===q.id));
+  const extras = completedIds
+    .filter(id=>!planned.some(p=>p.id===id))
+    .map(id=>state.quests.find(q=>q.id===id) || historicalQuestFromCompletion(id,key))
+    .filter(Boolean);
   return [...planned, ...extras];
+}
+
+function historicalQuestFromCompletion(id,dateKey) {
+  const record = completionRecord(id,dateKey);
+  if (!record) return null;
+  return {
+    id,
+    title:record.questTitle || "Deleted quest",
+    categoryId:record.categoryId,
+    difficulty:record.difficulty,
+    type:"oneoff",
+    schedule:{mode:"once"},
+    active:false
+  };
 }
 
 function renderDayReview() {
@@ -492,14 +571,14 @@ function renderDayReview() {
   $("#reviewDayLabel").textContent = day >= 1 ? `JOURNEY DAY ${day}` : "BEFORE THIS JOURNEY";
   $("#reviewDateLabel").textContent = selectedHistoryDate === todayKey ? "Today" : new Intl.DateTimeFormat(undefined,{weekday:"long",month:"long",day:"numeric"}).format(date);
   $("#reviewScore").textContent = dailyScoreFor(date);
-  $("#reviewXp").textContent = completed.reduce((sum,q)=>sum+xpForQuest(q),0);
+  $("#reviewXp").textContent = completed.reduce((sum,q)=>sum+completionXp(q.id,selectedHistoryDate),0);
   $("#reviewClears").textContent = `${completed.length}/${quests.length}`;
   $("#reviewQuestList").innerHTML = quests.length ? quests.map(q=>{
     const done = isCompleted(q.id,selectedHistoryDate);
     return `<div class="review-quest ${done ? "done" : "missed"}">
       <span class="review-check">${done ? "✓" : "○"}</span>
       <div><strong>${escapeHtml(q.title)}</strong><small>${done ? completionTimeLabel(q.id,selectedHistoryDate) : "Not completed"}</small></div>
-      <span class="review-xp">${done ? `+${xpForQuest(q)} XP` : "—"}</span>
+      <span class="review-xp">${done ? `+${completionXp(q.id,selectedHistoryDate)} XP` : "—"}</span>
     </div>`;
   }).join("") : `<div class="empty-state compact">No quests were scheduled for this day.</div>`;
 
@@ -564,7 +643,13 @@ function toggleComplete(id, button) {
   const oldLevel = levelFromXp(totalXp());
 
   if (wasDone) delete state.completions[key][id];
-  else state.completions[key][id] = new Date().toISOString();
+  else state.completions[key][id] = normalizeCompletionRecord({
+    completedAt:new Date().toISOString(),
+    questTitle:q.title,
+    categoryId:q.categoryId,
+    difficulty:q.difficulty,
+    xpAwarded:xpForQuest(q)
+  },q,key);
 
   save();
   const newLevel = levelFromXp(totalXp());
@@ -680,7 +765,7 @@ function saveQuest(e) {
     schedule: mode==="weekdays" ? {mode,days} : {mode},
   };
   if(existing){ Object.assign(existing,questData); delete existing.icon; }
-  else state.quests.push({id:uid(),createdOn:localDateKey(),...questData,active:true});
+  else state.quests.push({id:uid(),createdOn:localDateKey(),createdAt:new Date().toISOString(),...questData,active:true});
   save();
   $("#questDialog").close();
   renderAll();
@@ -746,7 +831,7 @@ function saveCategory(e) {
   const data={name,icon:$("#categoryIconInput").value.trim() || "✨",description:$("#categoryDescriptionInput").value.trim()};
   const existing=state.categories.find(c=>c.id===editingId);
   if(existing) Object.assign(existing,data);
-  else state.categories.push({id:categoryUid(),...data});
+  else state.categories.push({id:categoryUid(),createdAt:new Date().toISOString(),...data});
   save(); renderAll(); renderCategoryManager(); resetCategoryForm();
   showToast(existing ? "Category updated" : "Category added");
 }
@@ -834,7 +919,7 @@ function bindEvents() {
     const d=e.target.closest("[data-delete]");
     if(d){
       const q=state.quests.find(x=>x.id===d.dataset.delete);
-      if(q && confirm(`Delete "${q.title}"? Existing completion history for it will no longer add XP.`)){
+      if(q && confirm(`Delete "${q.title}"? Its completion history and earned XP will be preserved.`)){
         state.quests=state.quests.filter(x=>x.id!==q.id); save(); renderAll();
       }
     }

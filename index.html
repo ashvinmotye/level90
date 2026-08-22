@@ -14,7 +14,35 @@
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <div id="appShell" class="app-shell">
+  <section id="authScreen" class="auth-screen" aria-labelledby="authTitle">
+    <div class="auth-card">
+      <div class="auth-mark" aria-hidden="true">90</div>
+      <span class="kicker">YOUR AURAOS ACCOUNT</span>
+      <h1 id="authTitle">Continue your ascent</h1>
+      <p>Use the same account as Workout to sync Level90 across your devices.</p>
+
+      <div id="authLoading" class="auth-loading" role="status">
+        <span class="auth-spinner" aria-hidden="true"></span>
+        Checking your account…
+      </div>
+
+      <div id="authFormContent" hidden>
+        <div class="auth-mode-switch" aria-label="Account action">
+          <button id="signInModeButton" class="auth-mode-button is-active" type="button" aria-pressed="true">Sign in</button>
+          <button id="signUpModeButton" class="auth-mode-button" type="button" aria-pressed="false">Create account</button>
+        </div>
+        <form id="authForm" novalidate>
+          <label>Email<input id="authEmail" type="email" inputmode="email" autocomplete="email" autocapitalize="none" spellcheck="false" required /></label>
+          <label>Password<input id="authPassword" type="password" minlength="6" autocomplete="current-password" required /><small id="authPasswordHelp">Use the same account as your Workout app.</small></label>
+          <button id="authSubmitButton" class="primary-btn wide" type="submit">Sign in</button>
+        </form>
+        <p id="authMessage" class="auth-message" role="status" aria-live="polite"></p>
+        <small class="auth-offline-note">Your first sign-in requires an internet connection. Afterwards, Level90 remains available offline.</small>
+      </div>
+    </div>
+  </section>
+
+  <div id="appShell" class="app-shell" hidden>
     <header class="topbar">
       <button id="profileGreetingBtn" class="profile-greeting" aria-label="Open settings">
         <strong>Level up, <span id="greetingName" class="greeting-name">Player</span>!</strong><span class="greeting-wave" aria-hidden="true">👋</span>
@@ -286,6 +314,28 @@
       </div>
       <button type="button" class="icon-btn" id="closeSettings">×</button>
     </div>
+    <div class="settings-section account-settings-section">
+      <div class="settings-section-head account-settings-head">
+        <div>
+          <span class="kicker">ACCOUNT &amp; CLOUD</span>
+          <p>Level90 syncs through the same Supabase project as Workout.</p>
+        </div>
+        <span id="accountConnectionStatus" class="account-status">Connected</span>
+      </div>
+      <div class="account-summary-row">
+        <div><small>Signed in as</small><strong id="accountEmail">—</strong></div>
+        <button id="signOutButton" class="mini-btn" type="button">Sign out</button>
+      </div>
+      <div class="cloud-sync-row">
+        <div><strong>Level90 data</strong><span id="cloudSyncStatus">Preparing cloud sync…</span><small>Quests, categories, completions, streak history, order and settings sync automatically.</small></div>
+        <button id="syncNowButton" class="secondary-btn cloud-action-btn" type="button">Sync now</button>
+      </div>
+      <div id="cloudMigrationRow" class="cloud-sync-row cloud-migration-row" hidden>
+        <div><strong>Existing data on this device</strong><span id="cloudMigrationStatus">Checking this device…</span><small>Upload once to make the current Level90 journey available on your other devices.</small></div>
+        <button id="uploadExistingDataButton" class="primary-btn cloud-action-btn" type="button">Upload existing data</button>
+      </div>
+      <p id="accountMessage" class="account-message" role="status" aria-live="polite"></p>
+    </div>
     <div class="settings-section">
       <div class="settings-section-head">
         <span class="kicker">APPEARANCE</span>
@@ -333,6 +383,8 @@
     </div>
   </div>
 
-  <script src="./app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3" crossorigin="anonymous" defer></script>
+  <script src="./cloud.js" defer></script>
+  <script src="./app.js" defer></script>
 </body>
 </html>
