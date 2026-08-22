@@ -62,11 +62,21 @@
         <div class="section-heading">
           <div>
             <span class="kicker">TODAY'S LOADOUT</span>
-            <h3>Quests</h3>
+            <h3>Available today <span id="availableQuestCount" class="section-count">0</span></h3>
           </div>
           <button id="quickAddBtn" class="pill-btn">＋ New quest</button>
         </div>
-        <div id="todayQuests" class="quest-list today-quest-grid"></div>
+        <div id="availableQuests" class="quest-list today-quest-grid"></div>
+
+        <section id="completedTodaySection" class="today-completed-section hidden" aria-labelledby="completedTodayHeading">
+          <div class="section-heading completed-heading">
+            <div>
+              <span class="kicker">TODAY'S PROGRESS</span>
+              <h3 id="completedTodayHeading">Completed today <span id="completedQuestCount" class="section-count">0</span></h3>
+            </div>
+          </div>
+          <div id="completedTodayQuests" class="quest-list today-quest-grid"></div>
+        </section>
 
       </section>
 

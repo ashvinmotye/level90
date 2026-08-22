@@ -104,6 +104,7 @@ function startLevelNumberGlow() {
 }
 function freshState() {
   return {
+    schemaVersion: 2,
     startedOn: localDateKey(),
     quests: structuredClone(CONFIG.quests),
     categories: structuredClone(CONFIG.categories),
@@ -118,11 +119,16 @@ function migrateState() {
   state.categories ||= structuredClone(CONFIG.categories);
   state.completions ||= {};
   state.startedOn ||= localDateKey();
+  state.schemaVersion = 2;
   state.theme ||= "dark";
   if (!PALETTES.includes(state.palette)) state.palette = "arctic";
   state.profileName = typeof state.profileName === "string" ? state.profileName.trim() : "";
-  state.categories.forEach(c=>{ c.icon ||= "✨"; });
-  state.quests.forEach(q=>{ delete q.icon; });
+  state.categories.forEach(c=>{ c.id ||= categoryUid(); c.icon ||= "✨"; });
+  state.quests.forEach(q=>{
+    q.id ||= uid();
+    q.createdOn ||= earliestCompletionKey(q.id) || state.startedOn;
+    delete q.icon;
+  });
   selectedHistoryDate ||= localDateKey();
   historyMonth ||= new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   applyTheme();
@@ -180,6 +186,47 @@ function completionTimeLabel(id, dateKey) {
 }
 function isQuestEverCompleted(id) {
   return Object.values(state.completions || {}).some(day => !!day[id]);
+}
+
+function earliestCompletionKey(id) {
+  return Object.keys(state.completions || {})
+    .filter(dateKey => !!state.completions?.[dateKey]?.[id])
+    .sort()[0] || null;
+}
+
+function isRecurringScheduledOn(q, date) {
+  if (q.type !== "recurring") return false;
+  const mode = q.schedule?.mode || "daily";
+  if (mode === "daily") return true;
+  if (mode === "weekdays") return (q.schedule.days || []).includes(date.getDay());
+  return false;
+}
+
+function questStreak(q, asOf=new Date()) {
+  if (q.type !== "recurring") return null;
+
+  const todayKey = localDateKey(asOf);
+  const today = parseLocalDate(todayKey);
+  const firstCompletion = earliestCompletionKey(q.id);
+  const startKey = q.createdOn || firstCompletion || state.startedOn || todayKey;
+  const start = parseLocalDate(startKey);
+  let current = 0;
+  let best = 0;
+
+  for (let date = start; date <= today; date = addDays(date,1)) {
+    if (!isRecurringScheduledOn(q,date)) continue;
+    const dateKey = localDateKey(date);
+    const completed = isCompleted(q.id,dateKey);
+
+    if (completed) {
+      current += 1;
+      best = Math.max(best,current);
+    } else if (dateKey !== todayKey) {
+      current = 0;
+    }
+  }
+
+  return {current,best};
 }
 
 function plannedQuestsFor(date) {
@@ -321,22 +368,34 @@ function renderToday() {
   const today = new Date();
   const key = localDateKey(today);
   const qs = plannedQuestsFor(today);
+  const available = qs.filter(q=>!isCompleted(q.id,key));
+  const completed = qs.filter(q=>isCompleted(q.id,key));
   $("#todayXp").textContent = completedXpForDate(today);
   $("#dailyScore").textContent = dailyScoreFor(today);
   $("#momentumScore").textContent = `${momentum()}%`;
+  $("#availableQuestCount").textContent = available.length;
+  $("#completedQuestCount").textContent = completed.length;
 
-  const list = $("#todayQuests");
+  const availableList = $("#availableQuests");
+  const completedList = $("#completedTodayQuests");
+  const completedSection = $("#completedTodaySection");
   if (!qs.length) {
-    list.innerHTML = `<div class="empty-state">No quests scheduled today. Create one and give the day a target.</div>`;
+    availableList.innerHTML = `<div class="empty-state">No quests scheduled today. Create one and give the day a target.</div>`;
+  } else if (!available.length) {
+    availableList.innerHTML = `<div class="empty-state all-cleared">All quests completed today ✨</div>`;
   } else {
-    list.innerHTML = qs.map(q => questCard(q, true, key)).join("");
+    availableList.innerHTML = available.map(q => questCard(q, true, key)).join("");
   }
+  completedList.innerHTML = completed.map(q => questCard(q, true, key)).join("");
+  completedSection.classList.toggle("hidden", !completed.length);
 }
 
 function questCard(q, todayMode=false, dateKey=localDateKey()) {
   const cat = category(q.categoryId);
   const d = difficulty(q.difficulty);
   const done = isCompleted(q.id,dateKey);
+  const streak = todayMode ? questStreak(q,parseLocalDate(dateKey)) : null;
+  const streakBadge = streak ? `<span class="tile-streak" title="Current streak: ${streak.current} · Best streak: ${streak.best}" aria-label="Current streak ${streak.current}; best streak ${streak.best}">🔥 ${streak.current}</span>` : "";
   const repeat = q.type === "oneoff" ? "One-off mission" :
     q.schedule?.mode === "daily" ? "Every day" :
     `Repeats ${weekdayText(q.schedule?.days || [])}`;
@@ -345,6 +404,7 @@ function questCard(q, todayMode=false, dateKey=localDateKey()) {
       <div class="tile-copy">
         <div class="quest-title">${escapeHtml(q.title)}</div>
         <div class="tile-category">${escapeHtml(cat.name)}</div>
+        ${streakBadge}
         <div class="tile-xp">${d.xp} XP</div>
       </div>
       <button class="tile-hit" data-complete="${q.id}" aria-label="${done ? "Reopen" : "Complete"} ${escapeHtml(q.title)}">${done ? "✓" : ""}</button>
@@ -620,7 +680,7 @@ function saveQuest(e) {
     schedule: mode==="weekdays" ? {mode,days} : {mode},
   };
   if(existing){ Object.assign(existing,questData); delete existing.icon; }
-  else state.quests.push({id:uid(),...questData,active:true});
+  else state.quests.push({id:uid(),createdOn:localDateKey(),...questData,active:true});
   save();
   $("#questDialog").close();
   renderAll();

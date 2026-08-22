@@ -300,6 +300,11 @@ button:active { transform: scale(.97); }
 .today-tile .tile-copy { position:static; z-index:2; pointer-events:none; }
 .today-tile .quest-title { max-width:100%; font-size:14px; line-height:1.12; position:relative; z-index:2; }
 .today-tile .tile-category { color:var(--muted); font-size:8px; margin-top:5px; text-transform:uppercase; letter-spacing:.09em; position:relative; z-index:2; }
+.today-tile .tile-streak {
+  position:absolute; left:16px; bottom:16px; z-index:2; display:inline-flex; align-items:center;
+  min-height:24px; padding:5px 8px; border-radius:999px; color:var(--gold); background:rgb(var(--gold-rgb) / .09);
+  border:1px solid rgb(var(--gold-rgb) / .16); font-size:11px; line-height:1; font-weight:900; pointer-events:none;
+}
 .today-tile .tile-xp { position:absolute; bottom:16px; left:unset; right:16px; color:var(--text); font-size:14px; font-weight:750; z-index:2; }
 .today-tile .tile-hit { position:absolute; inset:0; z-index:3; border:0; background:transparent; cursor:pointer; border-radius:inherit; display:flex; align-items:center; justify-content:center; padding:10px; color:var(--accent-2); font-size:4rem; font-weight:950; }
 .quest-card.today-tile.completed { opacity:.76; background:rgb(var(--accent-2-rgb) / .09); border-color:rgb(var(--accent-2-rgb) / .22); }
@@ -388,6 +393,15 @@ body.light .level-prompt { color:var(--accent); }
 .section-heading, .page-heading { margin: 28px 2px 14px; }
 .section-heading { display:flex; align-items:end; justify-content:space-between; gap:16px; }
 .section-heading h3, .page-heading h2 { margin:4px 0 0; }
+.section-count {
+  display:inline-grid; place-items:center; min-width:23px; height:23px; margin-left:5px; padding:0 7px;
+  border-radius:999px; vertical-align:2px; color:var(--accent-soft); background:rgb(var(--accent-rgb) / .10);
+  border:1px solid rgb(var(--accent-rgb) / .18); font-size:10px;
+}
+.today-completed-section { margin-top:34px; padding-top:2px; }
+.today-completed-section .completed-heading { margin-top:0; }
+.today-completed-section .section-count { color:var(--accent-2); background:rgb(var(--accent-2-rgb) / .10); border-color:rgb(var(--accent-2-rgb) / .18); }
+.empty-state.all-cleared { color:var(--accent-soft); background:rgb(var(--accent-rgb) / .055); border-color:rgb(var(--accent-rgb) / .16); }
 .page-heading p { color:var(--muted); line-height:1.5; font-size:13px; margin:8px 0 0; }
 
 .pill-btn, .primary-btn, .settings-btn {
@@ -706,6 +720,7 @@ body.light .bottom-nav { background:rgba(255,255,255,.84); }
   .quest-card.today-tile { padding:11px; border-radius:15px; }
   .today-tile .quest-title { font-size:12px; }
   .today-tile .tile-category { font-size:7px; }
+  .today-tile .tile-streak { left:11px; bottom:11px; min-height:20px; padding:4px 6px; font-size:9px; }
   .today-tile .tile-xp { bottom:11px; left:unset; right:11px; font-size:11px; }
   .hero-card { padding:18px; }
   .journey-meta { font-size:7px; }

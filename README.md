@@ -2,6 +2,14 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 15 streaks and Today flow
+- Calculates current and best recurring-quest streaks from existing completion history.
+- Shows a compact `🔥 7`-style current streak on recurring quest tiles.
+- Separates Today into Available today and Completed today while preserving the custom quest order in both sections.
+- Moves a cleared quest into Completed today and restores it to its configured position when reopened.
+- Keeps one-off quests streak-free and leaves today's still-open recurring quest from breaking its streak prematurely.
+- Adds a backward-compatible local schema migration while preserving existing quests, completion timestamps, XP, themes and settings.
+
 ## Version 14 glow refinement
 - Restores the original slow breathing animation on the Level number.
 - Gives the internal glow genuinely randomized destinations and timing instead of a repeating geometric route.
