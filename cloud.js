@@ -6,6 +6,7 @@ const LEVEL90_AUTH_USER_KEY = "level90.authUser.v1";
 const LEVEL90_SYNC_QUEUE_KEY = "level90.syncQueue.v1";
 const LEVEL90_LAST_SYNC_PREFIX = "level90.lastSync.v1";
 const LEVEL90_MIGRATION_PREFIX = "level90.cloudMigration.v1";
+const LEVEL90_RECOVERY_BACKUP_PREFIX = "level90.beforeCloudRestore.v1";
 const LEVEL90_AUTOMATIC_SYNC_THROTTLE_MS = 12000;
 
 const level90CloudDom = {
@@ -29,6 +30,7 @@ const level90CloudDom = {
   syncNowButton:document.querySelector("#syncNowButton"),
   cloudMigrationRow:document.querySelector("#cloudMigrationRow"),
   cloudMigrationStatus:document.querySelector("#cloudMigrationStatus"),
+  useCloudDataButton:document.querySelector("#useCloudDataButton"),
   uploadExistingDataButton:document.querySelector("#uploadExistingDataButton")
 };
 
@@ -43,6 +45,8 @@ let level90StartingUserId = null;
 let level90SyncInProgress = false;
 let level90SyncRequested = false;
 let level90MigrationInProgress = false;
+let level90CloudRestoreInProgress = false;
+let level90LastCloudRecordCount = null;
 let level90AutomaticSyncTimer = null;
 let level90LastAutomaticSyncAt = 0;
 
@@ -84,6 +88,10 @@ function level90LastSyncKey(userId=level90SyncUserId()) {
 
 function level90MigrationKey(userId=level90SyncUserId()) {
   return userId ? `${LEVEL90_MIGRATION_PREFIX}.${userId}` : null;
+}
+
+function level90RecoveryBackupKey(userId=level90SyncUserId()) {
+  return userId ? `${LEVEL90_RECOVERY_BACKUP_PREFIX}.${userId}` : null;
 }
 
 function level90MigrationComplete(userId=level90SyncUserId()) {
@@ -190,6 +198,7 @@ function level90UpdateAccountPanel(user,offline=false) {
 }
 
 function level90RevealApp(user,offline=false) {
+  if (level90ActiveUserId !== user.id) level90LastCloudRecordCount = null;
   level90ActiveUserId = user.id;
   level90AuthResolved = true;
   level90CloudDom.authScreen.hidden = true;
@@ -299,7 +308,9 @@ async function level90SignOut() {
     level90ActiveUserId = null;
     level90AuthResolved = false;
     level90InitialSyncResolved = false;
+    level90LastCloudRecordCount = null;
     level90ClearCachedUser();
+    level90LastCloudRecordCount = null;
     if (document.querySelector("#settingsDialog")?.open) document.querySelector("#settingsDialog").close();
     level90SetAuthMode("signin",false);
     level90ShowAuthForm("You have been signed out. Your Level90 data remains on this device.","success");
@@ -326,6 +337,11 @@ function level90SaveSyncQueue(queue) {
   if (sorted.length) localStorage.setItem(LEVEL90_SYNC_QUEUE_KEY,JSON.stringify(sorted));
   else localStorage.removeItem(LEVEL90_SYNC_QUEUE_KEY);
   level90UpdateSyncStatus();
+}
+
+function level90ClearUserSyncQueue(userId=level90SyncUserId()) {
+  if (!userId) return;
+  level90SaveSyncQueue(level90LoadSyncQueue().filter(operation=>operation.userId !== userId));
 }
 
 function level90QueueRecord(entity,id,record,options={}) {
@@ -451,6 +467,10 @@ function level90HasMeaningfulLocalData() {
     || !level90RecordsEqual(quests,defaultQuests);
 }
 
+function level90NeedsMigrationDecision(userId=level90SyncUserId()) {
+  return Boolean(userId && !level90MigrationComplete(userId) && level90HasMeaningfulLocalData());
+}
+
 function level90MigrationSummary() {
   const categories = state.categories.length;
   const quests = state.quests.length;
@@ -527,7 +547,7 @@ function level90QuestFromCloud(row) {
   };
 }
 
-function level90MergeCloudList(local,rows,converter,protectLocal) {
+function level90MergeCloudList(local,rows,converter,protectLocal,cloudOnly=false) {
   const localMap = new Map(local.map(record=>[record.id,record]));
   if (protectLocal) {
     const merged = [...local];
@@ -536,12 +556,14 @@ function level90MergeCloudList(local,rows,converter,protectLocal) {
   }
   const remoteIds = new Set(rows.map(row=>row.id));
   const remote = rows.filter(row=>!row.deleted_at).sort((a,b)=>a.sort_order-b.sort_order || String(a.id).localeCompare(String(b.id))).map(converter);
+  if (cloudOnly) return remote;
   const localOnly = local.filter(record=>!remoteIds.has(record.id));
   return [...remote,...localOnly];
 }
 
 function level90ApplyCloudSnapshot(snapshot,options={}) {
   const protectLocal = Boolean(options.protectLocal);
+  const cloudOnly = Boolean(options.cloudOnly);
   const profile = snapshot.profile?.[0] || null;
   if (profile && !protectLocal) {
     state.startedOn = profile.started_on || state.startedOn;
@@ -549,8 +571,9 @@ function level90ApplyCloudSnapshot(snapshot,options={}) {
     state.theme = profile.theme || "dark";
     state.palette = profile.palette || "arctic";
   }
-  state.categories = level90MergeCloudList(state.categories,snapshot.categories,level90CategoryFromCloud,protectLocal);
-  state.quests = level90MergeCloudList(state.quests,snapshot.quests,level90QuestFromCloud,protectLocal);
+  state.categories = level90MergeCloudList(state.categories,snapshot.categories,level90CategoryFromCloud,protectLocal,cloudOnly);
+  state.quests = level90MergeCloudList(state.quests,snapshot.quests,level90QuestFromCloud,protectLocal,cloudOnly);
+  if (cloudOnly) state.completions = {};
 
   snapshot.completions.forEach(row=>{
     const existing = state.completions?.[row.completion_date]?.[row.quest_id];
@@ -577,7 +600,7 @@ function level90ApplyCloudSnapshot(snapshot,options={}) {
   renderAll();
 }
 
-async function level90PullCloudData(options={}) {
+async function level90FetchCloudSnapshot() {
   const [profile,categories,quests,completions] = await Promise.all([
     level90AuthClient.from("level90_profiles").select("user_id, started_on, profile_name, theme, palette, schema_version, client_updated_at, updated_at"),
     level90AuthClient.from("level90_categories").select("id, name, icon, description, sort_order, client_created_at, client_updated_at, deleted_at, updated_at").order("sort_order",{ascending:true}),
@@ -585,7 +608,12 @@ async function level90PullCloudData(options={}) {
     level90AuthClient.from("level90_completions").select("id, quest_id, completion_date, completed_at, quest_title, category_id, difficulty, xp_awarded, client_updated_at, deleted_at, updated_at").order("completion_date",{ascending:true})
   ]);
   for (const response of [profile,categories,quests,completions]) if (response.error) throw response.error;
-  const snapshot = {profile:profile.data || [],categories:categories.data || [],quests:quests.data || [],completions:completions.data || []};
+  return {profile:profile.data || [],categories:categories.data || [],quests:quests.data || [],completions:completions.data || []};
+}
+
+async function level90PullCloudData(options={}) {
+  const snapshot = await level90FetchCloudSnapshot();
+  level90LastCloudRecordCount = level90CloudRecordCount(snapshot);
   level90ApplyCloudSnapshot(snapshot,options);
   return snapshot;
 }
@@ -611,18 +639,24 @@ function level90SetSyncStatus(message,stateName="") {
   level90CloudDom.cloudSyncStatus.classList.toggle("is-error",stateName === "error");
   level90CloudDom.cloudSyncStatus.classList.toggle("is-waiting",stateName === "waiting");
   level90CloudDom.cloudSyncStatus.classList.toggle("is-success",stateName === "success");
-  level90CloudDom.syncNowButton.disabled = level90SyncInProgress || !level90AuthSession || !navigator.onLine;
+  level90CloudDom.syncNowButton.disabled = level90SyncInProgress || level90CloudRestoreInProgress || !level90AuthSession || !navigator.onLine;
 }
 
 function level90UpdateMigrationUI() {
   if (!level90CloudDom.cloudMigrationRow) return;
   const userId = level90SyncUserId();
-  const needed = Boolean(userId && !level90MigrationComplete(userId) && level90HasMeaningfulLocalData());
+  const needed = level90NeedsMigrationDecision(userId);
   level90CloudDom.cloudMigrationRow.hidden = !needed;
   if (!needed) return;
-  level90CloudDom.cloudMigrationStatus.textContent = `${level90MigrationSummary()} ready to upload`;
-  level90CloudDom.uploadExistingDataButton.textContent = level90MigrationInProgress ? "Uploading…" : "Upload existing data";
-  level90CloudDom.uploadExistingDataButton.disabled = level90MigrationInProgress || level90SyncInProgress || !level90AuthSession || !navigator.onLine;
+  const cloudStatus = level90LastCloudRecordCount === null
+    ? "checking cloud…"
+    : level90LastCloudRecordCount > 0 ? "cloud journey found" : "cloud is empty";
+  level90CloudDom.cloudMigrationStatus.textContent = `${level90MigrationSummary()} on this device · ${cloudStatus}`;
+  level90CloudDom.uploadExistingDataButton.textContent = level90MigrationInProgress ? "Uploading…" : "Upload this device";
+  level90CloudDom.useCloudDataButton.textContent = level90CloudRestoreInProgress ? "Loading cloud…" : "Use cloud data";
+  const busy = level90MigrationInProgress || level90CloudRestoreInProgress || level90SyncInProgress;
+  level90CloudDom.uploadExistingDataButton.disabled = busy || !level90AuthSession || !navigator.onLine;
+  level90CloudDom.useCloudDataButton.disabled = busy || !level90AuthSession || !navigator.onLine || !(level90LastCloudRecordCount > 0);
 }
 
 function level90UpdateSyncStatus(message=null,stateName="") {
@@ -641,6 +675,14 @@ function level90UpdateSyncStatus(message=null,stateName="") {
     level90SetSyncStatus("Syncing Level90…","waiting");
     return;
   }
+  if (level90CloudRestoreInProgress) {
+    level90SetSyncStatus("Loading the cloud journey…","waiting");
+    return;
+  }
+  if (level90NeedsMigrationDecision(userId)) {
+    level90SetSyncStatus("Choose which existing journey to keep","waiting");
+    return;
+  }
   if (pending) {
     level90SetSyncStatus(`${pending} ${pending===1?"change":"changes"} waiting to sync`,"waiting");
     return;
@@ -655,7 +697,7 @@ async function syncLevel90(options={}) {
     level90SyncRequested = true;
     return false;
   }
-  if (!level90AuthClient || !level90AuthSession || !navigator.onLine) {
+  if (level90CloudRestoreInProgress || !level90AuthClient || !level90AuthSession || !navigator.onLine) {
     level90UpdateSyncStatus();
     if (options.manual) showToast("Level90 will sync when you are online and signed in.");
     return false;
@@ -666,8 +708,8 @@ async function syncLevel90(options={}) {
   level90UpdateSyncStatus();
   try {
     const userId = level90AuthSession.user.id;
-    const protectLocal = !options.migration && !level90MigrationComplete(userId) && level90HasMeaningfulLocalData();
-    await level90ProcessSyncQueue();
+    const protectLocal = !options.migration && level90NeedsMigrationDecision(userId);
+    if (!protectLocal) await level90ProcessSyncQueue();
     let snapshot = await level90PullCloudData({protectLocal});
 
     if (options.migration) {
@@ -684,9 +726,9 @@ async function syncLevel90(options={}) {
 
     const syncedAt = Date.now();
     localStorage.setItem(level90LastSyncKey(userId),String(syncedAt));
-    level90SetSyncStatus(level90FormatLastSync(syncedAt),"success");
+    level90SetSyncStatus(protectLocal ? "Choose which existing journey to keep" : level90FormatLastSync(syncedAt),protectLocal ? "waiting" : "success");
     level90UpdateMigrationUI();
-    if (options.manual) showToast("Level90 synced.");
+    if (options.manual) showToast(protectLocal ? "Cloud checked. Choose which journey to keep." : "Level90 synced.");
     return true;
   } catch (error) {
     level90SetSyncStatus(level90FriendlySyncError(error),"error");
@@ -694,16 +736,16 @@ async function syncLevel90(options={}) {
     return false;
   } finally {
     level90SyncInProgress = false;
-    level90CloudDom.syncNowButton.disabled = !level90AuthSession || !navigator.onLine;
+    level90CloudDom.syncNowButton.disabled = level90CloudRestoreInProgress || !level90AuthSession || !navigator.onLine;
     level90UpdateMigrationUI();
     if (level90SyncRequested && level90AuthSession && navigator.onLine) window.setTimeout(()=>syncLevel90(),0);
   }
 }
 
 async function level90UploadExistingData() {
-  if (level90MigrationInProgress || level90SyncInProgress || !level90AuthSession || !navigator.onLine) return;
+  if (level90MigrationInProgress || level90CloudRestoreInProgress || level90SyncInProgress || !level90AuthSession || !navigator.onLine) return;
   const summary = level90MigrationSummary();
-  if (!window.confirm(`Upload this device's existing Level90 data?\n\n${summary}\n\nCloud data will be merged and no local records will be cleared.`)) return;
+  if (!window.confirm(`Upload this device's existing Level90 data?\n\n${summary}\n\nUse this only on your main device. Matching cloud records will be updated from this device; cloud-only records will be kept.`)) return;
   level90MigrationInProgress = true;
   level90UpdateMigrationUI();
   try {
@@ -716,8 +758,52 @@ async function level90UploadExistingData() {
   }
 }
 
+function level90SaveRecoveryBackup(userId) {
+  const key = level90RecoveryBackupKey(userId);
+  if (key) localStorage.setItem(key,JSON.stringify({savedAt:new Date().toISOString(),state:level90Clone(state)}));
+  const blob = new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+  const anchor = document.createElement("a");
+  anchor.href = URL.createObjectURL(blob);
+  anchor.download = `level90-before-cloud-${localDateKey()}.json`;
+  anchor.click();
+  URL.revokeObjectURL(anchor.href);
+}
+
+async function level90UseCloudData() {
+  if (level90MigrationInProgress || level90CloudRestoreInProgress || level90SyncInProgress || !level90AuthSession || !navigator.onLine || !(level90LastCloudRecordCount > 0)) return;
+  if (!window.confirm("Replace this device's Level90 journey with the cloud journey?\n\nUse this on your laptop after uploading your main phone. This device's current data and pending changes will be replaced. A JSON backup will be downloaded first.")) return;
+  const userId = level90AuthSession.user.id;
+  level90CloudRestoreInProgress = true;
+  level90UpdateMigrationUI();
+  level90UpdateSyncStatus("Loading the cloud journey…","waiting");
+  let completed = false;
+  try {
+    level90SaveRecoveryBackup(userId);
+    const snapshot = await level90FetchCloudSnapshot();
+    const cloudCount = level90CloudRecordCount(snapshot);
+    level90LastCloudRecordCount = cloudCount;
+    if (!cloudCount) throw new Error("No Level90 cloud journey was found. Upload the main device first.");
+    level90ClearUserSyncQueue(userId);
+    level90ApplyCloudSnapshot(snapshot,{protectLocal:false,cloudOnly:true});
+    level90MarkMigrationComplete(userId);
+    const syncedAt = Date.now();
+    localStorage.setItem(level90LastSyncKey(userId),String(syncedAt));
+    level90SetSyncStatus(level90FormatLastSync(syncedAt),"success");
+    completed = true;
+    showToast("This device now matches the cloud journey.");
+  } catch (error) {
+    level90SetSyncStatus(level90FriendlySyncError(error),"error");
+    showToast("Cloud journey could not be loaded.");
+  } finally {
+    level90CloudRestoreInProgress = false;
+    level90UpdateMigrationUI();
+    if (completed) level90UpdateSyncStatus();
+    else level90CloudDom.syncNowButton.disabled = !level90AuthSession || !navigator.onLine;
+  }
+}
+
 function level90CanAutomaticallySync() {
-  return Boolean(level90AuthClient && level90AuthSession && navigator.onLine && document.visibilityState !== "hidden");
+  return Boolean(level90AuthClient && level90AuthSession && navigator.onLine && !level90CloudRestoreInProgress && document.visibilityState !== "hidden");
 }
 
 function level90RequestAutomaticSync(options={}) {
@@ -774,6 +860,7 @@ function level90BindCloudEvents() {
   level90CloudDom.authForm.addEventListener("submit",level90SubmitAuth);
   level90CloudDom.signOutButton.addEventListener("click",level90SignOut);
   level90CloudDom.syncNowButton.addEventListener("click",()=>syncLevel90({manual:true}));
+  level90CloudDom.useCloudDataButton.addEventListener("click",level90UseCloudData);
   level90CloudDom.uploadExistingDataButton.addEventListener("click",level90UploadExistingData);
   window.addEventListener("focus",()=>level90RequestAutomaticSync());
   document.addEventListener("visibilitychange",()=>{ if (document.visibilityState === "visible") level90RequestAutomaticSync(); });

@@ -331,8 +331,11 @@
         <button id="syncNowButton" class="secondary-btn cloud-action-btn" type="button">Sync now</button>
       </div>
       <div id="cloudMigrationRow" class="cloud-sync-row cloud-migration-row" hidden>
-        <div><strong>Existing data on this device</strong><span id="cloudMigrationStatus">Checking this device…</span><small>Upload once to make the current Level90 journey available on your other devices.</small></div>
-        <button id="uploadExistingDataButton" class="primary-btn cloud-action-btn" type="button">Upload existing data</button>
+        <div><strong>Choose which journey to keep</strong><span id="cloudMigrationStatus">Checking this device and the cloud…</span><small>On your main device, upload its journey. On another device, use the cloud journey to match your main device exactly.</small></div>
+        <div class="cloud-migration-actions">
+          <button id="useCloudDataButton" class="secondary-btn cloud-action-btn" type="button">Use cloud data</button>
+          <button id="uploadExistingDataButton" class="primary-btn cloud-action-btn" type="button">Upload this device</button>
+        </div>
       </div>
       <p id="accountMessage" class="account-message" role="status" aria-live="polite"></p>
     </div>

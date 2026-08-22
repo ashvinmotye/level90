@@ -12,7 +12,7 @@ function fakeElement() {
     hidden:false,disabled:false,textContent:"",value:"",open:false,
     validity:{valid:true},lastChild:{textContent:""},dataset:{},style:{setProperty(){}},
     classList:{toggle(){},add(){},remove(){},contains(){ return false; }},
-    addEventListener(){},setAttribute(){},focus(){},close(){},showModal(){}
+    addEventListener(){},setAttribute(){},focus(){},click(){},close(){},showModal(){}
   };
 }
 
@@ -117,6 +117,8 @@ async function runCloudTests() {
     level90ActiveUserId = "user-a";
     globalThis.cloudApi = {
       queueLevel90StateChanges,level90LoadSyncQueue,level90ProcessSyncQueue,level90ApplyCloudSnapshot,
+      level90ClearUserSyncQueue,level90NeedsMigrationDecision,syncLevel90,level90UseCloudData,
+      setCloudCount(count){ level90LastCloudRecordCount = count; },
       setClient(client){ level90AuthClient = client; }
     };
   `,context);
@@ -158,6 +160,38 @@ async function runCloudTests() {
   assert.ok(writes.some(write=>write.table === "level90_completions" && write.options.onConflict === "user_id,id"));
   assert.ok(writes.filter(write=>write.table === "level90_quests").every(write=>write.options.onConflict === "user_id,id"));
 
+  context.state = reordered;
+  context.cloudApi.queueLevel90StateChanges(base,reordered);
+  const guardedWrites = [];
+  const cloudFixtures = {
+    level90_profiles:[],level90_categories:[],level90_quests:[],level90_completions:[]
+  };
+  context.cloudApi.setClient({
+    from(table) {
+      return {
+        select() {
+          const response = Promise.resolve({data:cloudFixtures[table],error:null});
+          response.order = ()=>Promise.resolve({data:cloudFixtures[table],error:null});
+          return response;
+        },
+        async upsert(row,options) { guardedWrites.push({table,row,options}); return {error:null}; }
+      };
+    }
+  });
+  assert.equal(context.cloudApi.level90NeedsMigrationDecision(),true);
+  await context.cloudApi.syncLevel90({manual:true});
+  assert.equal(guardedWrites.length,0,"an unresolved secondary device must not upload pending order changes");
+  assert.equal(context.cloudApi.level90LoadSyncQueue().filter(item=>item.userId === "user-a").length,2);
+
+  const preservedOtherUserOperation = {
+    queueId:"other-user-op",userId:"user-b",entity:"quest",id:"q_other",record:questA,
+    sortOrder:0,deletedAt:null,clientUpdatedAt:"2026-08-22T08:00:00.000Z",queuedAt:1
+  };
+  context.localStorage.setItem("level90.syncQueue.v1",JSON.stringify([...context.cloudApi.level90LoadSyncQueue(),preservedOtherUserOperation]));
+  context.cloudApi.level90ClearUserSyncQueue("user-a");
+  assert.deepEqual(context.cloudApi.level90LoadSyncQueue().map(item=>item.userId),["user-b"]);
+  context.cloudApi.level90ClearUserSyncQueue("user-b");
+
   context.state = {
     ...structuredClone(base),
     categories:[{id:"body",name:"Local Body",icon:"💪",description:"",createdAt:"2026-08-17T00:00:00.000Z"}],
@@ -193,6 +227,45 @@ async function runCloudTests() {
   },{protectLocal:false});
   assert.ok(!context.state.quests.some(quest=>quest.id === "q_a"));
   assert.ok(!context.state.completions["2026-08-22"].q_a);
+
+  context.state.quests.push({...questA,id:"q_laptop",title:"Laptop only"});
+  context.state.completions["2026-08-22"].q_laptop = {completedAt:"2026-08-22T11:00:00.000Z",questTitle:"Laptop only",categoryId:"body",difficulty:"easy",xpAwarded:10};
+  context.cloudApi.level90ApplyCloudSnapshot({
+    profile:[],categories:snapshot.categories,
+    quests:[snapshot.quests[1]],completions:[snapshot.completions[1]]
+  },{protectLocal:false,cloudOnly:true});
+  assert.deepEqual(context.state.quests.map(quest=>quest.id),["q_remote"],"cloud replacement must remove laptop-only quests");
+  assert.deepEqual(Object.keys(context.state.completions["2026-08-22"]),["q_remote"],"cloud replacement must remove laptop-only completions");
+
+  context.localStorage.removeItem("level90.cloudMigration.v1.user-a");
+  context.state = {
+    ...structuredClone(base),quests:[{...questA,id:"q_laptop",title:"Laptop only"}],
+    completions:{"2026-08-22":{q_laptop:{completedAt:"2026-08-22T11:00:00.000Z",questTitle:"Laptop only",categoryId:"body",difficulty:"easy",xpAwarded:10}}}
+  };
+  context.cloudApi.queueLevel90StateChanges(base,context.state);
+  const phoneSnapshot = {
+    level90_profiles:[{user_id:"user-a",started_on:"2026-08-01",profile_name:"Phone",theme:"dark",palette:"arctic",schema_version:3}],
+    level90_categories:snapshot.categories,
+    level90_quests:[snapshot.quests[1]],
+    level90_completions:[snapshot.completions[1]]
+  };
+  context.cloudApi.setClient({
+    from(table) {
+      return {select() {
+        const response = Promise.resolve({data:phoneSnapshot[table],error:null});
+        response.order = ()=>Promise.resolve({data:phoneSnapshot[table],error:null});
+        return response;
+      }};
+    }
+  });
+  context.cloudApi.setCloudCount(4);
+  await context.cloudApi.level90UseCloudData();
+  assert.deepEqual(context.state.quests.map(quest=>quest.id),["q_remote"]);
+  assert.equal(context.state.profileName,"Phone");
+  assert.equal(context.cloudApi.level90LoadSyncQueue().filter(item=>item.userId === "user-a").length,0);
+  assert.equal(context.localStorage.getItem("level90.cloudMigration.v1.user-a"),"complete");
+  const recovery = JSON.parse(context.localStorage.getItem("level90.beforeCloudRestore.v1.user-a"));
+  assert.equal(recovery.state.quests[0].id,"q_laptop");
 }
 
 (async()=>{

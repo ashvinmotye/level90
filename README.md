@@ -2,6 +2,14 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 17 device-source safety
+- Adds an explicit **Use cloud data** choice for secondary devices such as a laptop.
+- Replaces that device's local quests, custom order, completions and settings with the main device's cloud journey.
+- Downloads and stores a recovery backup before replacing local data.
+- Holds all queued edits on an unresolved device so **Sync now** cannot accidentally push its quest order to the main phone.
+- Keeps **Upload this device** as the deliberate choice for the authoritative device.
+- Shows whether a cloud journey was found before enabling the cloud-data choice.
+
 ## Version 16 Supabase sync
 - Uses the same Supabase project and email/password account as Workout.
 - Keeps Level90 local-first, including offline completions and edits that queue for automatic retry.
@@ -21,12 +29,12 @@ A local-first personal progression game. There is no deadline: complete real-lif
 2. Run `supabase/migrations/20260822_create_level90_sync.sql` once.
 3. Deploy every file in this ZIP to the Level90 site.
 4. Sign in with the same account used by Workout.
-5. On the device containing the current Level90 journey, open **Settings → Account & Cloud** and choose **Upload existing data**.
-6. After it reports a successful sync, sign in on the second device and use **Sync now** if the automatic pull has not already completed.
+5. On the device containing the current Level90 journey, open **Settings → Account & Cloud** and choose **Upload this device**.
+6. After it reports a successful sync, sign in on the second device and choose **Use cloud data**. Its local journey and quest order will be replaced with the main device's cloud version.
 
 The migration creates four Level90-only tables with per-user composite keys and Row Level Security. It does not modify Workout tables. Existing Level90 browser data remains stored under the same local-storage key and is migrated in place before cloud sync begins.
 
-Run `node tests/state-and-sync.test.cjs` to check legacy-data migration, streak continuity, historical XP, queue compaction, quest-order sync, composite upserts, first-upload protection and cloud tombstones.
+Run `node tests/state-and-sync.test.cjs` to check legacy-data migration, streak continuity, historical XP, queue compaction, quest-order sync, composite upserts, first-upload protection, secondary-device upload blocking, exact cloud replacement and cloud tombstones.
 
 ## Version 15 streaks and Today flow
 - Calculates current and best recurring-quest streaks from existing completion history.
