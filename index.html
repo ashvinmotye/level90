@@ -268,8 +268,8 @@
               <div class="smart-preference-grid">
                 <label>Protect streaks from<select id="smartMinimumStreak" disabled><option value="2">2 days</option><option value="3" selected>3 days</option><option value="5">5 days</option><option value="7">7 days</option></select></label>
                 <label>Daily limit<select id="smartDailyLimit" disabled><option value="1">1 reminder</option><option value="2" selected>2 reminders</option><option value="3">3 reminders</option></select></label>
-                <label>Quiet hours start<span class="smart-time-control"><input id="smartQuietStart" type="time" value="21:30" disabled /></span></label>
-                <label>Quiet hours end<span class="smart-time-control"><input id="smartQuietEnd" type="time" value="08:00" disabled /></span></label>
+                <label>Quiet hours start<span class="smart-time-control"><span class="smart-time-display" data-time-display-for="smartQuietStart" aria-hidden="true">21:30</span><input id="smartQuietStart" type="time" value="21:30" disabled /></span></label>
+                <label>Quiet hours end<span class="smart-time-control"><span class="smart-time-display" data-time-display-for="smartQuietEnd" aria-hidden="true">08:00</span><input id="smartQuietEnd" type="time" value="08:00" disabled /></span></label>
               </div>
               <div class="smart-preference-actions">
                 <div><small id="smartTimezoneLabel">Timezone: checking…</small><span id="smartRuleState">Run the Phase 2 migration and scheduler setup to activate this rule.</span></div>

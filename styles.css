@@ -738,10 +738,12 @@ body.light .bottom-nav { background:rgba(255,255,255,.84); }
 .smart-preference-grid input,.smart-preference-grid select { box-sizing:border-box; width:100%; min-width:0; max-width:100%; margin-top:6px; padding:10px 9px; border:1px solid var(--line); border-radius:13px; background:rgba(255,255,255,.04); color:var(--text); outline:none; font-size:10px; }
 .smart-preference-grid input:focus,.smart-preference-grid select:focus { border-color:rgb(var(--accent-rgb) / .62); box-shadow:0 0 0 3px rgb(var(--accent-rgb) / .11); }
 .smart-preference-grid input:disabled,.smart-preference-grid select:disabled { opacity:.42; }
-.smart-time-control { display:block; box-sizing:border-box; width:100%; min-width:0; max-width:100%; margin-top:6px; overflow:hidden; border:1px solid var(--line); border-radius:13px; background:rgba(255,255,255,.04); }
+.smart-time-control { position:relative; display:block; box-sizing:border-box; width:100%; min-width:0; max-width:100%; margin-top:6px; overflow:hidden; border:1px solid var(--line); border-radius:13px; background:rgba(255,255,255,.04); }
 .smart-time-control:focus-within { border-color:rgb(var(--accent-rgb) / .62); box-shadow:0 0 0 3px rgb(var(--accent-rgb) / .11); }
-.smart-time-control input[type="time"] { display:block; box-sizing:border-box; width:100%; min-width:0; max-width:100%; margin:0; padding:10px 0; border:0; border-radius:0; background:transparent; box-shadow:none; text-align:center; }
+.smart-time-display { display:flex; min-height:38px; align-items:center; justify-content:center; padding:10px 9px; color:var(--text); font-size:10px; font-weight:850; line-height:1; pointer-events:none; }
+.smart-time-control input[type="time"] { position:absolute; inset:0; display:block; box-sizing:border-box; width:100%; height:100%; min-width:0; max-width:100%; margin:0; padding:0; border:0; border-radius:inherit; background:transparent; box-shadow:none; opacity:0; font-size:16px; cursor:pointer; touch-action:manipulation; }
 .smart-time-control input[type="time"]:focus { border:0; box-shadow:none; }
+.smart-time-control:has(input[type="time"]:disabled) { opacity:.42; }
 .smart-preference-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:11px; }
 .smart-preference-actions small,.smart-preference-actions span { display:block; }
 .smart-preference-actions small { color:var(--accent-soft); font-size:8px; font-weight:850; }

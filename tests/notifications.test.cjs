@@ -201,11 +201,17 @@ async function run() {
   const smartToggle = smartHarness.elements.get("#smartNotificationsToggle");
   assert.equal(smartToggle.disabled,false,"smart settings should unlock after the device is connected");
   assert.equal(smartHarness.elements.get("#smartNotificationStatus").textContent,"Paused");
+  assert.equal(smartHarness.elements.get('[data-time-display-for="smartQuietStart"]').textContent,"21:30");
+  assert.equal(smartHarness.elements.get('[data-time-display-for="smartQuietEnd"]').textContent,"08:00");
   smartToggle.checked = true;
   smartHarness.elements.get("#smartMinimumStreak").value = "5";
   smartHarness.elements.get("#smartDailyLimit").value = "1";
   smartHarness.elements.get("#smartQuietStart").value = "22:00";
   smartHarness.elements.get("#smartQuietEnd").value = "07:30";
+  smartHarness.elements.get("#smartQuietStart").dispatch("change");
+  smartHarness.elements.get("#smartQuietEnd").dispatch("change");
+  assert.equal(smartHarness.elements.get('[data-time-display-for="smartQuietStart"]').textContent,"22:00");
+  assert.equal(smartHarness.elements.get('[data-time-display-for="smartQuietEnd"]').textContent,"07:30");
   await smartHarness.context.notificationApi.saveSmart();
   const smartWrite = smartHarness.writes.filter(write=>write.table === "level90_notification_preferences" && write.record.smart_enabled === true).at(-1);
   assert.equal(smartWrite.record.min_streak,5);

@@ -2,6 +2,9 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 22 Safari iOS time controls
+- Uses a Level90-rendered time display over an invisible native picker, preventing Safari's native time-field chrome from escaping the Settings card while retaining the iOS selector.
+
 ## Version 21 PWA time-control fix
 - Keeps the native quiet-hour pickers fully inside the Settings card on mobile PWAs by separating their visual container from the browser-rendered time control.
 

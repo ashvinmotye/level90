@@ -18,6 +18,8 @@ const level90NotificationDom = {
   smartDailyLimit:document.querySelector("#smartDailyLimit"),
   smartQuietStart:document.querySelector("#smartQuietStart"),
   smartQuietEnd:document.querySelector("#smartQuietEnd"),
+  smartQuietStartDisplay:document.querySelector('[data-time-display-for="smartQuietStart"]'),
+  smartQuietEndDisplay:document.querySelector('[data-time-display-for="smartQuietEnd"]'),
   smartTimezone:document.querySelector("#smartTimezoneLabel"),
   smartRuleState:document.querySelector("#smartRuleState"),
   smartSaveButton:document.querySelector("#saveSmartNotificationSettingsButton"),
@@ -101,6 +103,15 @@ function level90SetSmartNotificationBadge(label,state="") {
   if (!level90NotificationDom.smartStatus) return;
   level90NotificationDom.smartStatus.textContent = label;
   level90NotificationDom.smartStatus.classList.toggle("is-offline",state !== "success");
+}
+
+function level90SyncSmartTimeDisplay(input,display) {
+  if (input && display) display.textContent = input.value || "--:--";
+}
+
+function level90SyncSmartTimeDisplays() {
+  level90SyncSmartTimeDisplay(level90NotificationDom.smartQuietStart,level90NotificationDom.smartQuietStartDisplay);
+  level90SyncSmartTimeDisplay(level90NotificationDom.smartQuietEnd,level90NotificationDom.smartQuietEndDisplay);
 }
 
 function level90SetSmartControlsEnabled(enabled) {
@@ -242,6 +253,7 @@ async function level90LoadSmartNotificationSettings() {
   level90NotificationDom.smartDailyLimit.value = String(preference.max_daily || 2);
   level90NotificationDom.smartQuietStart.value = level90TimeInputValue(preference.quiet_start,"21:30");
   level90NotificationDom.smartQuietEnd.value = level90TimeInputValue(preference.quiet_end,"08:00");
+  level90SyncSmartTimeDisplays();
   level90SetSmartControlsEnabled(true);
   level90SetSmartNotificationBadge(preference.smart_enabled ? "Active" : "Paused",preference.smart_enabled ? "success" : "");
   if (level90NotificationDom.smartRuleState) level90NotificationDom.smartRuleState.textContent = level90SmartRuleStateText(preference);
@@ -523,6 +535,16 @@ function level90BindNotificationSettings() {
   level90NotificationDom.disableButton.addEventListener("click",level90DisableNotifications);
   level90NotificationDom.deviceName.addEventListener("change",level90UpdateNotificationDeviceName);
   level90NotificationDom.smartSaveButton?.addEventListener("click",level90SaveSmartNotificationSettings);
+  [
+    [level90NotificationDom.smartQuietStart,level90NotificationDom.smartQuietStartDisplay],
+    [level90NotificationDom.smartQuietEnd,level90NotificationDom.smartQuietEndDisplay]
+  ].forEach(([input,display])=>{
+    if (!input) return;
+    const sync = ()=>level90SyncSmartTimeDisplay(input,display);
+    input.addEventListener("input",sync);
+    input.addEventListener("change",sync);
+  });
+  level90SyncSmartTimeDisplays();
   window.addEventListener("online",()=>refreshLevel90NotificationSettings().catch(()=>{}));
   window.addEventListener("offline",()=>refreshLevel90NotificationSettings().catch(()=>{}));
 }

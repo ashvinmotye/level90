@@ -2,7 +2,7 @@
   "app": {
     "name": "Level 90",
     "maxLevel": 90,
-    "version": 21
+    "version": 22
   },
   "difficulty": {
     "tiny": {
