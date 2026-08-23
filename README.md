@@ -2,6 +2,10 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 20 mobile polish
+- Centers toast messages and gives them a slimmer, more compact shape on phones and desktop.
+- Prevents quiet-hour time inputs from overlapping by giving each one a safe full-width row on small screens.
+
 ## Version 19 smart streak rescue
 - Adds Level90's first transparent contextual reminder rule without AI or fixed daily alarm times.
 - Protects an unfinished scheduled recurring quest only when its active streak meets the chosen threshold.

@@ -18,7 +18,7 @@ select vault.create_secret(
 );
 
 select vault.create_secret(
-  'b165be5b412c9b9ca5eea6c9d957ae58dd7e74f9d45108821aab03014fe8b299',
+  'YOUR_RANDOM_LEVEL90_DISPATCH_SECRET',
   'level90_dispatch_secret',
   'Level90 smart-notification Cron authentication'
 );
