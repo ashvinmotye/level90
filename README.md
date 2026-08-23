@@ -2,6 +2,11 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 23 forged Level90 icon
+- Replaces every install icon with the supplied forged-silver “90” emblem and electric-blue energy artwork.
+- Adds dedicated 32px favicon, 180px Apple touch icon, standard PWA icons and safely padded maskable variants.
+- Uses an opaque deep blue-black master so Safari and iOS render the icon consistently.
+
 ## Version 22 Safari iOS time controls
 - Uses a Level90-rendered time display over an invisible native picker, preventing Safari's native time-field chrome from escaping the Settings card while retaining the iOS selector.
 

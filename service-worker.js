@@ -1,4 +1,4 @@
-const CACHE = "level90-v22";
+const CACHE = "level90-v23";
 const ASSETS = [
   "./",
   "./index.html",
@@ -8,8 +8,12 @@ const ASSETS = [
   "./app.js",
   "./data/initial-data.json",
   "./manifest.webmanifest",
+  "./icons/favicon-32.png",
+  "./icons/apple-touch-icon.png",
   "./icons/icon-192.png",
-  "./icons/icon-512.png"
+  "./icons/icon-512.png",
+  "./icons/icon-maskable-192.png",
+  "./icons/icon-maskable-512.png"
 ];
 
 self.addEventListener("install", event => {
