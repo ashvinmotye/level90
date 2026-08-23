@@ -2,6 +2,9 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 21 PWA time-control fix
+- Keeps the native quiet-hour pickers fully inside the Settings card on mobile PWAs by separating their visual container from the browser-rendered time control.
+
 ## Version 20 mobile polish
 - Centers toast messages and gives them a slimmer, more compact shape on phones and desktop.
 - Prevents quiet-hour time inputs from overlapping by giving each one a safe full-width row on small screens.
