@@ -2,6 +2,27 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 19 smart streak rescue
+- Adds Level90's first transparent contextual reminder rule without AI or fixed daily alarm times.
+- Protects an unfinished scheduled recurring quest only when its active streak meets the chosen threshold.
+- Learns the quest's usual completion time from up to 12 recent clears, waits another hour, and uses 18:00 only as a temporary fallback while fewer than three samples exist.
+- Prioritizes the longest at-risk streak, then respects the custom quest order when streaks tie.
+- Adds user-controlled quiet hours, streak threshold and daily reminder limit, plus a fixed four-hour cooldown.
+- Adds one-reminder-per-quest-per-day deduplication, a logical notification outbox, per-device delivery logging and safe retry attempts.
+- Runs the deterministic rules every 15 minutes through Supabase Cron while keeping the PWA fully local-first.
+- Shows whether the scheduler is active, what the last rule check decided and the three most recent smart reminders in Settings.
+
+### Phase 2 Supabase setup
+
+1. Run `supabase/migrations/20260823_add_level90_smart_notifications.sql` once in the Supabase SQL Editor.
+2. Generate a separate scheduler secret: `openssl rand -hex 32`.
+3. In **Edge Functions → Secrets**, add it as `LEVEL90_DISPATCH_SECRET`. Keep this value private and separate from the VAPID keys.
+4. Replace the deployed `level90-notifications` function with the included updated `supabase/functions/level90-notifications/index.ts` and deploy the update.
+5. Open `supabase/cron/schedule_level90_smart_notifications.sql`, replace only `YOUR_RANDOM_LEVEL90_DISPATCH_SECRET` with the same scheduler secret, then run it once in the SQL Editor. It securely stores the project URL, publishable key and dispatch secret in Supabase Vault and creates the 15-minute Cron job.
+6. Deploy the updated PWA, open **Settings → Notifications**, enable **Smart reminders**, review the defaults and save.
+
+The first scheduler result should appear in Settings within 15 minutes. If no check arrives within roughly 35 minutes, inspect **Integrations → Cron → level90-smart-notifications** and the `level90-notifications` Edge Function logs. Smart reminders remain opt-in even after the migration and scheduler are installed.
+
 ## Version 18 notification foundation and Settings page
 - Moves Settings out of the growing popup and into a dedicated, responsive app page.
 - Adds a Phase 1 notification status panel with a user-triggered permission flow, editable device name, test notification and safe disconnect action.
@@ -52,7 +73,7 @@ Keep the VAPID private key only in Supabase secrets; never add it to the PWA. On
 
 The migration creates four Level90-only tables with per-user composite keys and Row Level Security. It does not modify Workout tables. Existing Level90 browser data remains stored under the same local-storage key and is migrated in place before cloud sync begins.
 
-Run `node tests/state-and-sync.test.cjs` to check legacy-data migration, streak continuity, historical XP, queue compaction, quest-order sync, composite upserts, first-upload protection, secondary-device upload blocking, exact cloud replacement and cloud tombstones. Run `node tests/notifications.test.cjs` to check Phase 1 device support, permission, subscription registration, test-send request and disconnect behavior.
+Run `node tests/state-and-sync.test.cjs` to check legacy-data migration, streak continuity, historical XP, queue compaction, quest-order sync, composite upserts, first-upload protection, secondary-device upload blocking, exact cloud replacement and cloud tombstones. Run `node tests/notifications.test.cjs` to check device support, permission, subscription registration, test-send, disconnect and smart-setting behavior. Run `node tests/smart-notifications.test.cjs` to check streak qualification, learned timing, the fallback window, quiet hours, completed-quest suppression, schedule matching and longest-streak priority.
 
 ## Version 15 streaks and Today flow
 - Calculates current and best recurring-quest streaks from existing completion history.

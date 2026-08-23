@@ -34,7 +34,7 @@ function storage() {
   };
 }
 
-function notificationContext({ios=false,standalone=true}={}) {
+function notificationContext({ios=false,standalone=true,smartRuleVersion=0}={}) {
   const elements = new Map();
   const writes = [];
   const invocations = [];
@@ -42,6 +42,12 @@ function notificationContext({ios=false,standalone=true}={}) {
   let currentSubscription = null;
   let requestCount = 0;
   let unsubscribeCount = 0;
+  let smartPreference = {
+    user_id:"user-a",timezone:"UTC",smart_enabled:false,streak_rescue_enabled:true,
+    quiet_start:"21:30:00",quiet_end:"08:00:00",max_daily:2,min_streak:3,
+    adaptive_grace_minutes:60,cooldown_minutes:240,last_evaluated_at:null,
+    last_rule_result:null,last_rule_detail:{}
+  };
 
   const subscription = {
     endpoint:"https://push.example/subscription-a",
@@ -78,7 +84,7 @@ function notificationContext({ios=false,standalone=true}={}) {
     functions:{
       async invoke(_name,{body}) {
         invocations.push(body);
-        if (body.action === "config") return {data:{publicKey:"AQIDBA"},error:null};
+        if (body.action === "config") return {data:{publicKey:"AQIDBA",smartRuleVersion},error:null};
         if (body.action === "test") return {data:{sent:true},error:null};
         return {data:null,error:new Error("Unexpected action")};
       }
@@ -87,7 +93,21 @@ function notificationContext({ios=false,standalone=true}={}) {
       return {
         async upsert(record,options) {
           writes.push({kind:"upsert",table,record,options});
+          if (table === "level90_notification_preferences") smartPreference = {...smartPreference,...record};
           return {error:null};
+        },
+        select() {
+          const query = {
+            eq(){ return query; },
+            order(){ return query; },
+            maybeSingle() {
+              return Promise.resolve({data:table === "level90_notification_preferences" ? smartPreference : null,error:null});
+            },
+            limit() {
+              return Promise.resolve({data:table === "level90_notification_outbox" ? [] : null,error:null});
+            }
+          };
+          return query;
         },
         update(record) {
           const query = {
@@ -128,14 +148,16 @@ function notificationContext({ios=false,standalone=true}={}) {
     Intl,Date,Promise,Buffer,
     level90AuthSession:{user:{id:"user-a",email:"ashvin@example.com"}},
     level90AuthClient:client,
-    showToast:message=>toasts.push(message)
+    showToast:message=>toasts.push(message),
+    escapeHtml:value=>String(value)
   });
   vm.runInContext(`${source}\n;globalThis.notificationApi={
     support:level90NotificationSupport,
     refresh:refreshLevel90NotificationSettings,
     enable:level90EnableNotifications,
     sendTest:level90SendTestNotification,
-    disable:level90DisableNotifications
+    disable:level90DisableNotifications,
+    saveSmart:level90SaveSmartNotificationSettings
   };`,context);
   return {
     context,elements,writes,invocations,toasts,
@@ -172,6 +194,24 @@ async function run() {
   const iosSupport = iosHarness.context.notificationApi.support();
   assert.equal(iosSupport.supported,false);
   assert.equal(iosSupport.installRequired,true);
+
+  const smartHarness = notificationContext({smartRuleVersion:1});
+  await smartHarness.context.notificationApi.refresh();
+  await smartHarness.context.notificationApi.enable();
+  const smartToggle = smartHarness.elements.get("#smartNotificationsToggle");
+  assert.equal(smartToggle.disabled,false,"smart settings should unlock after the device is connected");
+  assert.equal(smartHarness.elements.get("#smartNotificationStatus").textContent,"Paused");
+  smartToggle.checked = true;
+  smartHarness.elements.get("#smartMinimumStreak").value = "5";
+  smartHarness.elements.get("#smartDailyLimit").value = "1";
+  smartHarness.elements.get("#smartQuietStart").value = "22:00";
+  smartHarness.elements.get("#smartQuietEnd").value = "07:30";
+  await smartHarness.context.notificationApi.saveSmart();
+  const smartWrite = smartHarness.writes.filter(write=>write.table === "level90_notification_preferences" && write.record.smart_enabled === true).at(-1);
+  assert.equal(smartWrite.record.min_streak,5);
+  assert.equal(smartWrite.record.max_daily,1);
+  assert.equal(smartWrite.record.quiet_start,"22:00");
+  assert.equal(smartHarness.elements.get("#smartNotificationStatus").textContent,"Active");
 
   await runServiceWorkerTests();
 

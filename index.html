@@ -229,11 +229,11 @@
             <p id="accountMessage" class="account-message" role="status" aria-live="polite"></p>
           </section>
 
-          <section class="panel settings-page-card notification-settings-section">
+          <section class="panel settings-page-card settings-card-wide notification-settings-section">
             <div class="settings-section-head account-settings-head">
               <div>
-                <span class="kicker">NOTIFICATIONS · PHASE 1</span>
-                <p>Connect this device and verify that Level90 can reach you.</p>
+                <span class="kicker">NOTIFICATIONS</span>
+                <p>Manage this device's push connection and Level90's transparent reminder rules.</p>
               </div>
               <span id="notificationSupportStatus" class="account-status is-offline">Checking</span>
             </div>
@@ -248,7 +248,37 @@
               <button id="disableNotificationsButton" class="secondary-btn" type="button" disabled>Disconnect</button>
             </div>
             <p id="notificationMessage" class="account-message" role="status" aria-live="polite"></p>
-            <small class="notification-phase-note">Phase 1 registers this device and sends a test notification. Smart quest reminders remain off until the next phase.</small>
+
+            <div id="smartNotificationPanel" class="smart-notification-panel" aria-labelledby="smartNotificationHeading">
+              <div class="smart-notification-head">
+                <div>
+                  <span class="kicker">SMART RULE · STREAK RESCUE</span>
+                  <strong id="smartNotificationHeading">Intervene only when momentum is genuinely at risk</strong>
+                </div>
+                <span id="smartNotificationStatus" class="account-status is-offline">Inactive</span>
+              </div>
+              <label class="smart-master-toggle">
+                <span><strong>Smart reminders</strong><small>Enable Level90's deterministic rule engine. No AI is used.</small></span>
+                <input id="smartNotificationsToggle" type="checkbox" role="switch" disabled />
+              </label>
+              <div class="smart-rule-explainer">
+                <span aria-hidden="true">🔥</span>
+                <p><strong>A recurring quest's streak must be at risk.</strong><small>Level90 learns the quest's usual completion time from its recent history, adds a one-hour grace period, and stays silent if you already completed it. Until it has enough history, the fallback check begins at 18:00.</small></p>
+              </div>
+              <div class="smart-preference-grid">
+                <label>Protect streaks from<select id="smartMinimumStreak" disabled><option value="2">2 days</option><option value="3" selected>3 days</option><option value="5">5 days</option><option value="7">7 days</option></select></label>
+                <label>Daily limit<select id="smartDailyLimit" disabled><option value="1">1 reminder</option><option value="2" selected>2 reminders</option><option value="3">3 reminders</option></select></label>
+                <label>Quiet hours start<input id="smartQuietStart" type="time" value="21:30" disabled /></label>
+                <label>Quiet hours end<input id="smartQuietEnd" type="time" value="08:00" disabled /></label>
+              </div>
+              <div class="smart-preference-actions">
+                <div><small id="smartTimezoneLabel">Timezone: checking…</small><span id="smartRuleState">Run the Phase 2 migration and scheduler setup to activate this rule.</span></div>
+                <button id="saveSmartNotificationSettingsButton" class="primary-btn" type="button" disabled>Save smart settings</button>
+              </div>
+              <div id="smartNotificationHistory" class="smart-notification-history"><small>No smart reminders sent yet.</small></div>
+              <p id="smartNotificationMessage" class="account-message" role="status" aria-live="polite"></p>
+            </div>
+            <small class="notification-phase-note">Delivery tests remain manual. Smart reminders obey quiet hours, a four-hour cooldown, the daily limit and one reminder per quest per day.</small>
           </section>
 
           <section class="panel settings-page-card appearance-settings-section">
