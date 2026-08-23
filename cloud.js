@@ -207,6 +207,7 @@ function level90RevealApp(user,offline=false) {
   level90SetAccountMessage(offline ? "Using local data. Cloud sync will resume when you reconnect." : "");
   renderAll();
   level90UpdateSyncStatus();
+  if (typeof initializeLevel90Notifications === "function") initializeLevel90Notifications().catch(()=>{});
 }
 
 async function level90ShowAuthenticatedApp(session,options={}) {
@@ -310,8 +311,7 @@ async function level90SignOut() {
     level90InitialSyncResolved = false;
     level90LastCloudRecordCount = null;
     level90ClearCachedUser();
-    level90LastCloudRecordCount = null;
-    if (document.querySelector("#settingsDialog")?.open) document.querySelector("#settingsDialog").close();
+    if (typeof resetLevel90NotificationSettings === "function") resetLevel90NotificationSettings();
     level90SetAuthMode("signin",false);
     level90ShowAuthForm("You have been signed out. Your Level90 data remains on this device.","success");
   } catch (error) {
@@ -848,7 +848,9 @@ function level90HandleAuthStateChange(event,session) {
     level90ActiveUserId = null;
     level90AuthResolved = false;
     level90InitialSyncResolved = false;
+    level90LastCloudRecordCount = null;
     level90ClearCachedUser();
+    if (typeof resetLevel90NotificationSettings === "function") resetLevel90NotificationSettings();
     level90SetAuthMode("signin",false);
     level90ShowAuthForm("You have been signed out.","success");
   }

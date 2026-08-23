@@ -8,7 +8,10 @@ let selectedHistoryDate = null;
 let historyMonth = null;
 let levelGlowAnimation = null;
 let lastSavedStateJson = "";
+let activeView = "today";
+let settingsReturnView = "today";
 const PALETTES = ["arctic","jade","aurora","rose"];
+const APP_VIEWS = ["today","quests","journey","character","settings"];
 const ICON_LIBRARY = [
   ["✨","sparkle magic default"],["⚡","energy discipline focus"],["✅","check done complete"],
   ["💪","strength body workout"],["🏋️‍♀️","weights gym strength workout"],["🏃","run cardio fitness"],
@@ -58,6 +61,7 @@ async function bootstrap() {
   migrateState();
   save({queue:false});
   bindEvents();
+  showView(viewFromLocation(),{remember:false,updateHash:false,scroll:false});
   renderAll();
   startLevelNumberGlow();
   registerSW();
@@ -169,10 +173,39 @@ function save(options={}) {
 function requestNameIfNeeded() {
   const dialog=$("#nameDialog");
   if (typeof canRequestLevel90Name === "function" && !canRequestLevel90Name()) return;
-  if(state.profileName || !dialog || dialog.open || $("#settingsDialog")?.open) return;
+  if(state.profileName || !dialog || dialog.open || activeView === "settings") return;
   $("#nameInput").value="";
   dialog.showModal();
   setTimeout(()=>$("#nameInput").focus(),0);
+}
+
+function viewFromLocation() {
+  const requested = String(window.location.hash || "").replace(/^#/,"");
+  return APP_VIEWS.includes(requested) ? requested : "today";
+}
+
+function showView(view,options={}) {
+  const nextView = APP_VIEWS.includes(view) ? view : "today";
+  if (nextView === "settings" && activeView !== "settings" && options.remember !== false) settingsReturnView = activeView;
+  activeView = nextView;
+  $$(".view").forEach(item=>item.classList.toggle("active",item.id === `view-${nextView}`));
+  $$(".nav-btn").forEach(button=>button.classList.toggle("active",button.dataset.view === nextView));
+  if (options.updateHash !== false && window.location.hash !== `#${nextView}`) {
+    window.history.replaceState(null,"",`#${nextView}`);
+  }
+  if (options.scroll !== false) window.scrollTo({top:0,behavior:"smooth"});
+  if (nextView === "settings" && typeof refreshLevel90NotificationSettings === "function") {
+    refreshLevel90NotificationSettings().catch(()=>{});
+  }
+}
+
+function openSettingsPage() {
+  showView("settings");
+}
+
+function closeSettingsPage() {
+  showView(settingsReturnView === "settings" ? "today" : settingsReturnView);
+  requestNameIfNeeded();
 }
 
 function applyTheme() {
@@ -849,12 +882,9 @@ function deleteCategory(id) {
 
 function bindEvents() {
   $$(".nav-btn").forEach(btn=>btn.addEventListener("click",()=>{
-    $$(".nav-btn").forEach(x=>x.classList.remove("active"));
-    btn.classList.add("active");
-    $$(".view").forEach(v=>v.classList.remove("active"));
-    $(`#view-${btn.dataset.view}`).classList.add("active");
-    window.scrollTo({top:0,behavior:"smooth"});
+    showView(btn.dataset.view);
   }));
+  window.addEventListener("hashchange",()=>showView(viewFromLocation(),{updateHash:false}));
 
   $("#quickAddBtn").addEventListener("click",()=>openQuestDialog());
   $("#addQuestBtn").addEventListener("click",()=>openQuestDialog());
@@ -965,12 +995,9 @@ function bindEvents() {
     showToast(`${option.querySelector("strong").textContent} activated`);
   });
 
-  $("#menuBtn").addEventListener("click",()=>$("#settingsDialog").showModal());
-  $("#profileGreetingBtn").addEventListener("click",()=>$("#settingsDialog").showModal());
-  $("#closeSettings").addEventListener("click",()=>{
-    $("#settingsDialog").close();
-    requestNameIfNeeded();
-  });
+  $("#menuBtn").addEventListener("click",openSettingsPage);
+  $("#profileGreetingBtn").addEventListener("click",openSettingsPage);
+  $("#closeSettings").addEventListener("click",closeSettingsPage);
   $("#profileNameInput").addEventListener("input",e=>{
     state.profileName=e.target.value.trimStart();
     $("#greetingName").textContent=state.profileName || "Player";
@@ -1002,20 +1029,20 @@ function bindEvents() {
     try{
       const incoming=JSON.parse(await file.text());
       if(!incoming.quests || !incoming.categories) throw new Error();
-      state=incoming; selectedHistoryDate=localDateKey(); historyMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1); migrateState(); save(); $("#settingsDialog").close(); renderAll(); showToast("Backup restored");
+      state=incoming; selectedHistoryDate=localDateKey(); historyMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1); migrateState(); save(); renderAll(); closeSettingsPage(); showToast("Backup restored");
     }catch{ alert("That file does not look like a valid Level 90 backup."); }
     e.target.value="";
   });
 
   $("#startChallengeBtn").addEventListener("click",()=>{
     if(confirm("Start a fresh journey today? Your quest definitions are kept, but XP and completion history are cleared.")){
-      state.startedOn=localDateKey(); state.completions={}; selectedHistoryDate=localDateKey(); historyMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1); save(); renderAll(); $("#settingsDialog").close(); showToast("Fresh journey started");
+      state.startedOn=localDateKey(); state.completions={}; selectedHistoryDate=localDateKey(); historyMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1); save(); renderAll(); closeSettingsPage(); showToast("Fresh journey started");
     }
   });
 
   $("#resetBtn").addEventListener("click",()=>{
     if(confirm("Reset everything to the original Level 90 starter data?")){
-      state=freshState(); selectedHistoryDate=localDateKey(); historyMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1); save(); document.body.classList.remove("light"); $("#settingsDialog").close(); renderAll(); showToast("App reset");
+      state=freshState(); selectedHistoryDate=localDateKey(); historyMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1); save(); document.body.classList.remove("light"); renderAll(); closeSettingsPage(); showToast("App reset");
     }
   });
 }
@@ -1027,6 +1054,9 @@ function escapeHtml(s) {
 function registerSW() {
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
+    navigator.serviceWorker.addEventListener("message",event=>{
+      if (event.data?.type === "LEVEL90_OPEN_VIEW") showView(event.data.view || "today");
+    });
   }
 }
 bootstrap();

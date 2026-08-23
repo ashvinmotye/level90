@@ -1,0 +1,2 @@
+[functions.level90-notifications]
+verify_jwt = true

@@ -671,6 +671,14 @@ body.light .bottom-nav { background:rgba(255,255,255,.84); }
 
 .settings-section { padding:15px 0; border-top:1px solid var(--line); }
 .modal-head + .settings-section { border-top:0; padding-top:0; }
+.settings-page-head { display:grid; grid-template-columns:auto minmax(0,1fr); align-items:start; gap:14px; margin:15px 2px 20px; }
+.settings-page-title { margin:0; }
+.settings-page-title h2 { font-size:30px; letter-spacing:-.04em; }
+.settings-back-btn { margin-top:2px; font-size:25px; line-height:1; }
+.settings-page-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:13px; }
+.settings-page-card { min-width:0; padding:18px; box-shadow:0 14px 40px rgba(0,0,0,.14); }
+.settings-card-wide { grid-column:1/-1; }
+.settings-page-card .settings-section-head > .kicker { display:block; }
 .settings-section-head p { color:var(--muted); font-size:11px; margin:6px 0 13px; }
 .account-settings-section { padding-bottom:18px; }
 .account-settings-head { display:flex; align-items:start; justify-content:space-between; gap:12px; }
@@ -693,6 +701,20 @@ body.light .bottom-nav { background:rgba(255,255,255,.84); }
 .cloud-migration-actions { display:flex; align-items:stretch; gap:7px; }
 .cloud-action-btn { padding:9px 11px; border-radius:12px; white-space:nowrap; font-size:9px; }
 .account-message { min-height:13px; margin:8px 2px 0; color:var(--muted); font-size:9px; }
+.notification-state-row { display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; gap:11px; padding:13px; border:1px solid var(--line); border-radius:17px; background:rgba(255,255,255,.025); }
+.notification-state-icon { width:42px; height:42px; display:grid; place-items:center; border-radius:14px; background:rgb(var(--accent-rgb) / .10); border:1px solid rgb(var(--accent-rgb) / .16); font-size:19px; }
+.notification-state-row strong,.notification-state-row span { display:block; }
+.notification-state-row strong { font-size:12px; }
+.notification-state-row span { margin-top:4px; color:var(--muted); font-size:9px; line-height:1.4; }
+.notification-device-field { display:block; margin-top:13px; color:var(--muted); font-size:9px; font-weight:850; }
+.settings-page-card .profile-name-field { display:block; color:var(--muted); font-size:9px; font-weight:850; }
+.notification-device-field input,.settings-page-card .profile-name-field input { width:100%; margin-top:6px; padding:12px 13px; border-radius:14px; border:1px solid var(--line); background:rgba(255,255,255,.04); color:var(--text); outline:none; }
+.notification-device-field input:focus,.settings-page-card .profile-name-field input:focus { border-color:rgb(var(--accent-rgb) / .62); box-shadow:0 0 0 3px rgb(var(--accent-rgb) / .11); }
+.notification-actions { display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-top:11px; }
+.notification-actions button { min-width:0; padding:11px 9px; border-radius:13px; font-size:9px; }
+.notification-actions #disableNotificationsButton { grid-column:1/-1; }
+.notification-actions button:disabled { opacity:.38; cursor:not-allowed; box-shadow:none; }
+.notification-phase-note { display:block; margin-top:8px; color:var(--muted); font-size:8px; line-height:1.45; }
 .profile-name-field { margin-bottom:12px !important; }
 .profile-name-field input { font-size:14px; color:var(--text); }
 .theme-mode-picker { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:12px; }
@@ -716,7 +738,7 @@ body.light .bottom-nav { background:rgba(255,255,255,.84); }
   width:100%; padding:14px; text-align:left; border-radius:16px; background:rgba(255,255,255,.045);
   border:1px solid var(--line); color:var(--text);
 }
-.modal .settings-btn,.modal .file-label { font-size:13px; font-weight:800; }
+.modal .settings-btn,.modal .file-label,.settings-page-card .settings-btn,.settings-page-card .file-label { font-size:13px; font-weight:800; }
 .file-label { display:block; cursor:pointer; }
 .settings-btn.danger { color:var(--danger); }
 
@@ -803,6 +825,11 @@ body.light .bottom-nav { background:rgba(255,255,255,.84); }
   .category-manager-item { grid-template-columns:auto minmax(0,1fr); }
   .category-manager-actions { grid-column:1/-1; justify-content:flex-end; }
   .auth-card { padding:23px 18px; border-radius:25px; }
+  .settings-page-head { gap:10px; margin-top:8px; }
+  .settings-page-title h2 { font-size:27px; }
+  .settings-page-grid { grid-template-columns:1fr; }
+  .settings-card-wide { grid-column:auto; }
+  .settings-page-card { padding:15px; border-radius:22px; }
   .cloud-sync-row { grid-template-columns:1fr; }
   .cloud-migration-actions { display:grid; grid-template-columns:1fr; }
   .cloud-action-btn { width:100%; }

@@ -49,7 +49,7 @@
       </button>
       <div class="topbar-actions">
         <button id="themeBtn" class="icon-btn" aria-label="Toggle theme">☾</button>
-        <button id="menuBtn" class="icon-btn" aria-label="Open menu">⋯</button>
+        <button id="menuBtn" class="icon-btn" aria-label="Open settings">⋯</button>
       </div>
     </header>
 
@@ -191,6 +191,108 @@
           </div>
         </div>
       </section>
+
+      <section id="view-settings" class="view settings-view">
+        <div class="settings-page-head">
+          <button type="button" class="icon-btn settings-back-btn" id="closeSettings" aria-label="Return to previous screen">‹</button>
+          <div class="page-heading settings-page-title">
+            <span class="kicker">SYSTEM</span>
+            <h2>Settings</h2>
+            <p>Manage your Level90 account, connected devices, appearance and journey.</p>
+          </div>
+        </div>
+
+        <div class="settings-page-grid">
+          <section class="panel settings-page-card settings-card-wide account-settings-section">
+            <div class="settings-section-head account-settings-head">
+              <div>
+                <span class="kicker">ACCOUNT &amp; CLOUD</span>
+                <p>Level90 syncs through the same Supabase project as Workout.</p>
+              </div>
+              <span id="accountConnectionStatus" class="account-status">Connected</span>
+            </div>
+            <div class="account-summary-row">
+              <div><small>Signed in as</small><strong id="accountEmail">—</strong></div>
+              <button id="signOutButton" class="mini-btn" type="button">Sign out</button>
+            </div>
+            <div class="cloud-sync-row">
+              <div><strong>Level90 data</strong><span id="cloudSyncStatus">Preparing cloud sync…</span><small>Quests, categories, completions, streak history, order and settings sync automatically.</small></div>
+              <button id="syncNowButton" class="secondary-btn cloud-action-btn" type="button">Sync now</button>
+            </div>
+            <div id="cloudMigrationRow" class="cloud-sync-row cloud-migration-row" hidden>
+              <div><strong>Choose which journey to keep</strong><span id="cloudMigrationStatus">Checking this device and the cloud…</span><small>On your main device, upload its journey. On another device, use the cloud journey to match your main device exactly.</small></div>
+              <div class="cloud-migration-actions">
+                <button id="useCloudDataButton" class="secondary-btn cloud-action-btn" type="button">Use cloud data</button>
+                <button id="uploadExistingDataButton" class="primary-btn cloud-action-btn" type="button">Upload this device</button>
+              </div>
+            </div>
+            <p id="accountMessage" class="account-message" role="status" aria-live="polite"></p>
+          </section>
+
+          <section class="panel settings-page-card notification-settings-section">
+            <div class="settings-section-head account-settings-head">
+              <div>
+                <span class="kicker">NOTIFICATIONS · PHASE 1</span>
+                <p>Connect this device and verify that Level90 can reach you.</p>
+              </div>
+              <span id="notificationSupportStatus" class="account-status is-offline">Checking</span>
+            </div>
+            <div class="notification-state-row">
+              <div class="notification-state-icon" aria-hidden="true">🔔</div>
+              <div><strong id="notificationStatusTitle">Checking this device</strong><span id="notificationStatusText">Notification permission has not been requested.</span></div>
+            </div>
+            <label class="notification-device-field">Device name<input id="notificationDeviceNameInput" maxlength="40" autocomplete="off" /></label>
+            <div class="notification-actions">
+              <button id="enableNotificationsButton" class="primary-btn" type="button" disabled>Enable notifications</button>
+              <button id="testNotificationButton" class="secondary-btn" type="button" disabled>Send test</button>
+              <button id="disableNotificationsButton" class="secondary-btn" type="button" disabled>Disconnect</button>
+            </div>
+            <p id="notificationMessage" class="account-message" role="status" aria-live="polite"></p>
+            <small class="notification-phase-note">Phase 1 registers this device and sends a test notification. Smart quest reminders remain off until the next phase.</small>
+          </section>
+
+          <section class="panel settings-page-card appearance-settings-section">
+            <div class="settings-section-head">
+              <span class="kicker">APPEARANCE</span>
+              <p>Choose the atmosphere for your ascent.</p>
+            </div>
+            <label class="profile-name-field">Display name<input id="profileNameInput" maxlength="30" /></label>
+            <div id="themeModePicker" class="theme-mode-picker">
+              <button type="button" data-theme-mode="dark">☾ Dark</button>
+              <button type="button" data-theme-mode="light">☀ Light</button>
+            </div>
+            <div id="palettePicker" class="palette-picker">
+              <button type="button" class="palette-option palette-arctic" data-palette="arctic">
+                <span class="palette-swatches"><i></i><i></i><i></i><i></i></span>
+                <strong>Arctic Depths</strong><small>Cyan · blue · deep ocean</small>
+              </button>
+              <button type="button" class="palette-option palette-jade" data-palette="jade">
+                <span class="palette-swatches"><i></i><i></i><i></i><i></i></span>
+                <strong>Jade Horizon</strong><small>Fresh · calm · grounded</small>
+              </button>
+              <button type="button" class="palette-option palette-aurora" data-palette="aurora">
+                <span class="palette-swatches"><i></i><i></i><i></i><i></i></span>
+                <strong>Aurora Blossom</strong><small>Deep blue · luminous pink</small>
+              </button>
+              <button type="button" class="palette-option palette-rose" data-palette="rose">
+                <span class="palette-swatches"><i></i><i></i><i></i><i></i></span>
+                <strong>Rosé Sunrise</strong><small>Warm red · soft pink glow</small>
+              </button>
+            </div>
+          </section>
+
+          <section class="panel settings-page-card data-settings-section settings-stack">
+            <div class="settings-section-head">
+              <span class="kicker">DATA &amp; JOURNEY</span>
+              <p>Back up, restore or restart your Level90 journey.</p>
+            </div>
+            <button id="startChallengeBtn" class="settings-btn">🚀 Start a fresh journey</button>
+            <button id="exportBtn" class="settings-btn">⬇️ Export JSON backup</button>
+            <label class="settings-btn file-label">⬆️ Import JSON backup<input id="importInput" type="file" accept=".json,application/json" hidden /></label>
+            <button id="resetBtn" class="settings-btn danger">♻️ Reset all app data</button>
+          </section>
+        </div>
+      </section>
     </main>
 
     <nav class="bottom-nav">
@@ -306,77 +408,6 @@
     </form>
   </dialog>
 
-  <dialog id="settingsDialog" class="modal">
-    <div class="modal-head">
-      <div>
-        <span class="kicker">SYSTEM</span>
-        <h3>Settings</h3>
-      </div>
-      <button type="button" class="icon-btn" id="closeSettings">×</button>
-    </div>
-    <div class="settings-section account-settings-section">
-      <div class="settings-section-head account-settings-head">
-        <div>
-          <span class="kicker">ACCOUNT &amp; CLOUD</span>
-          <p>Level90 syncs through the same Supabase project as Workout.</p>
-        </div>
-        <span id="accountConnectionStatus" class="account-status">Connected</span>
-      </div>
-      <div class="account-summary-row">
-        <div><small>Signed in as</small><strong id="accountEmail">—</strong></div>
-        <button id="signOutButton" class="mini-btn" type="button">Sign out</button>
-      </div>
-      <div class="cloud-sync-row">
-        <div><strong>Level90 data</strong><span id="cloudSyncStatus">Preparing cloud sync…</span><small>Quests, categories, completions, streak history, order and settings sync automatically.</small></div>
-        <button id="syncNowButton" class="secondary-btn cloud-action-btn" type="button">Sync now</button>
-      </div>
-      <div id="cloudMigrationRow" class="cloud-sync-row cloud-migration-row" hidden>
-        <div><strong>Choose which journey to keep</strong><span id="cloudMigrationStatus">Checking this device and the cloud…</span><small>On your main device, upload its journey. On another device, use the cloud journey to match your main device exactly.</small></div>
-        <div class="cloud-migration-actions">
-          <button id="useCloudDataButton" class="secondary-btn cloud-action-btn" type="button">Use cloud data</button>
-          <button id="uploadExistingDataButton" class="primary-btn cloud-action-btn" type="button">Upload this device</button>
-        </div>
-      </div>
-      <p id="accountMessage" class="account-message" role="status" aria-live="polite"></p>
-    </div>
-    <div class="settings-section">
-      <div class="settings-section-head">
-        <span class="kicker">APPEARANCE</span>
-        <p>Choose the atmosphere for your ascent.</p>
-      </div>
-      <label class="profile-name-field">Display name<input id="profileNameInput" maxlength="30" /></label>
-      <div id="themeModePicker" class="theme-mode-picker">
-        <button type="button" data-theme-mode="dark">☾ Dark</button>
-        <button type="button" data-theme-mode="light">☀ Light</button>
-      </div>
-      <div id="palettePicker" class="palette-picker">
-        <button type="button" class="palette-option palette-arctic" data-palette="arctic">
-          <span class="palette-swatches"><i></i><i></i><i></i><i></i></span>
-          <strong>Arctic Depths</strong><small>Cyan · blue · deep ocean</small>
-        </button>
-        <button type="button" class="palette-option palette-jade" data-palette="jade">
-          <span class="palette-swatches"><i></i><i></i><i></i><i></i></span>
-          <strong>Jade Horizon</strong><small>Fresh · calm · grounded</small>
-        </button>
-        <button type="button" class="palette-option palette-aurora" data-palette="aurora">
-          <span class="palette-swatches"><i></i><i></i><i></i><i></i></span>
-          <strong>Aurora Blossom</strong><small>Deep blue · luminous pink</small>
-        </button>
-        <button type="button" class="palette-option palette-rose" data-palette="rose">
-          <span class="palette-swatches"><i></i><i></i><i></i><i></i></span>
-          <strong>Rosé Sunrise</strong><small>Warm red · soft pink glow</small>
-        </button>
-      </div>
-    </div>
-    <div class="settings-section settings-stack">
-      <span class="kicker">DATA &amp; JOURNEY</span>
-      <button id="startChallengeBtn" class="settings-btn">🚀 Start a fresh journey</button>
-      <button id="exportBtn" class="settings-btn">⬇️ Export JSON backup</button>
-      <label class="settings-btn file-label">⬆️ Import JSON backup<input id="importInput" type="file" accept=".json,application/json" hidden /></label>
-      <button id="resetBtn" class="settings-btn danger">♻️ Reset all app data</button>
-    </div>
-  </dialog>
-
   <div id="toast" class="toast"></div>
   <div id="levelUpOverlay" class="level-up-overlay" aria-hidden="true">
     <div class="level-up-card">
@@ -388,6 +419,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3" crossorigin="anonymous" defer></script>
   <script src="./cloud.js" defer></script>
+  <script src="./notifications.js" defer></script>
   <script src="./app.js" defer></script>
 </body>
 </html>

@@ -2,6 +2,24 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 18 notification foundation and Settings page
+- Moves Settings out of the growing popup and into a dedicated, responsive app page.
+- Adds a Phase 1 notification status panel with a user-triggered permission flow, editable device name, test notification and safe disconnect action.
+- Stores each signed-in device's Web Push subscription in Supabase under Row Level Security.
+- Adds an authenticated Supabase Edge Function that can send a fixed test notification only to one of the signed-in user's registered devices.
+- Keeps smart reminders disabled for now. This phase proves that each device can receive Level90 pushes before reminder logic is introduced.
+
+### Notification setup
+
+1. Complete the existing sync setup below, then run `supabase/migrations/20260823_create_level90_notifications.sql` once in the Supabase SQL Editor.
+2. Generate a VAPID key pair from a trusted local terminal: `npx web-push generate-vapid-keys`.
+3. Add the keys and a contact subject to the function's Supabase secrets:
+   `supabase secrets set VAPID_PUBLIC_KEY="..." VAPID_PRIVATE_KEY="..." VAPID_SUBJECT="mailto:you@example.com"`
+4. Deploy the included function: `supabase functions deploy level90-notifications`.
+5. Deploy every PWA file, sign in, then open **Settings → Notifications · Phase 1 → Enable notifications** and send a test.
+
+Keep the VAPID private key only in Supabase secrets; never add it to the PWA. On iPhone or iPad, install Level90 to the Home Screen and open that installed app before enabling notifications. The panel explains when setup, sign-in, connectivity, permission or installation is still required.
+
 ## Version 17 device-source safety
 - Adds an explicit **Use cloud data** choice for secondary devices such as a laptop.
 - Replaces that device's local quests, custom order, completions and settings with the main device's cloud journey.
@@ -34,7 +52,7 @@ A local-first personal progression game. There is no deadline: complete real-lif
 
 The migration creates four Level90-only tables with per-user composite keys and Row Level Security. It does not modify Workout tables. Existing Level90 browser data remains stored under the same local-storage key and is migrated in place before cloud sync begins.
 
-Run `node tests/state-and-sync.test.cjs` to check legacy-data migration, streak continuity, historical XP, queue compaction, quest-order sync, composite upserts, first-upload protection, secondary-device upload blocking, exact cloud replacement and cloud tombstones.
+Run `node tests/state-and-sync.test.cjs` to check legacy-data migration, streak continuity, historical XP, queue compaction, quest-order sync, composite upserts, first-upload protection, secondary-device upload blocking, exact cloud replacement and cloud tombstones. Run `node tests/notifications.test.cjs` to check Phase 1 device support, permission, subscription registration, test-send request and disconnect behavior.
 
 ## Version 15 streaks and Today flow
 - Calculates current and best recurring-quest streaks from existing completion history.
