@@ -2,6 +2,14 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 30 Quests actions and greeting icons
+
+- Adds the supplied AuraOS-colored SVGs to the Quests **Categories** and **Reorder** actions.
+- Replaces the header wave emoji with the supplied hand SVG while preserving the greeting's wave animation.
+- Makes all three icons inherit the active Level90 palette in dark and light mode.
+- Preserves the supplied source and license attribution alongside the inline SVG sprite.
+- Requires only the updated PWA files; there is no Supabase migration or Edge Function deployment for this version.
+
 ## Version 29 aligned quest difficulty markers
 - Replaces platform-rendered difficulty emoji in the Quests metadata row with fixed-size AuraOS difficulty dots.
 - Vertically centers category, separators, difficulty and schedule text on one shared line box across desktop and mobile.
