@@ -202,7 +202,7 @@ async function run() {
   const smartHarness = notificationContext({
     smartRuleVersion:2,
     historyItems:[{
-      id:"notification-a",rule_key:"morning_brief",title:"Level90 morning briefing",
+      id:"notification-a",rule_key:"morning_brief",title:"Level90 morning briefing 🔥",
       body:"Yesterday: 80%. Today: 5 quests.",status:"sent",
       created_at:"2026-08-25T06:00:00.000Z",sent_at:"2026-08-25T06:00:02.000Z"
     }]
@@ -213,6 +213,8 @@ async function run() {
   assert.equal(smartToggle.disabled,false,"account settings should be available before this device is connected");
   assert.equal(smartHarness.elements.get("#smartNotificationStatus").textContent,"Paused");
   assert.match(smartHarness.elements.get("#smartNotificationHistory").innerHTML,/Level90 morning briefing/);
+  assert.match(smartHarness.elements.get("#smartNotificationHistory").innerHTML,/<use href="#icon-fire"><\/use>/);
+  assert.doesNotMatch(smartHarness.elements.get("#smartNotificationHistory").innerHTML,/🔥/);
   assert.match(smartHarness.elements.get("#smartNotificationHistory").innerHTML,/Morning/);
   assert.equal(smartHarness.elements.get('[data-time-display-for="morningBriefTime"]').textContent,"10:00");
   assert.equal(smartHarness.elements.get('[data-time-display-for="eveningRecapTime"]').textContent,"21:00");

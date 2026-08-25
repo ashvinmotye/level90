@@ -125,7 +125,7 @@ function runAppStateTests() {
 
   assert.deepEqual({...context.stateTestResult.streak},{current:5,best:5});
   assert.deepEqual({...context.stateTestResult.consistency},{completed:5,scheduled:6,percentage:83});
-  assert.match(context.questCardHtml,/🔥 <strong>5<\/strong> streak/);
+  assert.match(context.questCardHtml,/<use href="#icon-fire"><\/use><\/svg> <strong>5<\/strong> streak/);
   assert.match(context.questCardHtml,/✓ <strong>5\/6<\/strong> completed/);
   assert.match(context.questCardHtml,/>83%<\/span>/);
   assert.deepEqual({...context.scheduleConsistencyResult.weekday},{completed:4,scheduled:5,percentage:80});

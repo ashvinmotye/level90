@@ -2,6 +2,14 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 28 AuraOS SVG icon system
+- Replaces the main interface emoji with the supplied SVG artwork for Today, Quests, History, Character, notifications, streak fire, fresh journey, import, export and reset.
+- Reuses the established AuraOS Workout sun and moon SVGs in the header theme toggle, appearance picker, morning briefing and evening recap.
+- Colors every interface icon through the active AuraOS palette, including light mode and all four Level90 color atmospheres.
+- Replaces fire emoji inside rendered notification history with the outlined AuraOS fire while leaving native push-notification text compatible with the operating system.
+- Preserves the supplied source and license attribution alongside the inline SVG sprite.
+- Requires only the updated PWA files; there is no Supabase migration or Edge Function deployment for this version.
+
 ## Version 27 Mac notification connection and account history
 - Makes **Enable notifications** recover the VAPID configuration when its in-memory key was cleared, instead of silently ignoring the click.
 - Keeps the browser permission request directly attached to the click for Safari while loading the recovered server configuration in parallel.

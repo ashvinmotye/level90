@@ -30,6 +30,11 @@ const ICON_LIBRARY = [
 const $ = (s, p=document) => p.querySelector(s);
 const $$ = (s, p=document) => [...p.querySelectorAll(s)];
 
+function auraIcon(name,extraClass="") {
+  const className = extraClass ? `aura-icon ${extraClass}` : "aura-icon";
+  return `<svg class="${className}" aria-hidden="true" focusable="false"><use href="#icon-${name}"></use></svg>`;
+}
+
 function localDateKey(date = new Date()) {
   const y = date.getFullYear();
   const m = String(date.getMonth()+1).padStart(2,"0");
@@ -220,7 +225,11 @@ function applyTheme() {
   document.body.classList.toggle("light", state.theme === "light");
   document.body.dataset.palette = state.palette || "arctic";
   const quickToggle = $("#themeBtn");
-  if (quickToggle) quickToggle.textContent = state.theme === "dark" ? "☀" : "☾";
+  if (quickToggle) {
+    const label = state.theme === "dark" ? "Switch to light mode" : "Switch to dark mode";
+    quickToggle.setAttribute("aria-label",label);
+    quickToggle.title = label;
+  }
   $$("[data-theme-mode]").forEach(button=>button.classList.toggle("selected",button.dataset.themeMode===state.theme));
   $$("[data-palette]").forEach(button=>button.classList.toggle("selected",button.dataset.palette===state.palette));
   const browserColor=getComputedStyle(document.body).getPropertyValue("--bg").trim();
@@ -523,11 +532,11 @@ function questCard(q, todayMode=false, dateKey=localDateKey()) {
   const d = difficulty(q.difficulty);
   const done = isCompleted(q.id,dateKey);
   const streak = q.type === "recurring" ? questStreak(q,parseLocalDate(dateKey)) : null;
-  const streakBadge = todayMode && streak ? `<span class="tile-streak" title="Current streak: ${streak.current} · Best streak: ${streak.best}" aria-label="Current streak ${streak.current}; best streak ${streak.best}">🔥 ${streak.current}</span>` : "";
+  const streakBadge = todayMode && streak ? `<span class="tile-streak" title="Current streak: ${streak.current} · Best streak: ${streak.best}" aria-label="Current streak ${streak.current}; best streak ${streak.best}">${auraIcon("fire","streak-icon")} ${streak.current}</span>` : "";
   const consistency = !todayMode ? questConsistency(q,parseLocalDate(dateKey)) : null;
   const questProgress = streak && consistency ? `
       <div class="quest-progress-stats">
-        <span class="quest-progress-streak" title="Current streak: ${streak.current} · Best streak: ${streak.best}" aria-label="Current streak ${streak.current}; best streak ${streak.best}">🔥 <strong>${streak.current}</strong> streak</span>
+        <span class="quest-progress-streak" title="Current streak: ${streak.current} · Best streak: ${streak.best}" aria-label="Current streak ${streak.current}; best streak ${streak.best}">${auraIcon("fire","streak-icon")} <strong>${streak.current}</strong> streak</span>
         <span class="quest-progress-lifetime" title="Completed ${consistency.completed} of ${consistency.scheduled} scheduled days since this quest was added" aria-label="Completed ${consistency.completed} of ${consistency.scheduled} scheduled days since this quest was added">✓ <strong>${consistency.completed}/${consistency.scheduled}</strong> completed</span>
         <span class="quest-progress-rate" aria-label="${consistency.percentage} percent completion rate">${consistency.percentage}%</span>
       </div>` : "";

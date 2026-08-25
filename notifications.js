@@ -241,12 +241,13 @@ function level90RenderSmartHistory(items=[]) {
     level90NotificationDom.smartHistory.innerHTML = "<small>No notifications sent yet.</small>";
     return;
   }
+  const renderText = value=>String(value || "").split("🔥").map(part=>escapeHtml(part)).join('<svg class="aura-icon streak-icon smart-history-fire" aria-hidden="true" focusable="false"><use href="#icon-fire"></use></svg>');
   level90NotificationDom.smartHistory.innerHTML = items.map(item=>{
     const when = new Intl.DateTimeFormat(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}).format(new Date(item.sent_at || item.created_at));
     const status = item.status === "sent" ? "Delivered" : item.status === "pending" ? "Pending" : item.status;
     const labels = {morning_brief:"Morning",evening_recap:"Evening",streak_rescue:"Rescue"};
     const lane = labels[item.rule_key] || "Level90";
-    return `<div class="smart-history-item"><div><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.body)}</span></div><small>${escapeHtml(lane)} · ${escapeHtml(status)} · ${escapeHtml(when)}</small></div>`;
+    return `<div class="smart-history-item"><div><strong>${renderText(item.title)}</strong><span>${renderText(item.body)}</span></div><small>${escapeHtml(lane)} · ${escapeHtml(status)} · ${escapeHtml(when)}</small></div>`;
   }).join("");
 }
 
