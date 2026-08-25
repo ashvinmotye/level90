@@ -120,6 +120,8 @@ function runAppStateTests() {
       historyScores:["2026-08-17","2026-08-18","2026-08-19","2026-08-20"].map(dateKey=>dailyScoreFor(parseLocalDate(dateKey))),
       characterCount:strongDayCount(parseLocalDate("2026-08-22"))
     };
+    renderCharacter();
+    globalThis.renderedStrongDayStat = document.querySelector("#strongDayStat").textContent;
     state.completions = {"2026-08-22":{q_deleted:{completedAt:"2026-08-22T08:00:00.000Z",questTitle:"Archived quest",categoryId:"body",difficulty:"hard",xpAwarded:40}}};
     state.quests = [];
     globalThis.deletedHistoryResult = {
@@ -150,6 +152,7 @@ function runAppStateTests() {
   assert.deepEqual(JSON.parse(JSON.stringify(context.strongDayResult)),{
     historyScores:[100,100,25,100],characterCount:3
   });
+  assert.equal(context.renderedStrongDayStat,3);
   assert.equal(context.stateTestResult.schemaVersion,3);
   assert.equal(context.stateTestResult.legacyXp,40);
   assert.equal(context.stateTestResult.invalidDifficulty,"easy");

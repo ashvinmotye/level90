@@ -2,6 +2,13 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 33 live Character totals and reliable PWA updates
+
+- Recalculates Character totals every time the Character tab opens, after the latest local or synced completion data is available.
+- Version-tags the app scripts and stylesheet so a deployed update cannot combine an older cached script with newer markup.
+- Uses online-first navigation with an offline fallback, allowing installed PWAs to receive the latest app shell reliably.
+- Retains the Version 32 completion-ledger calculation that matches History's 80+ scoring.
+
 ## Version 32 Character 80+ day parity
 
 - Calculates Character's **80+ days** from the actual completion-ledger dates, matching the daily scores displayed in History.

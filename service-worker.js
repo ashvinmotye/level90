@@ -1,11 +1,11 @@
-const CACHE = "level90-v32";
+const CACHE = "level90-v33";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css",
-  "./cloud.js",
-  "./notifications.js",
-  "./app.js",
+  "./styles.css?v=33",
+  "./cloud.js?v=33",
+  "./notifications.js?v=33",
+  "./app.js?v=33",
   "./data/initial-data.json",
   "./manifest.webmanifest",
   "./icons/favicon-32.png",
@@ -33,6 +33,14 @@ self.addEventListener("fetch", event => {
   const requestUrl = new URL(event.request.url);
   if (requestUrl.hostname.endsWith(".supabase.co")) {
     event.respondWith(fetch(event.request));
+    return;
+  }
+  if (event.request.mode === "navigate") {
+    event.respondWith(fetch(event.request).then(response => {
+      const copy = response.clone();
+      caches.open(CACHE).then(cache => cache.put("./index.html",copy));
+      return response;
+    }).catch(() => caches.match("./index.html")));
     return;
   }
   event.respondWith(

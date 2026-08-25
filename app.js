@@ -211,6 +211,7 @@ function showView(view,options={}) {
   if (options.updateHash !== false && window.location.hash !== `#${nextView}`) {
     window.history.replaceState(null,"",`#${nextView}`);
   }
+  if (nextView === "character" && state && CONFIG) renderCharacter();
   if (options.scroll !== false) window.scrollTo({top:0,behavior:"smooth"});
   if (nextView === "settings" && typeof refreshLevel90NotificationSettings === "function") {
     refreshLevel90NotificationSettings().catch(()=>{});
