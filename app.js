@@ -588,8 +588,9 @@ function renderQuestLibrary() {
   const qs = state.quests.filter(q => questFilter === "all" || q.type === questFilter);
   $("#questLibrary").innerHTML = qs.length ? qs.map(q=>questCard(q,false)).join("") :
     `<div class="empty-state">Nothing here yet.</div>`;
-  $("#reorderBtn").classList.toggle("active", reorderMode);
-  $("#reorderBtn").textContent = reorderMode ? "✓ Done ordering" : "↕ Reorder";
+  const reorderButton = $("#reorderBtn");
+  reorderButton.classList.toggle("active", reorderMode);
+  reorderButton.querySelector("span").textContent = reorderMode ? "Done ordering" : "Reorder";
   $("#reorderHint").classList.toggle("hidden", !reorderMode);
   $("#questLibrary").classList.toggle("reordering", reorderMode);
 }

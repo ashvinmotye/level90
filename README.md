@@ -2,6 +2,11 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 31 persistent Reorder icon
+
+- Keeps the supplied Reorder SVG mounted when the Quests list renders or enters ordering mode.
+- Updates only the button label between **Reorder** and **Done ordering**, preventing the dynamic renderer from restoring the legacy glyph.
+
 ## Version 30 Quests actions and greeting icons
 
 - Adds the supplied AuraOS-colored SVGs to the Quests **Categories** and **Reorder** actions.
