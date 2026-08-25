@@ -294,13 +294,18 @@ async function level90LoadSmartNotificationSettings() {
   level90RenderSmartHistory(history || []);
 }
 
-async function level90RefreshSmartNotificationSettings(connected=false) {
+async function level90RefreshSmartNotificationSettings() {
   if (!level90NotificationDom.smartStatus) return;
-  if (!connected) {
-    level90DisableSmartSettings();
+  if (!level90NotificationUser()) {
+    level90DisableSmartSettings("Signed out","Sign in to manage smart reminders.");
+    return;
+  }
+  if (!navigator.onLine) {
+    level90DisableSmartSettings("Offline","Connect to check or change smart reminders.");
     return;
   }
   try {
+    await level90LoadNotificationConfig();
     await level90LoadSmartNotificationSettings();
     level90SetSmartNotificationMessage();
   } catch (error) {
@@ -353,7 +358,7 @@ async function level90SaveSmartNotificationSettings() {
   } finally {
     level90SmartSettingsBusy = false;
     level90NotificationDom.smartSaveButton.textContent = "Save notification settings";
-    await level90RefreshSmartNotificationSettings(true);
+    await level90RefreshSmartNotificationSettings();
     level90SetSmartNotificationMessage(resultMessage,resultIsError);
   }
 }
@@ -416,11 +421,6 @@ async function refreshLevel90NotificationSettings() {
     .filter(Boolean).forEach(button=>{ button.disabled = true; });
   level90DisableSmartSettings("Checking","Checking this device and the smart notification service…");
 
-  if (!support.supported) {
-    level90SetNotificationState(support.installRequired ? "Install Level90 first" : "Notifications unavailable",support.reason,support.installRequired ? "Install app" : "Unsupported");
-    level90DisableSmartSettings(support.installRequired ? "Install app" : "Unsupported",support.reason);
-    return;
-  }
   if (!user) {
     level90SetNotificationState("Sign in required","Your notification devices are linked to your Level90 account.","Signed out");
     level90DisableSmartSettings("Signed out","Sign in to manage smart reminders.");
@@ -429,6 +429,11 @@ async function refreshLevel90NotificationSettings() {
   if (!navigator.onLine) {
     level90SetNotificationState("Offline","Connect to check or change this device's notification status.","Offline");
     level90DisableSmartSettings("Offline","Connect to check or change smart reminders.");
+    return;
+  }
+  if (!support.supported) {
+    level90SetNotificationState(support.installRequired ? "Install Level90 first" : "Notifications unavailable",support.reason,support.installRequired ? "Install app" : "Unsupported");
+    await level90RefreshSmartNotificationSettings();
     return;
   }
 
@@ -445,7 +450,7 @@ async function refreshLevel90NotificationSettings() {
   const permission = Notification.permission;
   if (permission === "denied") {
     level90SetNotificationState("Notifications are blocked","Allow Level90 notifications in your device or browser settings, then return here.","Blocked");
-    level90DisableSmartSettings("Blocked","Allow notifications before enabling smart reminders.");
+    await level90RefreshSmartNotificationSettings();
     return;
   }
 
@@ -464,39 +469,43 @@ async function refreshLevel90NotificationSettings() {
       level90NotificationDom.enableButton.disabled = level90NotificationBusy;
     }
     level90SetNotificationMessage();
-    await level90RefreshSmartNotificationSettings(Boolean(subscription));
+    await level90RefreshSmartNotificationSettings();
   } catch (error) {
     level90SetNotificationState("Device registration incomplete",level90FriendlyNotificationError(error),"Setup needed");
     level90SetNotificationMessage(level90FriendlyNotificationError(error),true);
-    level90DisableSmartSettings("Setup needed",level90FriendlyNotificationError(error));
+    await level90RefreshSmartNotificationSettings();
   }
 }
 
 async function level90EnableNotifications() {
-  if (level90NotificationBusy || !level90NotificationPublicKey) return;
+  if (level90NotificationBusy) return;
+  let resultMessage = "";
+  let resultIsError = false;
   const permissionPromise = Notification.permission === "default"
     ? Notification.requestPermission()
     : Promise.resolve(Notification.permission);
   level90SetNotificationBusy(true,"Connecting…");
   level90SetNotificationMessage();
   try {
-    const permission = await permissionPromise;
+    const [permission,publicKey] = await Promise.all([permissionPromise,level90LoadNotificationConfig()]);
     if (permission !== "granted") throw new Error(permission === "denied" ? "Notifications were blocked. Enable them in your device settings." : "Notification permission was not granted.");
     const registration = await navigator.serviceWorker.ready;
     let subscription = await registration.pushManager.getSubscription();
     if (!subscription) {
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly:true,
-        applicationServerKey:level90UrlBase64ToUint8Array(level90NotificationPublicKey)
+        applicationServerKey:level90UrlBase64ToUint8Array(publicKey)
       });
     }
     await level90StorePushSubscription(subscription);
     showToast("Notifications connected.");
   } catch (error) {
-    level90SetNotificationMessage(level90FriendlyNotificationError(error),true);
+    resultMessage = level90FriendlyNotificationError(error);
+    resultIsError = true;
   } finally {
     level90NotificationBusy = false;
     await refreshLevel90NotificationSettings();
+    level90SetNotificationMessage(resultMessage,resultIsError);
   }
 }
 

@@ -34,7 +34,7 @@ function storage() {
   };
 }
 
-function notificationContext({ios=false,standalone=true,smartRuleVersion=0}={}) {
+function notificationContext({ios=false,standalone=true,smartRuleVersion=0,historyItems=[]}={}) {
   const elements = new Map();
   const writes = [];
   const invocations = [];
@@ -108,7 +108,7 @@ function notificationContext({ios=false,standalone=true,smartRuleVersion=0}={}) 
               return Promise.resolve({data:table === "level90_notification_preferences" ? smartPreference : null,error:null});
             },
             limit() {
-              return Promise.resolve({data:table === "level90_notification_outbox" ? [] : null,error:null});
+              return Promise.resolve({data:table === "level90_notification_outbox" ? historyItems : null,error:null});
             }
           };
           return query;
@@ -199,16 +199,26 @@ async function run() {
   assert.equal(iosSupport.supported,false);
   assert.equal(iosSupport.installRequired,true);
 
-  const smartHarness = notificationContext({smartRuleVersion:2});
+  const smartHarness = notificationContext({
+    smartRuleVersion:2,
+    historyItems:[{
+      id:"notification-a",rule_key:"morning_brief",title:"Level90 morning briefing",
+      body:"Yesterday: 80%. Today: 5 quests.",status:"sent",
+      created_at:"2026-08-25T06:00:00.000Z",sent_at:"2026-08-25T06:00:02.000Z"
+    }]
+  });
   await smartHarness.context.notificationApi.refresh();
-  await smartHarness.context.notificationApi.enable();
   const smartToggle = smartHarness.elements.get("#smartNotificationsToggle");
-  assert.equal(smartToggle.disabled,false,"smart settings should unlock after the device is connected");
+  assert.equal(smartHarness.elements.get("#enableNotificationsButton").disabled,false,"this device should still be ready to connect");
+  assert.equal(smartToggle.disabled,false,"account settings should be available before this device is connected");
   assert.equal(smartHarness.elements.get("#smartNotificationStatus").textContent,"Paused");
+  assert.match(smartHarness.elements.get("#smartNotificationHistory").innerHTML,/Level90 morning briefing/);
+  assert.match(smartHarness.elements.get("#smartNotificationHistory").innerHTML,/Morning/);
   assert.equal(smartHarness.elements.get('[data-time-display-for="morningBriefTime"]').textContent,"10:00");
   assert.equal(smartHarness.elements.get('[data-time-display-for="eveningRecapTime"]').textContent,"21:00");
   assert.equal(smartHarness.elements.get('[data-time-display-for="smartQuietStart"]').textContent,"21:30");
   assert.equal(smartHarness.elements.get('[data-time-display-for="smartQuietEnd"]').textContent,"08:00");
+  await smartHarness.context.notificationApi.enable();
   smartToggle.checked = true;
   smartHarness.elements.get("#morningBriefToggle").checked = true;
   smartHarness.elements.get("#morningBriefTime").value = "09:45";
@@ -240,6 +250,16 @@ async function run() {
   assert.equal(smartWrite.record.cooldown_minutes,90);
   assert.equal(smartWrite.record.quiet_start,"22:00");
   assert.equal(smartHarness.elements.get("#smartNotificationStatus").textContent,"Active");
+
+  const keyRecoveryHarness = notificationContext({smartRuleVersion:2});
+  await keyRecoveryHarness.context.notificationApi.refresh();
+  keyRecoveryHarness.context.Notification.permission = "granted";
+  vm.runInContext("level90NotificationPublicKey = null;",keyRecoveryHarness.context);
+  await keyRecoveryHarness.context.notificationApi.enable();
+  assert.equal(keyRecoveryHarness.requestCount(),0,"granted permission should not be requested again");
+  assert.equal(keyRecoveryHarness.invocations.filter(item=>item.action === "config").length,2,"enable should recover a missing in-memory VAPID key");
+  assert.equal(keyRecoveryHarness.elements.get("#testNotificationButton").disabled,false);
+  assert.ok(keyRecoveryHarness.writes.some(write=>write.table === "level90_push_subscriptions" && write.kind === "upsert"));
 
   await runServiceWorkerTests();
 

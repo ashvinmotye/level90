@@ -2,6 +2,13 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 27 Mac notification connection and account history
+- Makes **Enable notifications** recover the VAPID configuration when its in-memory key was cleared, instead of silently ignoring the click.
+- Keeps the browser permission request directly attached to the click for Safari while loading the recovered server configuration in parallel.
+- Treats smart-notification preferences and delivery history as account data, so they remain visible on any signed-in online device even when that browser is not connected for push delivery.
+- Keeps push subscriptions device-specific: connecting the Mac adds it as another delivery device without replacing the phone.
+- Requires only the updated PWA files; there is no new Supabase migration or Edge Function deployment for this version.
+
 ## Version 26 lifetime quest consistency
 - Adds a second recurring-quest measurement in Quests: completed scheduled days over every scheduled opportunity since the quest was added, such as `12/15 completed · 80%`.
 - Shows current streak and lifetime completion together on each recurring quest card while keeping Today focused on the compact `🔥 7` streak badge.
