@@ -2,6 +2,12 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 29 aligned quest difficulty markers
+- Replaces platform-rendered difficulty emoji in the Quests metadata row with fixed-size AuraOS difficulty dots.
+- Vertically centers category, separators, difficulty and schedule text on one shared line box across desktop and mobile.
+- Applies the same aligned markers inside the quest difficulty picker for a consistent editing experience.
+- Requires only the updated PWA files; there is no Supabase migration or Edge Function deployment for this version.
+
 ## Version 28 AuraOS SVG icon system
 - Replaces the main interface emoji with the supplied SVG artwork for Today, Quests, History, Character, notifications, streak fire, fresh journey, import, export and reset.
 - Reuses the established AuraOS Workout sun and moon SVGs in the header theme toggle, appearance picker, morning briefing and evening recap.

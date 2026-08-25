@@ -35,6 +35,11 @@ function auraIcon(name,extraClass="") {
   return `<svg class="${className}" aria-hidden="true" focusable="false"><use href="#icon-${name}"></use></svg>`;
 }
 
+function difficultyDot(id) {
+  const key = Object.prototype.hasOwnProperty.call(CONFIG?.difficulty || {},id) ? id : "easy";
+  return `<i class="difficulty-dot difficulty-dot-${key}" aria-hidden="true"></i>`;
+}
+
 function localDateKey(date = new Date()) {
   const y = date.getFullYear();
   const m = String(date.getMonth()+1).padStart(2,"0");
@@ -558,7 +563,7 @@ function questCard(q, todayMode=false, dateKey=localDateKey()) {
     <div>
       <div class="quest-title">${escapeHtml(q.title)}</div>
       <div class="quest-meta">
-        <span>${escapeHtml(cat.name)}</span><span>•</span><span>${d.icon} ${d.label}</span><span>•</span><span>${repeat}</span>
+        <span class="quest-meta-item">${escapeHtml(cat.name)}</span><i class="quest-meta-separator" aria-hidden="true">•</i><span class="quest-meta-item quest-meta-difficulty">${difficultyDot(q.difficulty)}<span>${escapeHtml(d.label)}</span></span><i class="quest-meta-separator" aria-hidden="true">•</i><span class="quest-meta-item">${repeat}</span>
       </div>
       ${questProgress}
     </div>
@@ -866,7 +871,7 @@ function renderDifficulty() {
   const selected=$("#questDialog").dataset.difficulty || "medium";
   p.innerHTML=Object.entries(CONFIG.difficulty).map(([id,d])=>`
     <button type="button" class="difficulty-btn ${id===selected?"selected":""}" data-difficulty="${id}">
-      ${d.icon} ${d.label}<br><small>${d.xp} XP</small>
+      <span class="difficulty-option-label">${difficultyDot(id)}<span>${escapeHtml(d.label)}</span></span><small>${d.xp} XP</small>
     </button>`).join("");
   $("#difficultyXpHint").textContent=`This quest will award ${difficulty(selected).xp} XP. XP is fixed by difficulty.`;
 }

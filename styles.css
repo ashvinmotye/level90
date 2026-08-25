@@ -478,7 +478,17 @@ body.light .level-prompt { color:var(--accent); }
 .quest-card.completed { opacity:.62; }
 .quest-card.completed .quest-title { text-decoration:line-through; }
 .quest-title { font-weight:800; font-size:14px; }
-.quest-meta { color:var(--muted); font-size:10px; margin-top:4px; display:flex; gap:6px; flex-wrap:wrap; }
+.quest-meta { color:var(--muted); font-size:10px; line-height:1.35; margin-top:4px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.quest-meta-item { display:inline-flex; align-items:center; min-height:14px; }
+.quest-meta-separator { display:inline-flex; align-items:center; align-self:center; height:14px; font-style:normal; line-height:14px; opacity:.8; }
+.quest-meta-difficulty { gap:5px; }
+.difficulty-dot { flex:0 0 auto; display:inline-block; width:8px; height:8px; border-radius:50%; border:1px solid rgb(var(--accent-rgb) / .22); box-shadow:0 0 0 2px rgb(var(--accent-rgb) / .055); }
+.difficulty-dot-tiny { background:var(--muted); border-color:rgb(var(--gold-rgb) / .18); }
+.difficulty-dot-easy { background:var(--accent-soft); }
+.difficulty-dot-medium { background:var(--accent-2); border-color:rgb(var(--accent-2-rgb) / .34); }
+.difficulty-dot-hard { background:var(--gold); border-color:rgb(var(--gold-rgb) / .34); }
+.difficulty-dot-major { background:var(--danger); border-color:rgb(255 118 146 / .34); }
+.difficulty-dot-epic { background:linear-gradient(135deg,var(--accent),var(--danger)); border-color:rgb(var(--accent-rgb) / .36); }
 .quest-progress-stats { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-top:9px; }
 .quest-progress-stats > span { display:inline-flex; align-items:center; gap:2px; min-height:24px; padding:5px 8px; border:1px solid var(--line); border-radius:999px; background:rgba(255,255,255,.025); font-size:9px; font-weight:800; line-height:1; }
 .quest-progress-stats strong { margin:0 3px; color:var(--text); font-size:10px; }
@@ -675,8 +685,10 @@ body.light .bottom-nav { background:rgba(255,255,255,.84); }
 .difficulty-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:8px; }
 .difficulty-btn {
   border:1px solid var(--line); background:rgba(255,255,255,.035); color:var(--muted); border-radius:14px;
-  padding:10px 7px; cursor:pointer; font-size:10px; font-weight:800;
+  display:grid; justify-items:center; gap:4px; padding:10px 7px; cursor:pointer; font-size:10px; font-weight:800;
 }
+.difficulty-option-label { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:14px; line-height:1; }
+.difficulty-btn small { display:block; }
 .difficulty-btn.selected { border-color:rgb(var(--accent-rgb) / .52); background:rgb(var(--accent-rgb) / .13); color:var(--text); }
 .xp-hint { margin:8px 0 16px; color:var(--gold); font-size:10px; font-weight:800; }
 
