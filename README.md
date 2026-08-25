@@ -2,6 +2,13 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 26 lifetime quest consistency
+- Adds a second recurring-quest measurement in Quests: completed scheduled days over every scheduled opportunity since the quest was added, such as `12/15 completed · 80%`.
+- Shows current streak and lifetime completion together on each recurring quest card while keeping Today focused on the compact `🔥 7` streak badge.
+- Counts only the weekdays selected for non-daily recurring quests; one-off quests do not receive streak or lifetime-consistency stats.
+- Includes today when the quest is scheduled and recalculates directly from the completion ledger, so yesterday corrections, cloud sync and restored backups immediately update the ratio.
+- Requires only the updated PWA files; there is no new Supabase migration or Edge Function deployment for this version.
+
 ## Version 25 daily briefings and aggressive streak rescue
 - Adds an independent morning briefing at 10:00 local time with yesterday's score, today's quest count, current level, strongest streak and XP to the next level.
 - Adds an independent evening recap at 21:00 with today's score, completed/open quest counts and the number of streaks at risk.

@@ -77,11 +77,21 @@ function runAppStateTests() {
       legacyXp:state.completions["2026-08-17"].q_daily.xpAwarded,
       invalidDifficulty:state.completions["2026-08-19"].q_daily.difficulty,
       invalidDifficultyXp:state.completions["2026-08-19"].q_daily.xpAwarded,
-      streak:questStreak(state.quests[0],parseLocalDate("2026-08-22"))
+      streak:questStreak(state.quests[0],parseLocalDate("2026-08-22")),
+      consistency:questConsistency(state.quests[0],parseLocalDate("2026-08-22"))
     };
+    globalThis.questCardHtml = questCard(state.quests[0],false,"2026-08-22");
+    const weekdayQuest = {id:"q_weekday",title:"Weekday quest",categoryId:"body",difficulty:"easy",type:"recurring",schedule:{mode:"weekdays",days:[1,2,3,4,5]},active:true,createdOn:"2026-08-17"};
+    ["2026-08-17","2026-08-18","2026-08-19","2026-08-20"].forEach(dateKey=>{ state.completions[dateKey].q_weekday = true; });
+    globalThis.scheduleConsistencyResult = {
+      weekday:questConsistency(weekdayQuest,parseLocalDate("2026-08-23")),
+      oneoff:questConsistency({...weekdayQuest,id:"q_once",type:"oneoff"},parseLocalDate("2026-08-23"))
+    };
+    ["2026-08-17","2026-08-18","2026-08-19","2026-08-20"].forEach(dateKey=>{ delete state.completions[dateKey].q_weekday; });
     delete state.completions["2026-08-21"];
     const xpBeforeBackwardEdit = totalXp();
     const streakBeforeBackwardEdit = questStreak(state.quests[0],parseLocalDate("2026-08-22"));
+    const consistencyBeforeBackwardEdit = questConsistency(state.quests[0],parseLocalDate("2026-08-22"));
     toggleQuestCompletionForDate("q_daily","2026-08-21",completionFallbackTimestamp("2026-08-21"));
     const backwardRecord = state.completions["2026-08-21"].q_daily;
     globalThis.backwardEditResult = {
@@ -93,12 +103,15 @@ function runAppStateTests() {
       todayEditable:isEditableHistoryDate("2026-08-22",parseLocalDate("2026-08-22")),
       beforeStreak:streakBeforeBackwardEdit,
       afterStreak:questStreak(state.quests[0],parseLocalDate("2026-08-22")),
+      beforeConsistency:consistencyBeforeBackwardEdit,
+      afterConsistency:questConsistency(state.quests[0],parseLocalDate("2026-08-22")),
       xpAdded:totalXp()-xpBeforeBackwardEdit,
       completionDate:localDateKey(new Date(backwardRecord.completedAt))
     };
     toggleQuestCompletionForDate("q_daily","2026-08-21");
     globalThis.backwardEditUndoResult = {
       streak:questStreak(state.quests[0],parseLocalDate("2026-08-22")),
+      consistency:questConsistency(state.quests[0],parseLocalDate("2026-08-22")),
       xpRestored:totalXp()===xpBeforeBackwardEdit,
       emptyDayRemoved:!state.completions["2026-08-21"]
     };
@@ -111,12 +124,22 @@ function runAppStateTests() {
   `,context);
 
   assert.deepEqual({...context.stateTestResult.streak},{current:5,best:5});
+  assert.deepEqual({...context.stateTestResult.consistency},{completed:5,scheduled:6,percentage:83});
+  assert.match(context.questCardHtml,/🔥 <strong>5<\/strong> streak/);
+  assert.match(context.questCardHtml,/✓ <strong>5\/6<\/strong> completed/);
+  assert.match(context.questCardHtml,/>83%<\/span>/);
+  assert.deepEqual({...context.scheduleConsistencyResult.weekday},{completed:4,scheduled:5,percentage:80});
+  assert.equal(context.scheduleConsistencyResult.oneoff,null);
   assert.deepEqual(JSON.parse(JSON.stringify(context.backwardEditResult)),{
     yesterdayEditable:true,earlySameDayEditable:true,lateSameDayEditable:true,expiredAtNextMidnight:true,
     twoDaysAgoEditable:false,todayEditable:false,
-    beforeStreak:{current:0,best:4},afterStreak:{current:5,best:5},xpAdded:40,completionDate:"2026-08-21"
+    beforeStreak:{current:0,best:4},afterStreak:{current:5,best:5},
+    beforeConsistency:{completed:4,scheduled:6,percentage:67},afterConsistency:{completed:5,scheduled:6,percentage:83},
+    xpAdded:40,completionDate:"2026-08-21"
   });
-  assert.deepEqual(JSON.parse(JSON.stringify(context.backwardEditUndoResult)),{streak:{current:0,best:4},xpRestored:true,emptyDayRemoved:true});
+  assert.deepEqual(JSON.parse(JSON.stringify(context.backwardEditUndoResult)),{
+    streak:{current:0,best:4},consistency:{completed:4,scheduled:6,percentage:67},xpRestored:true,emptyDayRemoved:true
+  });
   assert.equal(context.stateTestResult.schemaVersion,3);
   assert.equal(context.stateTestResult.legacyXp,40);
   assert.equal(context.stateTestResult.invalidDifficulty,"easy");

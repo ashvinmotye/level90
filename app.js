@@ -336,6 +336,30 @@ function questStreak(q, asOf=new Date()) {
   return {current,best};
 }
 
+function questConsistency(q, asOf=new Date()) {
+  if (q.type !== "recurring") return null;
+
+  const asOfKey = localDateKey(asOf);
+  const firstCompletion = earliestCompletionKey(q.id);
+  const startKey = q.createdOn || firstCompletion || state.startedOn || asOfKey;
+  const start = parseLocalDate(startKey);
+  const end = parseLocalDate(asOfKey);
+  let scheduled = 0;
+  let completed = 0;
+
+  for (let date = start; date <= end; date = addDays(date,1)) {
+    if (!isRecurringScheduledOn(q,date)) continue;
+    scheduled += 1;
+    if (isCompleted(q.id,localDateKey(date))) completed += 1;
+  }
+
+  return {
+    completed,
+    scheduled,
+    percentage:scheduled ? Math.round((completed/scheduled)*100) : 0
+  };
+}
+
 function plannedQuestsFor(date) {
   return state.quests.filter(q => isScheduledOn(q,date));
 }
@@ -498,8 +522,15 @@ function questCard(q, todayMode=false, dateKey=localDateKey()) {
   const cat = category(q.categoryId);
   const d = difficulty(q.difficulty);
   const done = isCompleted(q.id,dateKey);
-  const streak = todayMode ? questStreak(q,parseLocalDate(dateKey)) : null;
-  const streakBadge = streak ? `<span class="tile-streak" title="Current streak: ${streak.current} · Best streak: ${streak.best}" aria-label="Current streak ${streak.current}; best streak ${streak.best}">🔥 ${streak.current}</span>` : "";
+  const streak = q.type === "recurring" ? questStreak(q,parseLocalDate(dateKey)) : null;
+  const streakBadge = todayMode && streak ? `<span class="tile-streak" title="Current streak: ${streak.current} · Best streak: ${streak.best}" aria-label="Current streak ${streak.current}; best streak ${streak.best}">🔥 ${streak.current}</span>` : "";
+  const consistency = !todayMode ? questConsistency(q,parseLocalDate(dateKey)) : null;
+  const questProgress = streak && consistency ? `
+      <div class="quest-progress-stats">
+        <span class="quest-progress-streak" title="Current streak: ${streak.current} · Best streak: ${streak.best}" aria-label="Current streak ${streak.current}; best streak ${streak.best}">🔥 <strong>${streak.current}</strong> streak</span>
+        <span class="quest-progress-lifetime" title="Completed ${consistency.completed} of ${consistency.scheduled} scheduled days since this quest was added" aria-label="Completed ${consistency.completed} of ${consistency.scheduled} scheduled days since this quest was added">✓ <strong>${consistency.completed}/${consistency.scheduled}</strong> completed</span>
+        <span class="quest-progress-rate" aria-label="${consistency.percentage} percent completion rate">${consistency.percentage}%</span>
+      </div>` : "";
   const repeat = q.type === "oneoff" ? "One-off mission" :
     q.schedule?.mode === "daily" ? "Every day" :
     `Repeats ${weekdayText(q.schedule?.days || [])}`;
@@ -520,6 +551,7 @@ function questCard(q, todayMode=false, dateKey=localDateKey()) {
       <div class="quest-meta">
         <span>${escapeHtml(cat.name)}</span><span>•</span><span>${d.icon} ${d.label}</span><span>•</span><span>${repeat}</span>
       </div>
+      ${questProgress}
     </div>
     ${reorderMode ? `<div class="reorder-controls">
           <button class="move-btn" data-move="up" data-move-id="${q.id}" aria-label="Move ${escapeHtml(q.title)} up">↑</button>

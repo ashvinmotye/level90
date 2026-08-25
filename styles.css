@@ -470,6 +470,12 @@ body.light .level-prompt { color:var(--accent); }
 .quest-card.completed .quest-title { text-decoration:line-through; }
 .quest-title { font-weight:800; font-size:14px; }
 .quest-meta { color:var(--muted); font-size:10px; margin-top:4px; display:flex; gap:6px; flex-wrap:wrap; }
+.quest-progress-stats { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-top:9px; }
+.quest-progress-stats > span { display:inline-flex; align-items:center; min-height:24px; padding:5px 8px; border:1px solid var(--line); border-radius:999px; background:rgba(255,255,255,.025); font-size:9px; font-weight:800; line-height:1; }
+.quest-progress-stats strong { margin:0 3px; color:var(--text); font-size:10px; }
+.quest-progress-streak { color:var(--gold); border-color:rgb(var(--gold-rgb) / .18) !important; background:rgb(var(--gold-rgb) / .07) !important; }
+.quest-progress-lifetime { color:var(--accent-soft); border-color:rgb(var(--accent-rgb) / .18) !important; background:rgb(var(--accent-rgb) / .07) !important; }
+.quest-progress-rate { color:var(--muted); }
 .xp-chip {
   color:var(--gold); font-size:11px; font-weight:900; padding:7px 9px;
   background:rgba(255,209,102,.09); border:1px solid rgba(255,209,102,.16); border-radius:999px;
