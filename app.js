@@ -389,6 +389,14 @@ function dailyScoreFor(date) {
   if (!planned) return 0;
   return Math.min(100,Math.round((completedXpForDate(date) / planned) * 100));
 }
+function strongDayCount(asOf=new Date()) {
+  const asOfKey = localDateKey(asOf);
+  return Object.keys(state.completions || {}).filter(dateKey => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey) || dateKey > asOfKey) return false;
+    const date = parseLocalDate(dateKey);
+    return localDateKey(date) === dateKey && dailyScoreFor(date) >= 80;
+  }).length;
+}
 function totalXp() {
   let total = 0;
   Object.entries(state.completions).forEach(([dateKey, completions]) => {
@@ -730,13 +738,7 @@ function renderCharacter() {
   }).join("");
   $("#totalXpStat").textContent = totalXp();
   $("#completedQuestStat").textContent = Object.values(state.completions).reduce((s,d)=>s+Object.values(d).filter(Boolean).length,0);
-  let strong=0;
-  const elapsedDays = journeyDay();
-  for(let i=0;i<elapsedDays;i++){
-    const d=addDays(parseLocalDate(state.startedOn),i);
-    if(dailyScoreFor(d)>=80) strong++;
-  }
-  $("#strongDayStat").textContent = strong;
+  $("#strongDayStat").textContent = strongDayCount();
 }
 
 function toggleQuestCompletionForDate(id,dateKey,completedAt=new Date().toISOString()) {

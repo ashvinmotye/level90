@@ -115,6 +115,11 @@ function runAppStateTests() {
       xpRestored:totalXp()===xpBeforeBackwardEdit,
       emptyDayRemoved:!state.completions["2026-08-21"]
     };
+    state.startedOn = "2026-08-22";
+    globalThis.strongDayResult = {
+      historyScores:["2026-08-17","2026-08-18","2026-08-19","2026-08-20"].map(dateKey=>dailyScoreFor(parseLocalDate(dateKey))),
+      characterCount:strongDayCount(parseLocalDate("2026-08-22"))
+    };
     state.completions = {"2026-08-22":{q_deleted:{completedAt:"2026-08-22T08:00:00.000Z",questTitle:"Archived quest",categoryId:"body",difficulty:"hard",xpAwarded:40}}};
     state.quests = [];
     globalThis.deletedHistoryResult = {
@@ -141,6 +146,9 @@ function runAppStateTests() {
   });
   assert.deepEqual(JSON.parse(JSON.stringify(context.backwardEditUndoResult)),{
     streak:{current:0,best:4},consistency:{completed:4,scheduled:6,percentage:67},xpRestored:true,emptyDayRemoved:true
+  });
+  assert.deepEqual(JSON.parse(JSON.stringify(context.strongDayResult)),{
+    historyScores:[100,100,25,100],characterCount:3
   });
   assert.equal(context.stateTestResult.schemaVersion,3);
   assert.equal(context.stateTestResult.legacyXp,40);

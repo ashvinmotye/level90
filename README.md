@@ -2,6 +2,12 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 32 Character 80+ day parity
+
+- Calculates Character's **80+ days** from the actual completion-ledger dates, matching the daily scores displayed in History.
+- Includes valid synced or imported completion dates even when they predate the profile's `startedOn` value.
+- Excludes future and malformed date entries from the run total.
+
 ## Version 31 persistent Reorder icon
 
 - Keeps the supplied Reorder SVG mounted when the Quests list renders or enters ordering mode.
