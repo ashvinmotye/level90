@@ -1,4 +1,4 @@
-const CACHE = "level90-v23";
+const CACHE = "level90-v24";
 const ASSETS = [
   "./",
   "./index.html",

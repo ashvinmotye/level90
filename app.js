@@ -43,6 +43,14 @@ function parseLocalDate(key) {
 function addDays(date, n) {
   const d = new Date(date); d.setDate(d.getDate()+n); return d;
 }
+function previousCalendarDateKey(asOf=new Date()) {
+  const previous = new Date(asOf.getFullYear(),asOf.getMonth(),asOf.getDate());
+  previous.setDate(previous.getDate()-1);
+  return localDateKey(previous);
+}
+function isEditableHistoryDate(dateKey,asOf=new Date()) {
+  return dateKey === previousCalendarDateKey(asOf);
+}
 function daysBetween(a,b) {
   const x = new Date(a.getFullYear(),a.getMonth(),a.getDate());
   const y = new Date(b.getFullYear(),b.getMonth(),b.getDate());
@@ -260,6 +268,7 @@ function completionXp(id,dateKey=localDateKey()) {
 
 function isScheduledOn(q, date) {
   if (!q.active) return false;
+  if (q.createdOn && localDateKey(date) < q.createdOn) return false;
   if (q.type === "oneoff") {
     return !isQuestEverCompleted(q.id) || isCompleted(q.id, localDateKey(date));
   }
@@ -596,27 +605,43 @@ function historicalQuestFromCompletion(id,dateKey) {
 
 function renderDayReview() {
   const date = parseLocalDate(selectedHistoryDate || localDateKey());
+  const dateKey = localDateKey(date);
   const start = parseLocalDate(state.startedOn);
   const day = daysBetween(date,start) + 1;
   const quests = questsForReview(date);
-  const completed = quests.filter(q=>isCompleted(q.id,selectedHistoryDate));
+  const completed = quests.filter(q=>isCompleted(q.id,dateKey));
   const todayKey = localDateKey();
+  const editable = isEditableHistoryDate(dateKey);
   $("#reviewDayLabel").textContent = day >= 1 ? `JOURNEY DAY ${day}` : "BEFORE THIS JOURNEY";
-  $("#reviewDateLabel").textContent = selectedHistoryDate === todayKey ? "Today" : new Intl.DateTimeFormat(undefined,{weekday:"long",month:"long",day:"numeric"}).format(date);
+  $("#reviewDateLabel").textContent = dateKey === todayKey ? "Today" : new Intl.DateTimeFormat(undefined,{weekday:"long",month:"long",day:"numeric"}).format(date);
   $("#reviewScore").textContent = dailyScoreFor(date);
-  $("#reviewXp").textContent = completed.reduce((sum,q)=>sum+completionXp(q.id,selectedHistoryDate),0);
+  $("#reviewXp").textContent = completed.reduce((sum,q)=>sum+completionXp(q.id,dateKey),0);
   $("#reviewClears").textContent = `${completed.length}/${quests.length}`;
-  $("#reviewQuestList").innerHTML = quests.length ? quests.map(q=>{
-    const done = isCompleted(q.id,selectedHistoryDate);
-    return `<div class="review-quest ${done ? "done" : "missed"}">
-      <span class="review-check">${done ? "✓" : "○"}</span>
-      <div><strong>${escapeHtml(q.title)}</strong><small>${done ? completionTimeLabel(q.id,selectedHistoryDate) : "Not completed"}</small></div>
-      <span class="review-xp">${done ? `+${completionXp(q.id,selectedHistoryDate)} XP` : "—"}</span>
-    </div>`;
-  }).join("") : `<div class="empty-state compact">No quests were scheduled for this day.</div>`;
+  $("#historyEditNotice").classList.toggle("hidden",!editable);
+  $("#reviewQuestList").innerHTML = quests.length
+    ? quests.map(q=>reviewQuestRow(q,date,dateKey,editable)).join("")
+    : `<div class="empty-state compact">No quests were scheduled for this day.</div>`;
 
   $("#previousDayBtn").disabled = date <= start;
   $("#nextDayBtn").disabled = date >= parseLocalDate(localDateKey());
+}
+
+function reviewQuestRow(q,date,dateKey,editableDate) {
+  const done = isCompleted(q.id,dateKey);
+  const currentQuest = state.quests.find(item=>item.id===q.id) || null;
+  const canEdit = editableDate && currentQuest && isScheduledOn(currentQuest,date);
+  const detail = canEdit
+    ? (done ? `${completionTimeLabel(q.id,dateKey)} · Tap to reopen` : "Tap to mark completed")
+    : (done ? completionTimeLabel(q.id,dateKey) : "Not completed");
+  const end = canEdit
+    ? `<span class="review-edit-action">${done ? "UNDO" : "ADD"}</span>`
+    : `<span class="review-xp">${done ? `+${completionXp(q.id,dateKey)} XP` : "—"}</span>`;
+  const content = `
+    <span class="review-check">${done ? "✓" : "○"}</span>
+    <div><strong>${escapeHtml(q.title)}</strong><small>${escapeHtml(detail)}</small></div>
+    ${end}`;
+  if (!canEdit) return `<div class="review-quest ${done ? "done" : "missed"}">${content}</div>`;
+  return `<button type="button" class="review-quest editable ${done ? "done" : "missed"}" data-history-complete="${q.id}" aria-pressed="${done}" aria-label="${done ? "Reopen" : "Mark completed"} ${escapeHtml(q.title)} for yesterday">${content}</button>`;
 }
 
 function moveQuest(id, direction) {
@@ -667,22 +692,30 @@ function renderCharacter() {
   $("#strongDayStat").textContent = strong;
 }
 
-function toggleComplete(id, button) {
-  const key = localDateKey();
+function toggleQuestCompletionForDate(id,dateKey,completedAt=new Date().toISOString()) {
   const q = state.quests.find(x=>x.id===id);
-  if (!q) return;
-  state.completions[key] ||= {};
-  const wasDone = !!state.completions[key][id];
-  const oldLevel = levelFromXp(totalXp());
-
-  if (wasDone) delete state.completions[key][id];
-  else state.completions[key][id] = normalizeCompletionRecord({
-    completedAt:new Date().toISOString(),
+  if (!q) return null;
+  state.completions[dateKey] ||= {};
+  const wasDone = !!state.completions[dateKey][id];
+  if (wasDone) {
+    delete state.completions[dateKey][id];
+    if (!Object.keys(state.completions[dateKey]).length) delete state.completions[dateKey];
+  } else state.completions[dateKey][id] = normalizeCompletionRecord({
+    completedAt,
     questTitle:q.title,
     categoryId:q.categoryId,
     difficulty:q.difficulty,
     xpAwarded:xpForQuest(q)
-  },q,key);
+  },q,dateKey);
+  return {q,wasDone};
+}
+
+function toggleComplete(id, button) {
+  const key = localDateKey();
+  const oldLevel = levelFromXp(totalXp());
+  const change = toggleQuestCompletionForDate(id,key);
+  if (!change) return;
+  const {q,wasDone} = change;
 
   save();
   const newLevel = levelFromXp(totalXp());
@@ -695,6 +728,26 @@ function toggleComplete(id, button) {
   } else {
     showToast("Quest reopened");
   }
+  renderAll();
+}
+
+function toggleHistoryCompletion(id) {
+  const key = selectedHistoryDate;
+  if (!key || !isEditableHistoryDate(key)) {
+    showToast("Only yesterday can be edited");
+    renderHistory();
+    return;
+  }
+  const date = parseLocalDate(key);
+  const q = state.quests.find(item=>item.id===id);
+  if (!q || !isScheduledOn(q,date)) return;
+  const oldLevel = levelFromXp(totalXp());
+  const change = toggleQuestCompletionForDate(id,key,completionFallbackTimestamp(key));
+  if (!change) return;
+  save();
+  const newLevel = levelFromXp(totalXp());
+  if (!change.wasDone && newLevel > oldLevel) showLevelUp(newLevel);
+  else showToast(change.wasDone ? "Yesterday's correction removed" : `Yesterday corrected · +${xpForQuest(q)} XP`);
   renderAll();
 }
 
@@ -934,6 +987,11 @@ function bindEvents() {
   $$("#weekdayPicker button").forEach(b=>b.addEventListener("click",()=>b.classList.toggle("selected")));
 
   document.addEventListener("click",e=>{
+    const historyCompletion=e.target.closest("[data-history-complete]");
+    if(historyCompletion){
+      toggleHistoryCompletion(historyCompletion.dataset.historyComplete);
+      return;
+    }
     const c=e.target.closest("[data-complete]");
     if(c) toggleComplete(c.dataset.complete,c);
     const t=e.target.closest("[data-toggle]");

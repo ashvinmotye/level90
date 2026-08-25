@@ -2,6 +2,11 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 24 one-day History corrections
+- Makes only the immediately previous local calendar date editable from History; the window changes at local midnight rather than after 24 elapsed hours.
+- Lets a missed scheduled quest be marked complete—or an incorrect clear be reopened—directly in Yesterday's review.
+- Stores corrections in the normal completion ledger so XP, daily score, current and best streaks, calendar activity and Supabase sync all recalculate together.
+
 ## Version 23 forged Level90 icon
 - Replaces every install icon with the supplied forged-silver “90” emblem and electric-blue energy artwork.
 - Adds dedicated 32px favicon, 180px Apple touch icon, standard PWA icons and safely padded maskable variants.

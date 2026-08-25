@@ -79,6 +79,29 @@ function runAppStateTests() {
       invalidDifficultyXp:state.completions["2026-08-19"].q_daily.xpAwarded,
       streak:questStreak(state.quests[0],parseLocalDate("2026-08-22"))
     };
+    delete state.completions["2026-08-21"];
+    const xpBeforeBackwardEdit = totalXp();
+    const streakBeforeBackwardEdit = questStreak(state.quests[0],parseLocalDate("2026-08-22"));
+    toggleQuestCompletionForDate("q_daily","2026-08-21",completionFallbackTimestamp("2026-08-21"));
+    const backwardRecord = state.completions["2026-08-21"].q_daily;
+    globalThis.backwardEditResult = {
+      yesterdayEditable:isEditableHistoryDate("2026-08-21",parseLocalDate("2026-08-22")),
+      earlySameDayEditable:isEditableHistoryDate("2026-08-21",new Date(2026,7,22,0,1)),
+      lateSameDayEditable:isEditableHistoryDate("2026-08-21",new Date(2026,7,22,23,59)),
+      expiredAtNextMidnight:!isEditableHistoryDate("2026-08-21",new Date(2026,7,23,0,0)),
+      twoDaysAgoEditable:isEditableHistoryDate("2026-08-20",parseLocalDate("2026-08-22")),
+      todayEditable:isEditableHistoryDate("2026-08-22",parseLocalDate("2026-08-22")),
+      beforeStreak:streakBeforeBackwardEdit,
+      afterStreak:questStreak(state.quests[0],parseLocalDate("2026-08-22")),
+      xpAdded:totalXp()-xpBeforeBackwardEdit,
+      completionDate:localDateKey(new Date(backwardRecord.completedAt))
+    };
+    toggleQuestCompletionForDate("q_daily","2026-08-21");
+    globalThis.backwardEditUndoResult = {
+      streak:questStreak(state.quests[0],parseLocalDate("2026-08-22")),
+      xpRestored:totalXp()===xpBeforeBackwardEdit,
+      emptyDayRemoved:!state.completions["2026-08-21"]
+    };
     state.completions = {"2026-08-22":{q_deleted:{completedAt:"2026-08-22T08:00:00.000Z",questTitle:"Archived quest",categoryId:"body",difficulty:"hard",xpAwarded:40}}};
     state.quests = [];
     globalThis.deletedHistoryResult = {
@@ -88,6 +111,12 @@ function runAppStateTests() {
   `,context);
 
   assert.deepEqual({...context.stateTestResult.streak},{current:5,best:5});
+  assert.deepEqual(JSON.parse(JSON.stringify(context.backwardEditResult)),{
+    yesterdayEditable:true,earlySameDayEditable:true,lateSameDayEditable:true,expiredAtNextMidnight:true,
+    twoDaysAgoEditable:false,todayEditable:false,
+    beforeStreak:{current:0,best:4},afterStreak:{current:5,best:5},xpAdded:40,completionDate:"2026-08-21"
+  });
+  assert.deepEqual(JSON.parse(JSON.stringify(context.backwardEditUndoResult)),{streak:{current:0,best:4},xpRestored:true,emptyDayRemoved:true});
   assert.equal(context.stateTestResult.schemaVersion,3);
   assert.equal(context.stateTestResult.legacyXp,40);
   assert.equal(context.stateTestResult.invalidDifficulty,"easy");

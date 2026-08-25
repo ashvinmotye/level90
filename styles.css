@@ -550,15 +550,23 @@ body.light .move-btn { color:var(--accent); }
 .review-score-row strong,.review-score-row span { display:block; }
 .review-score-row strong { font-size:20px; }
 .review-score-row span { margin-top:3px; color:var(--muted); font-size:8px; text-transform:uppercase; letter-spacing:.08em; font-weight:800; }
+.history-edit-notice { display:grid; gap:3px; margin:-2px 0 12px; padding:10px 12px; border:1px solid rgb(var(--accent-rgb) / .22); border-radius:14px; background:rgb(var(--accent-rgb) / .07); }
+.history-edit-notice strong { color:var(--accent-soft); font-size:9px; }
+.history-edit-notice span { color:var(--muted); font-size:8px; line-height:1.4; }
 .review-quest-list { display:grid; gap:8px; }
 .review-quest { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:10px; padding:11px; border-radius:15px; background:rgba(255,255,255,.03); border:1px solid var(--line); }
+.review-quest.editable { appearance:none; width:100%; color:var(--text); text-align:left; font:inherit; cursor:pointer; transition:.18s ease; }
+.review-quest.editable:hover,.review-quest.editable:focus-visible { border-color:rgb(var(--accent-rgb) / .38); background:rgb(var(--accent-rgb) / .08); outline:none; }
+.review-quest.editable:active { transform:scale(.985); }
 .review-check { width:28px; height:28px; display:grid; place-items:center; border-radius:10px; background:rgba(255,255,255,.04); color:var(--muted); }
 .review-quest.done .review-check { background:rgb(var(--accent-2-rgb) / .13); color:var(--accent-2); }
 .review-quest strong,.review-quest small { display:block; }
 .review-quest strong { font-size:12px; }
 .review-quest small { color:var(--muted); margin-top:3px; font-size:9px; }
 .review-quest.missed { opacity:.65; }
+.review-quest.editable.missed { opacity:1; }
 .review-xp { color:var(--gold); font-size:10px; font-weight:900; }
+.review-edit-action { min-width:39px; padding:6px 7px; border-radius:9px; background:rgb(var(--accent-rgb) / .12); color:var(--accent-soft); font-size:7px; font-weight:950; letter-spacing:.08em; text-align:center; }
 .empty-state.compact { padding:15px; }
 
 .character-list { display:grid; gap:12px; }
