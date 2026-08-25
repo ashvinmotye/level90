@@ -2,6 +2,7 @@
 
 const LEVEL90_NOTIFICATION_FUNCTION = "level90-notifications";
 const LEVEL90_NOTIFICATION_DEVICE_NAME_PREFIX = "level90.notificationDeviceName.v1";
+const LEVEL90_NOTIFICATION_CATCHUP_PREFIX = "level90.notificationCatchup.v1";
 
 const level90NotificationDom = {
   supportStatus:document.querySelector("#notificationSupportStatus"),
@@ -14,8 +15,15 @@ const level90NotificationDom = {
   message:document.querySelector("#notificationMessage"),
   smartStatus:document.querySelector("#smartNotificationStatus"),
   smartToggle:document.querySelector("#smartNotificationsToggle"),
+  morningBriefToggle:document.querySelector("#morningBriefToggle"),
+  morningBriefTime:document.querySelector("#morningBriefTime"),
+  morningBriefTimeDisplay:document.querySelector('[data-time-display-for="morningBriefTime"]'),
+  eveningRecapToggle:document.querySelector("#eveningRecapToggle"),
+  eveningRecapTime:document.querySelector("#eveningRecapTime"),
+  eveningRecapTimeDisplay:document.querySelector('[data-time-display-for="eveningRecapTime"]'),
+  streakRescueToggle:document.querySelector("#streakRescueToggle"),
   smartMinimumStreak:document.querySelector("#smartMinimumStreak"),
-  smartDailyLimit:document.querySelector("#smartDailyLimit"),
+  smartRescueIntensity:document.querySelector("#smartRescueIntensity"),
   smartQuietStart:document.querySelector("#smartQuietStart"),
   smartQuietEnd:document.querySelector("#smartQuietEnd"),
   smartQuietStartDisplay:document.querySelector('[data-time-display-for="smartQuietStart"]'),
@@ -33,6 +41,7 @@ let level90NotificationBusy = false;
 let level90NotificationBound = false;
 let level90NotificationSmartRuleVersion = 0;
 let level90SmartSettingsBusy = false;
+let level90NotificationCatchupBusy = false;
 
 function level90NotificationUser() {
   return typeof level90AuthSession !== "undefined" ? level90AuthSession?.user || null : null;
@@ -110,14 +119,19 @@ function level90SyncSmartTimeDisplay(input,display) {
 }
 
 function level90SyncSmartTimeDisplays() {
+  level90SyncSmartTimeDisplay(level90NotificationDom.morningBriefTime,level90NotificationDom.morningBriefTimeDisplay);
+  level90SyncSmartTimeDisplay(level90NotificationDom.eveningRecapTime,level90NotificationDom.eveningRecapTimeDisplay);
   level90SyncSmartTimeDisplay(level90NotificationDom.smartQuietStart,level90NotificationDom.smartQuietStartDisplay);
   level90SyncSmartTimeDisplay(level90NotificationDom.smartQuietEnd,level90NotificationDom.smartQuietEndDisplay);
 }
 
 function level90SetSmartControlsEnabled(enabled) {
   [
-    level90NotificationDom.smartToggle,level90NotificationDom.smartMinimumStreak,
-    level90NotificationDom.smartDailyLimit,level90NotificationDom.smartQuietStart,
+    level90NotificationDom.smartToggle,level90NotificationDom.morningBriefToggle,
+    level90NotificationDom.morningBriefTime,level90NotificationDom.eveningRecapToggle,
+    level90NotificationDom.eveningRecapTime,level90NotificationDom.streakRescueToggle,
+    level90NotificationDom.smartMinimumStreak,level90NotificationDom.smartRescueIntensity,
+    level90NotificationDom.smartQuietStart,
     level90NotificationDom.smartQuietEnd,level90NotificationDom.smartSaveButton
   ].filter(Boolean).forEach(control=>{ control.disabled = !enabled || level90SmartSettingsBusy; });
 }
@@ -126,7 +140,7 @@ function level90DisableSmartSettings(title="Smart reminders unavailable",message
   level90SetSmartControlsEnabled(false);
   level90SetSmartNotificationBadge(title);
   if (level90NotificationDom.smartRuleState) level90NotificationDom.smartRuleState.textContent = message;
-  if (level90NotificationDom.smartHistory) level90NotificationDom.smartHistory.innerHTML = "<small>No smart reminders sent yet.</small>";
+  if (level90NotificationDom.smartHistory) level90NotificationDom.smartHistory.innerHTML = "<small>No notifications sent yet.</small>";
 }
 
 function level90SetNotificationBusy(busy,label="") {
@@ -154,7 +168,8 @@ function level90FriendlyNotificationError(error) {
   const message = String(error?.message || error || "").trim();
   const normalized = message.toLowerCase();
   if (!navigator.onLine || normalized.includes("failed to fetch") || normalized.includes("network")) return "Connect to the internet and try again.";
-  if (normalized.includes("min_streak") || normalized.includes("notification_outbox") || normalized.includes("last_evaluated_at")) return "Run the included Level90 Phase 2 smart-notification migration in Supabase.";
+  if (normalized.includes("morning_brief") || normalized.includes("rescue_intensity") || normalized.includes("final_rescue_time")) return "Run the included Level90 Phase 3 notification migration in Supabase, then redeploy the Edge Function.";
+  if (normalized.includes("min_streak") || normalized.includes("notification_outbox") || normalized.includes("last_evaluated_at")) return "Run the included Level90 smart-notification migrations in Supabase.";
   if (normalized.includes("level90_push_subscriptions") || normalized.includes("schema cache") || normalized.includes("relation")) return "Run the included Level90 notification migration in Supabase.";
   if (normalized.includes("function") && (normalized.includes("not found") || normalized.includes("non-2xx"))) return "Deploy the included Level90 notification Edge Function.";
   if (normalized.includes("setup incomplete") || normalized.includes("vapid")) return "Add the three VAPID secrets to the Level90 notification Edge Function.";
@@ -192,7 +207,7 @@ function level90TimeInputValue(value,fallback) {
 }
 
 function level90SmartRuleStateText(preference) {
-  if (!preference.smart_enabled) return "Smart reminders are paused.";
+  if (!preference.smart_enabled) return "Level90 notifications are paused.";
   if (!preference.last_evaluated_at) {
     const enabledAgeMinutes = Math.max(0,Math.round((Date.now()-Date.parse(preference.updated_at || new Date().toISOString()))/60000));
     return enabledAgeMinutes > 35
@@ -205,11 +220,15 @@ function level90SmartRuleStateText(preference) {
   const messages = {
     quiet_hours:"Last check: quiet hours are active, so Level90 stayed silent.",
     no_at_risk_streak:"Last check: no qualifying streak is currently at risk.",
-    before_adaptive_time:`Monitoring your streak. The earliest contextual check is ${detail.next_trigger_local || "later today"}.`,
-    daily_limit:"Today's reminder limit has already been reached.",
-    cooldown:"Level90 is respecting the four-hour reminder cooldown.",
-    queued:"A streak-rescue reminder was queued for delivery.",
-    already_queued:"Today's reminder for that quest was already handled.",
+    before_adaptive_time:`Monitoring every qualifying streak. The next contextual check begins at ${detail.next_trigger_local || "later today"}.`,
+    daily_limit:"Today's streak-rescue limit has already been reached.",
+    cooldown:`Level90 is respecting the ${preference.cooldown_minutes || 90}-minute rescue cooldown.`,
+    queued_adaptive:"A grouped streak-rescue alert was queued for delivery.",
+    queued_final:"The final grouped streak check was queued for delivery.",
+    reserved_final:`The adaptive quota is full. A final grouped check is reserved for ${detail.final_rescue_local || "20:15"}.`,
+    already_queued:"Today's matching notification was already handled.",
+    summary_only:"Daily summaries are active; streak rescue is paused.",
+    all_rules_paused:"All notification lanes are paused.",
     no_device:"No connected notification device was found.",
     error:"The last rule check failed. Open the Edge Function logs for details."
   };
@@ -219,13 +238,15 @@ function level90SmartRuleStateText(preference) {
 function level90RenderSmartHistory(items=[]) {
   if (!level90NotificationDom.smartHistory) return;
   if (!items.length) {
-    level90NotificationDom.smartHistory.innerHTML = "<small>No smart reminders sent yet.</small>";
+    level90NotificationDom.smartHistory.innerHTML = "<small>No notifications sent yet.</small>";
     return;
   }
   level90NotificationDom.smartHistory.innerHTML = items.map(item=>{
     const when = new Intl.DateTimeFormat(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}).format(new Date(item.sent_at || item.created_at));
     const status = item.status === "sent" ? "Delivered" : item.status === "pending" ? "Pending" : item.status;
-    return `<div class="smart-history-item"><div><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.body)}</span></div><small>${escapeHtml(status)} · ${escapeHtml(when)}</small></div>`;
+    const labels = {morning_brief:"Morning",evening_recap:"Evening",streak_rescue:"Rescue"};
+    const lane = labels[item.rule_key] || "Level90";
+    return `<div class="smart-history-item"><div><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.body)}</span></div><small>${escapeHtml(lane)} · ${escapeHtml(status)} · ${escapeHtml(when)}</small></div>`;
   }).join("");
 }
 
@@ -237,20 +258,25 @@ async function level90LoadSmartNotificationSettings() {
     level90DisableSmartSettings("Signed out","Sign in to manage smart reminders.");
     return;
   }
-  if (level90NotificationSmartRuleVersion < 1) {
-    level90DisableSmartSettings("Update required","Deploy the updated Level90 notification Edge Function for Phase 2.");
+  if (level90NotificationSmartRuleVersion < 2) {
+    level90DisableSmartSettings("Update required","Run the Phase 3 migration and deploy the updated Level90 notification Edge Function.");
     return;
   }
   const {data:preference,error} = await level90AuthClient
     .from("level90_notification_preferences")
-    .select("timezone,smart_enabled,streak_rescue_enabled,quiet_start,quiet_end,max_daily,min_streak,adaptive_grace_minutes,cooldown_minutes,last_evaluated_at,last_rule_result,last_rule_detail,updated_at")
+    .select("timezone,smart_enabled,morning_brief_enabled,morning_brief_time,evening_recap_enabled,evening_recap_time,streak_rescue_enabled,rescue_intensity,final_rescue_time,quiet_start,quiet_end,max_daily,min_streak,adaptive_grace_minutes,cooldown_minutes,last_evaluated_at,last_rule_result,last_rule_detail,updated_at")
     .eq("user_id",user.id)
     .maybeSingle();
   if (error) throw error;
   if (!preference) throw new Error("The Level90 notification preference record is missing.");
   level90NotificationDom.smartToggle.checked = Boolean(preference.smart_enabled);
+  level90NotificationDom.morningBriefToggle.checked = Boolean(preference.morning_brief_enabled);
+  level90NotificationDom.morningBriefTime.value = level90TimeInputValue(preference.morning_brief_time,"10:00");
+  level90NotificationDom.eveningRecapToggle.checked = Boolean(preference.evening_recap_enabled);
+  level90NotificationDom.eveningRecapTime.value = level90TimeInputValue(preference.evening_recap_time,"21:00");
+  level90NotificationDom.streakRescueToggle.checked = Boolean(preference.streak_rescue_enabled);
   level90NotificationDom.smartMinimumStreak.value = String(preference.min_streak || 3);
-  level90NotificationDom.smartDailyLimit.value = String(preference.max_daily || 2);
+  level90NotificationDom.smartRescueIntensity.value = preference.rescue_intensity || "aggressive";
   level90NotificationDom.smartQuietStart.value = level90TimeInputValue(preference.quiet_start,"21:30");
   level90NotificationDom.smartQuietEnd.value = level90TimeInputValue(preference.quiet_end,"08:00");
   level90SyncSmartTimeDisplays();
@@ -260,10 +286,10 @@ async function level90LoadSmartNotificationSettings() {
 
   const {data:history,error:historyError} = await level90AuthClient
     .from("level90_notification_outbox")
-    .select("id,title,body,status,created_at,sent_at")
+    .select("id,rule_key,title,body,status,created_at,sent_at")
     .eq("user_id",user.id)
     .order("created_at",{ascending:false})
-    .limit(3);
+    .limit(5);
   if (historyError) throw historyError;
   level90RenderSmartHistory(history || []);
 }
@@ -295,26 +321,38 @@ async function level90SaveSmartNotificationSettings() {
   try {
     const user = level90NotificationUser();
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    const rescueIntensity = level90NotificationDom.smartRescueIntensity.value || "aggressive";
+    const rescuePresets = {
+      calm:{max_daily:1,adaptive_grace_minutes:60,cooldown_minutes:240},
+      balanced:{max_daily:2,adaptive_grace_minutes:45,cooldown_minutes:120},
+      aggressive:{max_daily:3,adaptive_grace_minutes:30,cooldown_minutes:90}
+    };
+    const rescuePreset = rescuePresets[rescueIntensity] || rescuePresets.aggressive;
     const record = {
       user_id:user.id,timezone,
       smart_enabled:Boolean(level90NotificationDom.smartToggle.checked),
-      streak_rescue_enabled:true,
+      morning_brief_enabled:Boolean(level90NotificationDom.morningBriefToggle.checked),
+      morning_brief_time:level90NotificationDom.morningBriefTime.value || "10:00",
+      evening_recap_enabled:Boolean(level90NotificationDom.eveningRecapToggle.checked),
+      evening_recap_time:level90NotificationDom.eveningRecapTime.value || "21:00",
+      streak_rescue_enabled:Boolean(level90NotificationDom.streakRescueToggle.checked),
+      rescue_intensity:rescueIntensity,
+      final_rescue_time:"20:15",
       min_streak:Number(level90NotificationDom.smartMinimumStreak.value || 3),
-      max_daily:Number(level90NotificationDom.smartDailyLimit.value || 2),
       quiet_start:level90NotificationDom.smartQuietStart.value || "21:30",
       quiet_end:level90NotificationDom.smartQuietEnd.value || "08:00",
-      adaptive_grace_minutes:60,cooldown_minutes:240
+      ...rescuePreset
     };
     const {error} = await level90AuthClient.from("level90_notification_preferences").upsert(record,{onConflict:"user_id"});
     if (error) throw error;
-    resultMessage = record.smart_enabled ? "Smart streak rescue is active." : "Smart reminders are paused.";
+    resultMessage = record.smart_enabled ? "Level90 notifications are active." : "Level90 notifications are paused.";
     showToast(resultMessage);
   } catch (error) {
     resultMessage = level90FriendlyNotificationError(error);
     resultIsError = true;
   } finally {
     level90SmartSettingsBusy = false;
-    level90NotificationDom.smartSaveButton.textContent = "Save smart settings";
+    level90NotificationDom.smartSaveButton.textContent = "Save notification settings";
     await level90RefreshSmartNotificationSettings(true);
     level90SetSmartNotificationMessage(resultMessage,resultIsError);
   }
@@ -527,6 +565,33 @@ async function level90UpdateNotificationDeviceName() {
   }
 }
 
+function level90NotificationCatchupKey(userId=level90NotificationUser()?.id) {
+  return userId ? `${LEVEL90_NOTIFICATION_CATCHUP_PREFIX}.${userId}` : null;
+}
+
+async function level90CatchupNotifications(force=false) {
+  const user = level90NotificationUser();
+  if (level90NotificationCatchupBusy || !user || !navigator.onLine || Notification.permission !== "granted") return;
+  try {
+    await level90LoadNotificationConfig();
+  } catch {
+    return;
+  }
+  if (level90NotificationSmartRuleVersion < 2) return;
+  const key = level90NotificationCatchupKey(user.id);
+  const lastCheck = Number(key ? localStorage.getItem(key) : 0) || 0;
+  if (!force && Date.now()-lastCheck < 15*60000) return;
+  level90NotificationCatchupBusy = true;
+  if (key) localStorage.setItem(key,String(Date.now()));
+  try {
+    await level90InvokeNotificationFunction("catchup");
+  } catch {
+    // Catch-up is best effort. The scheduled Supabase dispatcher remains authoritative.
+  } finally {
+    level90NotificationCatchupBusy = false;
+  }
+}
+
 function level90BindNotificationSettings() {
   if (level90NotificationBound || !level90NotificationDom.enableButton) return;
   level90NotificationBound = true;
@@ -536,6 +601,8 @@ function level90BindNotificationSettings() {
   level90NotificationDom.deviceName.addEventListener("change",level90UpdateNotificationDeviceName);
   level90NotificationDom.smartSaveButton?.addEventListener("click",level90SaveSmartNotificationSettings);
   [
+    [level90NotificationDom.morningBriefTime,level90NotificationDom.morningBriefTimeDisplay],
+    [level90NotificationDom.eveningRecapTime,level90NotificationDom.eveningRecapTimeDisplay],
     [level90NotificationDom.smartQuietStart,level90NotificationDom.smartQuietStartDisplay],
     [level90NotificationDom.smartQuietEnd,level90NotificationDom.smartQuietEndDisplay]
   ].forEach(([input,display])=>{
@@ -545,13 +612,20 @@ function level90BindNotificationSettings() {
     input.addEventListener("change",sync);
   });
   level90SyncSmartTimeDisplays();
-  window.addEventListener("online",()=>refreshLevel90NotificationSettings().catch(()=>{}));
+  window.addEventListener("online",async()=>{
+    await refreshLevel90NotificationSettings().catch(()=>{});
+    await level90CatchupNotifications().catch(()=>{});
+  });
   window.addEventListener("offline",()=>refreshLevel90NotificationSettings().catch(()=>{}));
+  document.addEventListener?.("visibilitychange",()=>{
+    if (document.visibilityState !== "hidden") level90CatchupNotifications().catch(()=>{});
+  });
 }
 
 async function initializeLevel90Notifications() {
   level90BindNotificationSettings();
   await refreshLevel90NotificationSettings();
+  await level90CatchupNotifications();
 }
 
 function resetLevel90NotificationSettings() {
@@ -560,6 +634,7 @@ function resetLevel90NotificationSettings() {
   level90NotificationBusy = false;
   level90NotificationSmartRuleVersion = 0;
   level90SmartSettingsBusy = false;
+  level90NotificationCatchupBusy = false;
   level90ResetNotificationButtonLabels();
   level90DisableSmartSettings("Signed out","Sign in to manage smart reminders.");
   refreshLevel90NotificationSettings().catch(()=>{});

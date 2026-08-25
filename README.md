@@ -2,6 +2,24 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 25 daily briefings and aggressive streak rescue
+- Adds an independent morning briefing at 10:00 local time with yesterday's score, today's quest count, current level, strongest streak and XP to the next level.
+- Adds an independent evening recap at 21:00 with today's score, completed/open quest counts and the number of streaks at risk.
+- Evaluates every qualifying unfinished recurring quest instead of stopping after the first item in the available list.
+- Adds Calm, Balanced and Aggressive rescue presets. Aggressive uses a 30-minute adaptive grace period, a 90-minute rescue cooldown, up to three rescue alerts and a final grouped check at 20:15.
+- Groups up to three urgent quest names and streak counts in one alert, prioritised by longest streak, overdue time and the saved quest order.
+- Keeps summary notifications outside rescue quiet hours, cooldown and daily limits, with per-day deduplication for each lane.
+- Extends push lifetimes and runs a throttled catch-up evaluation when the installed app reconnects or returns to the foreground.
+
+### Phase 3 Supabase setup
+
+1. Run `supabase/migrations/20260825_add_level90_notification_briefs.sql` once in the Supabase SQL Editor.
+2. Redeploy `supabase/functions/level90-notifications/index.ts` as the existing `level90-notifications` Edge Function.
+3. Keep the existing `level90-smart-notifications` Cron job; its 15-minute schedule now evaluates all three lanes.
+4. Deploy every PWA file, then open **Settings → Notifications**, review the three lane switches and save.
+
+The morning push is eligible from 10:00 for a 12-hour catch-up window, and the evening push is eligible from 21:00 for three hours. Web Push delivery after a device reconnects remains best effort on iOS: Level90 uses longer push TTLs plus an authenticated app-resume catch-up, but Safari does not guarantee an exact delivery minute while the device is offline.
+
 ## Version 24 one-day History corrections
 - Makes only the immediately previous local calendar date editable from History; the window changes at local midnight rather than after 24 elapsed hours.
 - Lets a missed scheduled quest be marked complete—or an incorrect clear be reopened—directly in Yesterday's review.

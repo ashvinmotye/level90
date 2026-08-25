@@ -14,7 +14,8 @@ function loadRuleApi(environment={}) {
   let source = fs.readFileSync(functionPath,"utf8").replace(/^import .*;\s*$/gm,"");
   source += `\nglobalThis.smartRuleApi={
     timeMinutes,minuteLabel,isQuietMinute,zonedParts,dateKeyAdd,weekdayForDateKey,
-    questScheduledOn,streakBeforeToday,median,adaptiveTriggerMinute,evaluateStreakRescue
+    questScheduledOn,questPlannedOn,streakBeforeToday,median,adaptiveTriggerMinute,
+    summaryDue,evaluateStreakRescue,notificationSummaryStats,morningBrief,eveningRecap,rescueCopy
   };`;
   const context = vm.createContext({
     console,Date,Intl,Map,Set,Promise,Response,JSON,Object,Math,Number,String,Array,
@@ -28,8 +29,11 @@ function loadRuleApi(environment={}) {
 function preference(overrides={}) {
   return {
     user_id:"user-a",timezone:"UTC",smart_enabled:true,streak_rescue_enabled:true,
-    quiet_start:"21:30",quiet_end:"08:00",max_daily:2,min_streak:3,
-    adaptive_grace_minutes:60,cooldown_minutes:240,...overrides
+    morning_brief_enabled:true,morning_brief_time:"10:00",
+    evening_recap_enabled:true,evening_recap_time:"21:00",
+    rescue_intensity:"aggressive",final_rescue_time:"20:15",
+    quiet_start:"21:30",quiet_end:"08:00",max_daily:3,min_streak:3,
+    adaptive_grace_minutes:30,cooldown_minutes:90,...overrides
   };
 }
 
@@ -43,7 +47,7 @@ function dailyQuest(overrides={}) {
 function completion(date,hour=17,questId="q_read") {
   return {
     quest_id:questId,completion_date:date,
-    completed_at:`${date}T${String(hour).padStart(2,"0")}:00:00.000Z`
+    completed_at:`${date}T${String(hour).padStart(2,"0")}:00:00.000Z`,xp_awarded:20
   };
 }
 
@@ -53,14 +57,15 @@ async function run() {
   const history = [completion("2026-08-20"),completion("2026-08-21"),completion("2026-08-22")];
 
   const eligible = api.evaluateStreakRescue(preference(),[quest],history,new Date("2026-08-23T19:00:00.000Z"));
-  assert.equal(eligible.result,"candidate");
+  assert.equal(eligible.result,"candidates");
   assert.equal(eligible.candidate.streak,3);
-  assert.equal(eligible.candidate.triggerMinute,18*60,"usual 17:00 completion plus one-hour grace");
+  assert.equal(eligible.candidate.triggerMinute,17*60+30,"usual 17:00 completion plus 30-minute aggressive grace");
   assert.equal(eligible.candidate.learnedTiming,true);
+  assert.equal(eligible.candidates.length,1);
 
-  const early = api.evaluateStreakRescue(preference(),[quest],history,new Date("2026-08-23T17:30:00.000Z"));
+  const early = api.evaluateStreakRescue(preference(),[quest],history,new Date("2026-08-23T17:20:00.000Z"));
   assert.equal(early.result,"before_adaptive_time");
-  assert.equal(early.detail.next_trigger_local,"18:00");
+  assert.equal(early.detail.next_trigger_local,"17:30");
 
   const completedToday = api.evaluateStreakRescue(
     preference(),[quest],[...history,completion("2026-08-23",16)],new Date("2026-08-23T19:00:00.000Z")
@@ -77,7 +82,7 @@ async function run() {
   const fallback = api.evaluateStreakRescue(
     preference({min_streak:2}),[quest],fallbackHistory,new Date("2026-08-23T18:15:00.000Z")
   );
-  assert.equal(fallback.result,"candidate");
+  assert.equal(fallback.result,"candidates");
   assert.equal(fallback.candidate.triggerMinute,18*60,"fewer than three samples must use the transparent 18:00 fallback");
   assert.equal(fallback.candidate.learnedTiming,false);
 
@@ -92,6 +97,29 @@ async function run() {
   ];
   const priority = api.evaluateStreakRescue(preference(),[quest,longerQuest],[...history,...longerHistory],new Date("2026-08-23T19:00:00.000Z"));
   assert.equal(priority.candidate.quest.id,"q_move","the longest at-risk streak should be protected first");
+  assert.equal(priority.candidates.length,2,"every eligible quest should be returned, not only the first available quest");
+  assert.equal(priority.candidates[1].quest.id,"q_read");
+
+  assert.equal(api.summaryDue(10*60,10*60,12*60),true,"the morning brief is due at 10:00");
+  assert.equal(api.summaryDue(21*60,10*60,12*60),true,"the morning brief remains catch-up eligible later that day");
+  assert.equal(api.summaryDue(22*60+1,10*60,12*60),false,"the morning catch-up window expires after 12 hours");
+  assert.equal(api.summaryDue(21*60,21*60,3*60),true,"the evening recap is independently due at 21:00");
+
+  const summaryHistory = [
+    completion("2026-08-20"),completion("2026-08-21"),completion("2026-08-22"),completion("2026-08-23")
+  ];
+  const stats = api.notificationSummaryStats(preference(),[quest],summaryHistory,new Date("2026-08-23T21:00:00.000Z"));
+  assert.equal(stats.yesterdayScore,100);
+  assert.equal(stats.completedToday,1);
+  assert.equal(stats.plannedToday,1);
+  assert.equal(stats.strongestStreak,4);
+  assert.match(api.morningBrief(stats).title,/Morning briefing/);
+  assert.match(api.eveningRecap(stats).body,/1\/1 quests complete/);
+
+  const grouped = api.rescueCopy(priority.candidates,"adaptive");
+  assert.match(grouped.title,/2 streaks/);
+  assert.match(grouped.body,/Move/);
+  assert.match(grouped.body,/Read/);
 
   const {handler} = loadRuleApi({
     SUPABASE_URL:"https://project.supabase.co",SUPABASE_ANON_KEY:"publishable",

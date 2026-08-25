@@ -44,8 +44,11 @@ function notificationContext({ios=false,standalone=true,smartRuleVersion=0}={}) 
   let unsubscribeCount = 0;
   let smartPreference = {
     user_id:"user-a",timezone:"UTC",smart_enabled:false,streak_rescue_enabled:true,
-    quiet_start:"21:30:00",quiet_end:"08:00:00",max_daily:2,min_streak:3,
-    adaptive_grace_minutes:60,cooldown_minutes:240,last_evaluated_at:null,
+    morning_brief_enabled:true,morning_brief_time:"10:00:00",
+    evening_recap_enabled:true,evening_recap_time:"21:00:00",
+    rescue_intensity:"aggressive",final_rescue_time:"20:15:00",
+    quiet_start:"21:30:00",quiet_end:"08:00:00",max_daily:3,min_streak:3,
+    adaptive_grace_minutes:30,cooldown_minutes:90,last_evaluated_at:null,
     last_rule_result:null,last_rule_detail:{}
   };
 
@@ -86,6 +89,7 @@ function notificationContext({ios=false,standalone=true,smartRuleVersion=0}={}) 
         invocations.push(body);
         if (body.action === "config") return {data:{publicKey:"AQIDBA",smartRuleVersion},error:null};
         if (body.action === "test") return {data:{sent:true},error:null};
+        if (body.action === "catchup") return {data:{users:1,outcomes:{}},error:null};
         return {data:null,error:new Error("Unexpected action")};
       }
     },
@@ -195,27 +199,45 @@ async function run() {
   assert.equal(iosSupport.supported,false);
   assert.equal(iosSupport.installRequired,true);
 
-  const smartHarness = notificationContext({smartRuleVersion:1});
+  const smartHarness = notificationContext({smartRuleVersion:2});
   await smartHarness.context.notificationApi.refresh();
   await smartHarness.context.notificationApi.enable();
   const smartToggle = smartHarness.elements.get("#smartNotificationsToggle");
   assert.equal(smartToggle.disabled,false,"smart settings should unlock after the device is connected");
   assert.equal(smartHarness.elements.get("#smartNotificationStatus").textContent,"Paused");
+  assert.equal(smartHarness.elements.get('[data-time-display-for="morningBriefTime"]').textContent,"10:00");
+  assert.equal(smartHarness.elements.get('[data-time-display-for="eveningRecapTime"]').textContent,"21:00");
   assert.equal(smartHarness.elements.get('[data-time-display-for="smartQuietStart"]').textContent,"21:30");
   assert.equal(smartHarness.elements.get('[data-time-display-for="smartQuietEnd"]').textContent,"08:00");
   smartToggle.checked = true;
+  smartHarness.elements.get("#morningBriefToggle").checked = true;
+  smartHarness.elements.get("#morningBriefTime").value = "09:45";
+  smartHarness.elements.get("#eveningRecapToggle").checked = true;
+  smartHarness.elements.get("#eveningRecapTime").value = "20:45";
+  smartHarness.elements.get("#streakRescueToggle").checked = true;
   smartHarness.elements.get("#smartMinimumStreak").value = "5";
-  smartHarness.elements.get("#smartDailyLimit").value = "1";
+  smartHarness.elements.get("#smartRescueIntensity").value = "aggressive";
   smartHarness.elements.get("#smartQuietStart").value = "22:00";
   smartHarness.elements.get("#smartQuietEnd").value = "07:30";
   smartHarness.elements.get("#smartQuietStart").dispatch("change");
   smartHarness.elements.get("#smartQuietEnd").dispatch("change");
+  smartHarness.elements.get("#morningBriefTime").dispatch("change");
+  smartHarness.elements.get("#eveningRecapTime").dispatch("change");
+  assert.equal(smartHarness.elements.get('[data-time-display-for="morningBriefTime"]').textContent,"09:45");
+  assert.equal(smartHarness.elements.get('[data-time-display-for="eveningRecapTime"]').textContent,"20:45");
   assert.equal(smartHarness.elements.get('[data-time-display-for="smartQuietStart"]').textContent,"22:00");
   assert.equal(smartHarness.elements.get('[data-time-display-for="smartQuietEnd"]').textContent,"07:30");
   await smartHarness.context.notificationApi.saveSmart();
   const smartWrite = smartHarness.writes.filter(write=>write.table === "level90_notification_preferences" && write.record.smart_enabled === true).at(-1);
   assert.equal(smartWrite.record.min_streak,5);
-  assert.equal(smartWrite.record.max_daily,1);
+  assert.equal(smartWrite.record.morning_brief_enabled,true);
+  assert.equal(smartWrite.record.morning_brief_time,"09:45");
+  assert.equal(smartWrite.record.evening_recap_time,"20:45");
+  assert.equal(smartWrite.record.streak_rescue_enabled,true);
+  assert.equal(smartWrite.record.rescue_intensity,"aggressive");
+  assert.equal(smartWrite.record.max_daily,3);
+  assert.equal(smartWrite.record.adaptive_grace_minutes,30);
+  assert.equal(smartWrite.record.cooldown_minutes,90);
   assert.equal(smartWrite.record.quiet_start,"22:00");
   assert.equal(smartHarness.elements.get("#smartNotificationStatus").textContent,"Active");
 
