@@ -122,6 +122,15 @@ function runAppStateTests() {
     };
     renderCharacter();
     globalThis.renderedStrongDayStat = document.querySelector("#strongDayStat").textContent;
+    state.quests.push({id:"q_once",title:"One-off mission",categoryId:"body",difficulty:"epic",type:"oneoff",schedule:{mode:"once"},active:true,createdOn:"2026-08-17"});
+    state.completions["2026-08-22"] = {q_once:normalizeCompletionRecord({difficulty:"epic",xpAwarded:100},state.quests.at(-1),"2026-08-22")};
+    globalThis.oneOffScoreResult = {
+      openOneOffDoesNotLowerScore:dailyScoreFor(parseLocalDate("2026-08-18")),
+      completedOneOffDoesNotRaiseScore:dailyScoreFor(parseLocalDate("2026-08-22")),
+      completedOneOffStillEarnsXp:completedXpForDate(parseLocalDate("2026-08-22")),
+      recurringPlannedXp:plannedXpForDate(parseLocalDate("2026-08-22")),
+      recurringCompletedXp:completedScoreXpForDate(parseLocalDate("2026-08-22"))
+    };
     state.completions = {"2026-08-22":{q_deleted:{completedAt:"2026-08-22T08:00:00.000Z",questTitle:"Archived quest",categoryId:"body",difficulty:"hard",xpAwarded:40}}};
     state.quests = [];
     globalThis.deletedHistoryResult = {
@@ -153,6 +162,13 @@ function runAppStateTests() {
     historyScores:[100,100,25,100],characterCount:3
   });
   assert.equal(context.renderedStrongDayStat,3);
+  assert.deepEqual(JSON.parse(JSON.stringify(context.oneOffScoreResult)),{
+    openOneOffDoesNotLowerScore:100,
+    completedOneOffDoesNotRaiseScore:0,
+    completedOneOffStillEarnsXp:100,
+    recurringPlannedXp:40,
+    recurringCompletedXp:0
+  });
   assert.equal(context.stateTestResult.schemaVersion,3);
   assert.equal(context.stateTestResult.legacyXp,40);
   assert.equal(context.stateTestResult.invalidDifficulty,"easy");

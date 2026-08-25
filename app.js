@@ -378,17 +378,27 @@ function questConsistency(q, asOf=new Date()) {
 function plannedQuestsFor(date) {
   return state.quests.filter(q => isScheduledOn(q,date));
 }
+function scoreQuestsFor(date) {
+  return plannedQuestsFor(date).filter(q => q.type === "recurring");
+}
 function completedXpForDate(date) {
   const key = localDateKey(date);
   return Object.entries(state.completions?.[key] || {}).reduce((sum,[id,value]) => sum + (value ? completionXp(id,key) : 0), 0);
 }
+function completedScoreXpForDate(date) {
+  const key = localDateKey(date);
+  const eligibleIds = new Set(scoreQuestsFor(date).map(quest=>quest.id));
+  return Object.entries(state.completions?.[key] || {}).reduce((sum,[id,value]) => {
+    return sum + (value && eligibleIds.has(id) ? completionXp(id,key) : 0);
+  },0);
+}
 function plannedXpForDate(date) {
-  return plannedQuestsFor(date).reduce((sum,q) => sum + xpForQuest(q), 0);
+  return scoreQuestsFor(date).reduce((sum,q) => sum + xpForQuest(q), 0);
 }
 function dailyScoreFor(date) {
   const planned = plannedXpForDate(date);
   if (!planned) return 0;
-  return Math.min(100,Math.round((completedXpForDate(date) / planned) * 100));
+  return Math.min(100,Math.round((completedScoreXpForDate(date) / planned) * 100));
 }
 function strongDayCount(asOf=new Date()) {
   const asOfKey = localDateKey(asOf);
@@ -625,7 +635,7 @@ function renderHistoryCalendar() {
     const hasActivity = completedXpForDate(date)>0;
     const disabled = date < start || date > today;
     const cls = score>=80 ? "done" : hasActivity ? "partial" : "empty";
-    html += `<button class="calendar-day ${cls}${key===selectedHistoryDate?" selected":""}${key===localDateKey()?" today":""}" data-history-date="${key}" ${disabled?"disabled":""} title="${key}: ${score}/100"><span>${day}</span>${hasActivity?`<i>${completedXpForDate(date)} XP</i>`:""}</button>`;
+    html += `<button class="calendar-day ${cls}${key===selectedHistoryDate?" selected":""}${key===localDateKey()?" today":""}" data-history-date="${key}" ${disabled?"disabled":""} title="${key}: ${score}/100"><span>${day}</span>${hasActivity?`<i>${score}/100</i>`:""}</button>`;
   }
   $("#historyCalendar").innerHTML = html;
   const startMonth = new Date(start.getFullYear(),start.getMonth(),1);

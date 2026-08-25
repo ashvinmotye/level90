@@ -306,7 +306,7 @@ function notificationSummaryStats(preference:SmartPreference,quests:QuestRecord[
   const planned = (dateKey:string) => quests.filter(quest=>questPlannedOn(quest,dateKey,byQuest.get(quest.id) || new Set()));
   const completed = (quest:QuestRecord,dateKey:string) => byQuest.get(quest.id)?.has(dateKey) || false;
   const score = (dateKey:string) => {
-    const plannedQuests = planned(dateKey);
+    const plannedQuests = planned(dateKey).filter(quest=>quest.quest_type === "recurring");
     const plannedXp = plannedQuests.reduce((sum,quest)=>sum+(difficultyXp[quest.difficulty] || 10),0);
     const earnedXp = plannedQuests.filter(quest=>completed(quest,dateKey)).reduce((sum,quest)=>sum+(difficultyXp[quest.difficulty] || 10),0);
     return plannedXp ? Math.min(100,Math.round(earnedXp/plannedXp*100)) : 0;

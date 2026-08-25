@@ -2,6 +2,14 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 34 recurring-only daily score
+
+- Removes one-off quests from both completed and planned XP in daily-score calculations.
+- Keeps one-off XP in total XP, levels, category progression and History.
+- Applies the recurring-only score consistently to Today, seven-day momentum, History, Character's **80+ score days**, morning briefings and evening recaps.
+- Shows the score directly inside History calendar cells and clarifies the Character label.
+- Requires redeploying the included `level90-notifications` Edge Function for notification summaries; no database migration is required.
+
 ## Version 33 live Character totals and reliable PWA updates
 
 - Recalculates Character totals every time the Character tab opens, after the latest local or synced completion data is available.

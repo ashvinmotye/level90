@@ -116,6 +116,14 @@ async function run() {
   assert.match(api.morningBrief(stats).title,/Morning briefing/);
   assert.match(api.eveningRecap(stats).body,/1\/1 quests complete/);
 
+  const oneOff = dailyQuest({id:"q_once",title:"One-off",difficulty:"epic",quest_type:"oneoff"});
+  const scoreWithOneOff = api.notificationSummaryStats(
+    preference(),[quest,oneOff],[...summaryHistory,completion("2026-08-23",18,"q_once")],new Date("2026-08-23T21:00:00.000Z")
+  );
+  assert.equal(scoreWithOneOff.scoreToday,100,"completed one-off XP must not change the recurring daily score");
+  assert.equal(scoreWithOneOff.plannedToday,2,"one-off quests should remain visible in summary quest counts");
+  assert.equal(scoreWithOneOff.completedToday,2,"completed one-off quests should remain visible in summary quest counts");
+
   const grouped = api.rescueCopy(priority.candidates,"adaptive");
   assert.match(grouped.title,/2 streaks/);
   assert.match(grouped.body,/Move/);
