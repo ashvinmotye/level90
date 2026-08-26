@@ -2,6 +2,14 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 35 AuraOS refresh/90 app icon
+
+- Rebuilds the complete install-icon family around the supplied Framework7 refresh/90 SVG.
+- Keeps Level90's rounded metallic-square frame and centers the new mark over a deep-blue AuraOS panel.
+- Colors the mark with the Arctic Depth cyan, blue and teal palette while retaining crisp highlights at small sizes.
+- Includes standard, Apple touch, favicon and dedicated safe-zone maskable PNGs generated from one editable SVG source.
+- Requires only the updated PWA files; there is no Supabase migration or Edge Function deployment for this version.
+
 ## Version 34 recurring-only daily score
 
 - Removes one-off quests from both completed and planned XP in daily-score calculations.
