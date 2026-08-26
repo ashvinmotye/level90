@@ -2,6 +2,13 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 36 iOS icon correction
+
+- Rebuilt the Apple Touch icon around the iOS Home Screen squircle.
+- Preserved the Level90 refresh/90 mark and metallic rounded-square language.
+- Moved the lighter frame inside the platform crop to prevent clipped, watch-like corners.
+- Gave the Apple Touch icon a versioned filename so iOS requests the corrected asset after reinstalling.
+
 ## Version 35 AuraOS refresh/90 app icon
 
 - Rebuilds the complete install-icon family around the supplied Framework7 refresh/90 SVG.
