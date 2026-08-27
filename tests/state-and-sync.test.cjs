@@ -74,12 +74,16 @@ function runAppStateTests() {
     migrateState();
     globalThis.stateTestResult = {
       schemaVersion:state.schemaVersion,
+      stoicCalendar:structuredClone(state.stoicCalendar),
       legacyXp:state.completions["2026-08-17"].q_daily.xpAwarded,
       invalidDifficulty:state.completions["2026-08-19"].q_daily.difficulty,
       invalidDifficultyXp:state.completions["2026-08-19"].q_daily.xpAwarded,
       streak:questStreak(state.quests[0],parseLocalDate("2026-08-22")),
       consistency:questConsistency(state.quests[0],parseLocalDate("2026-08-22"))
     };
+    globalThis.stoicPositionResult = stoicPositionForDate("1990-08-27",90,parseLocalDate("2026-08-27"));
+    const stoicFirstWeek = stoicWeekBounds("1990-08-27",36,0);
+    globalThis.stoicBoundsResult = {start:localDateKey(stoicFirstWeek.start),end:localDateKey(stoicFirstWeek.end),key:stoicWeekRecordKey(36,0)};
     globalThis.questCardHtml = questCard(state.quests[0],false,"2026-08-22");
     const weekdayQuest = {id:"q_weekday",title:"Weekday quest",categoryId:"body",difficulty:"easy",type:"recurring",schedule:{mode:"weekdays",days:[1,2,3,4,5]},active:true,createdOn:"2026-08-17"};
     ["2026-08-17","2026-08-18","2026-08-19","2026-08-20"].forEach(dateKey=>{ state.completions[dateKey].q_weekday = true; });
@@ -120,6 +124,7 @@ function runAppStateTests() {
       historyScores:["2026-08-17","2026-08-18","2026-08-19","2026-08-20"].map(dateKey=>dailyScoreFor(parseLocalDate(dateKey))),
       characterCount:strongDayCount(parseLocalDate("2026-08-22"))
     };
+    globalThis.stoicMetricsResult = stoicWeekMetrics(parseLocalDate("2026-08-17"),parseLocalDate("2026-08-23"),parseLocalDate("2026-08-22"));
     renderCharacter();
     globalThis.renderedStrongDayStat = document.querySelector("#strongDayStat").textContent;
     state.quests.push({id:"q_once",title:"One-off mission",categoryId:"body",difficulty:"epic",type:"oneoff",schedule:{mode:"once"},active:true,createdOn:"2026-08-17"});
@@ -169,7 +174,11 @@ function runAppStateTests() {
     recurringPlannedXp:40,
     recurringCompletedXp:0
   });
-  assert.equal(context.stateTestResult.schemaVersion,3);
+  assert.equal(context.stateTestResult.schemaVersion,4);
+  assert.deepEqual(JSON.parse(JSON.stringify(context.stateTestResult.stoicCalendar)),{birthDate:"",horizonYears:90,weeks:{}});
+  assert.deepEqual(JSON.parse(JSON.stringify(context.stoicPositionResult)),{year:36,week:0,index:1872,totalWeeks:4680,withinHorizon:true});
+  assert.deepEqual(JSON.parse(JSON.stringify(context.stoicBoundsResult)),{start:"2026-08-27",end:"2026-09-02",key:"36:00"});
+  assert.deepEqual(JSON.parse(JSON.stringify(context.stoicMetricsResult)),{tracked:true,trackedDays:6,scoreDays:6,averageScore:54,strongDays:3,questClears:4});
   assert.equal(context.stateTestResult.legacyXp,40);
   assert.equal(context.stateTestResult.invalidDifficulty,"easy");
   assert.equal(context.stateTestResult.invalidDifficultyXp,10);
@@ -215,6 +224,12 @@ async function runCloudTests() {
   let completionOps = context.cloudApi.level90LoadSyncQueue().filter(item=>item.entity === "completion");
   assert.equal(completionOps.length,1);
   assert.equal(completionOps[0].deletedAt,null);
+
+  const stoicChanged = {...structuredClone(base),schemaVersion:4,stoicCalendar:{birthDate:"1990-08-27",horizonYears:90,weeks:{"36:00":{intention:"Act on what is mine.",control:"",reaction:"",correction:"",updatedAt:"2026-08-27T08:00:00.000Z"}}}};
+  context.cloudApi.queueLevel90StateChanges(base,stoicChanged);
+  const stoicProfileOp = context.cloudApi.level90LoadSyncQueue().find(item=>item.entity === "profile");
+  assert.equal(stoicProfileOp.record.stoicCalendar.birthDate,"1990-08-27");
+  assert.equal(stoicProfileOp.record.stoicCalendar.weeks["36:00"].intention,"Act on what is mine.");
 
   context.cloudApi.queueLevel90StateChanges(completed,base);
   completionOps = context.cloudApi.level90LoadSyncQueue().filter(item=>item.entity === "completion");
@@ -325,7 +340,7 @@ async function runCloudTests() {
   };
   context.cloudApi.queueLevel90StateChanges(base,context.state);
   const phoneSnapshot = {
-    level90_profiles:[{user_id:"user-a",started_on:"2026-08-01",profile_name:"Phone",theme:"dark",palette:"arctic",schema_version:3}],
+    level90_profiles:[{user_id:"user-a",started_on:"2026-08-01",profile_name:"Phone",theme:"dark",palette:"arctic",schema_version:4,stoic_calendar:{birthDate:"1990-08-27",horizonYears:90,weeks:{}}}],
     level90_categories:snapshot.categories,
     level90_quests:[snapshot.quests[1]],
     level90_completions:[snapshot.completions[1]]
@@ -343,6 +358,7 @@ async function runCloudTests() {
   await context.cloudApi.level90UseCloudData();
   assert.deepEqual(context.state.quests.map(quest=>quest.id),["q_remote"]);
   assert.equal(context.state.profileName,"Phone");
+  assert.equal(context.state.stoicCalendar.birthDate,"1990-08-27");
   assert.equal(context.cloudApi.level90LoadSyncQueue().filter(item=>item.userId === "user-a").length,0);
   assert.equal(context.localStorage.getItem("level90.cloudMigration.v1.user-a"),"complete");
   const recovery = JSON.parse(context.localStorage.getItem("level90.beforeCloudRestore.v1.user-a"));

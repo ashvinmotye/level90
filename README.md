@@ -2,6 +2,22 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 37 Stoic Calendar
+
+- Adds a **Memento Mori Life Calendar** to Character with 52 weeks across each year of a configurable 50–120 year planning horizon; the default is Level90's 90-year view.
+- Positions the present from the user's date of birth and clearly labels the horizon as perspective rather than a lifespan prediction.
+- Colors only Level90-tracked weeks from the existing recurring-only daily score: one-off XP never changes calendar intensity.
+- Uses the existing **80+ score day** threshold, with restrained AuraOS intensity for 1–2, 3–4 and 5+ strong days; pre-tracking time is neutral and future time remains open.
+- Adds a mobile-friendly year drill-down with weekly score, 80+ days and quest-clear totals.
+- Adds optional weekly Stoic entries for what was within the user's control, what was handled well, where reaction replaced choice and one correction for the next week.
+- Keeps Stoic entries outside XP and Character scoring so reflection cannot be gamed as another checkbox.
+- Synchronizes the calendar setup and reflections across signed-in devices through the existing Level90 profile.
+- Version-tags the updated app shell and cache as Version 37.
+
+### Version 37 Supabase update
+
+Before deploying the Version 37 PWA files, run `supabase/migrations/20260827_add_level90_stoic_calendar.sql` once in the existing Supabase SQL Editor. No Edge Function redeployment is required.
+
 ## Version 36 iOS icon correction
 
 - Rebuilt the Apple Touch icon around the iOS Home Screen squircle.
@@ -188,7 +204,7 @@ Keep the VAPID private key only in Supabase secrets; never add it to the PWA. On
 
 The migration creates four Level90-only tables with per-user composite keys and Row Level Security. It does not modify Workout tables. Existing Level90 browser data remains stored under the same local-storage key and is migrated in place before cloud sync begins.
 
-Run `node tests/state-and-sync.test.cjs` to check legacy-data migration, streak continuity, historical XP, queue compaction, quest-order sync, composite upserts, first-upload protection, secondary-device upload blocking, exact cloud replacement and cloud tombstones. Run `node tests/notifications.test.cjs` to check device support, permission, subscription registration, test-send, disconnect and smart-setting behavior. Run `node tests/smart-notifications.test.cjs` to check streak qualification, learned timing, the fallback window, quiet hours, completed-quest suppression, schedule matching and longest-streak priority.
+Run `node tests/state-and-sync.test.cjs` to check legacy-data migration, streak continuity, historical XP, Stoic week calculations, profile sync, queue compaction, quest-order sync, composite upserts, first-upload protection, secondary-device upload blocking, exact cloud replacement and cloud tombstones. Run `node tests/stoic-calendar.test.cjs` to check the Version 37 interface, recurring-score integration, reflection/XP separation, migration and cache version. Run `node tests/notifications.test.cjs` to check device support, permission, subscription registration, test-send, disconnect and smart-setting behavior. Run `node tests/smart-notifications.test.cjs` to check streak qualification, learned timing, the fallback window, quiet hours, completed-quest suppression, schedule matching and longest-streak priority.
 
 ## Version 15 streaks and Today flow
 - Calculates current and best recurring-quest streaks from existing completion history.

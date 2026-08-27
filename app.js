@@ -10,8 +10,14 @@ let levelGlowAnimation = null;
 let lastSavedStateJson = "";
 let activeView = "today";
 let settingsReturnView = "today";
+let selectedStoicYear = null;
+let selectedStoicWeek = null;
 const PALETTES = ["arctic","jade","aurora","rose"];
 const APP_VIEWS = ["today","quests","journey","character","settings"];
+const STOIC_DEFAULT_HORIZON = 90;
+const STOIC_MIN_HORIZON = 50;
+const STOIC_MAX_HORIZON = 120;
+const STOIC_TEXT_LIMITS = {intention:220,control:360,reaction:360,correction:360};
 const ICON_LIBRARY = [
   ["✨","sparkle magic default"],["⚡","energy discipline focus"],["✅","check done complete"],
   ["💪","strength body workout"],["🏋️‍♀️","weights gym strength workout"],["🏃","run cardio fitness"],
@@ -65,6 +71,48 @@ function daysBetween(a,b) {
   const x = new Date(a.getFullYear(),a.getMonth(),a.getDate());
   const y = new Date(b.getFullYear(),b.getMonth(),b.getDate());
   return Math.floor((x-y)/86400000);
+}
+function isValidLocalDateKey(key) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(key || ""))) return false;
+  const parsed = parseLocalDate(key);
+  return !Number.isNaN(parsed.getTime()) && localDateKey(parsed) === key;
+}
+function calendarDaysBetween(a,b) {
+  const utcA = Date.UTC(a.getFullYear(),a.getMonth(),a.getDate());
+  const utcB = Date.UTC(b.getFullYear(),b.getMonth(),b.getDate());
+  return Math.round((utcA-utcB)/86400000);
+}
+function addCalendarYearsClamped(date,years) {
+  const targetYear = date.getFullYear()+years;
+  const targetMonth = date.getMonth();
+  const lastDay = new Date(targetYear,targetMonth+1,0).getDate();
+  return new Date(targetYear,targetMonth,Math.min(date.getDate(),lastDay));
+}
+function freshStoicCalendar() {
+  return {birthDate:"",horizonYears:STOIC_DEFAULT_HORIZON,weeks:{}};
+}
+function normalizeStoicText(value,limit) {
+  return typeof value === "string" ? value.slice(0,limit) : "";
+}
+function normalizeStoicCalendar(source) {
+  const input = source && typeof source === "object" ? source : {};
+  const birthDate = isValidLocalDateKey(input.birthDate) && input.birthDate <= localDateKey() ? input.birthDate : "";
+  let horizonYears = Math.round(Number(input.horizonYears) || STOIC_DEFAULT_HORIZON);
+  horizonYears = Math.max(STOIC_MIN_HORIZON,Math.min(STOIC_MAX_HORIZON,horizonYears));
+  const weeks = {};
+  Object.entries(input.weeks && typeof input.weeks === "object" ? input.weeks : {}).forEach(([key,value])=>{
+    const match = /^(\d{1,3}):(\d{2})$/.exec(key);
+    if (!match || Number(match[1]) >= STOIC_MAX_HORIZON || Number(match[2]) > 51 || !value || typeof value !== "object") return;
+    const record = {
+      intention:normalizeStoicText(value.intention,STOIC_TEXT_LIMITS.intention),
+      control:normalizeStoicText(value.control,STOIC_TEXT_LIMITS.control),
+      reaction:normalizeStoicText(value.reaction,STOIC_TEXT_LIMITS.reaction),
+      correction:normalizeStoicText(value.correction,STOIC_TEXT_LIMITS.correction),
+      updatedAt:Number.isNaN(Date.parse(value.updatedAt)) ? null : new Date(value.updatedAt).toISOString()
+    };
+    if (record.intention || record.control || record.reaction || record.correction) weeks[key]=record;
+  });
+  return {birthDate,horizonYears,weeks};
 }
 function uid() { return "q_" + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function categoryUid() { return "cat_" + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
@@ -128,14 +176,15 @@ function startLevelNumberGlow() {
 }
 function freshState() {
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     startedOn: localDateKey(),
     quests: structuredClone(CONFIG.quests),
     categories: structuredClone(CONFIG.categories),
     completions: {},
     theme: "dark",
     palette: "arctic",
-    profileName: ""
+    profileName: "",
+    stoicCalendar:freshStoicCalendar()
   };
 }
 function migrateState() {
@@ -143,10 +192,11 @@ function migrateState() {
   state.categories ||= structuredClone(CONFIG.categories);
   state.completions ||= {};
   state.startedOn ||= localDateKey();
-  state.schemaVersion = 3;
+  state.schemaVersion = 4;
   state.theme ||= "dark";
   if (!PALETTES.includes(state.palette)) state.palette = "arctic";
   state.profileName = typeof state.profileName === "string" ? state.profileName.trim() : "";
+  state.stoicCalendar = normalizeStoicCalendar(state.stoicCalendar);
   const migrationTimestamp = new Date().toISOString();
   state.categories.forEach(c=>{
     c.id ||= categoryUid();
@@ -731,6 +781,272 @@ function shiftHistoryMonth(amount) {
   renderHistoryCalendar();
 }
 
+function stoicAgeYearForDate(birthDate,date=new Date()) {
+  let ageYear = date.getFullYear()-birthDate.getFullYear();
+  const anniversary = addCalendarYearsClamped(birthDate,ageYear);
+  if (date < anniversary) ageYear -= 1;
+  return ageYear;
+}
+
+function stoicYearBounds(birthDateKey,ageYear) {
+  const birthDate = parseLocalDate(birthDateKey);
+  return {
+    start:addCalendarYearsClamped(birthDate,ageYear),
+    endExclusive:addCalendarYearsClamped(birthDate,ageYear+1)
+  };
+}
+
+function stoicWeekBounds(birthDateKey,ageYear,weekIndex) {
+  const year = stoicYearBounds(birthDateKey,ageYear);
+  const days = calendarDaysBetween(year.endExclusive,year.start);
+  const startOffset = Math.floor((weekIndex*days)/52);
+  const endOffset = Math.max(startOffset+1,Math.floor(((weekIndex+1)*days)/52));
+  return {
+    start:addDays(year.start,startOffset),
+    end:addDays(year.start,endOffset-1)
+  };
+}
+
+function stoicPositionForDate(birthDateKey,horizonYears,date=new Date()) {
+  if (!isValidLocalDateKey(birthDateKey)) return null;
+  const birthDate = parseLocalDate(birthDateKey);
+  const target = parseLocalDate(localDateKey(date));
+  if (target < birthDate) return null;
+  const year = stoicAgeYearForDate(birthDate,target);
+  const bounds = stoicYearBounds(birthDateKey,year);
+  const daysInYear = calendarDaysBetween(bounds.endExclusive,bounds.start);
+  const elapsedDays = Math.max(0,calendarDaysBetween(target,bounds.start));
+  const week = Math.min(51,Math.floor((elapsedDays*52)/daysInYear));
+  return {
+    year,week,index:year*52+week,totalWeeks:horizonYears*52,
+    withinHorizon:year>=0 && year<horizonYears
+  };
+}
+
+function stoicWeekRecordKey(ageYear,weekIndex) {
+  return `${ageYear}:${String(weekIndex).padStart(2,"0")}`;
+}
+
+function stoicTrackingStartDate() {
+  const candidates = Object.keys(state.completions || {}).filter(isValidLocalDateKey);
+  if (isValidLocalDateKey(state.startedOn)) candidates.push(state.startedOn);
+  if (!candidates.length) return parseLocalDate(localDateKey());
+  return parseLocalDate(candidates.sort()[0]);
+}
+
+function stoicWeekMetrics(start,end,asOf=new Date()) {
+  const today = parseLocalDate(localDateKey(asOf));
+  const trackingStart = stoicTrackingStartDate();
+  const first = start > trackingStart ? start : trackingStart;
+  const last = end < today ? end : today;
+  if (first > last) return {tracked:false,trackedDays:0,scoreDays:0,averageScore:0,strongDays:0,questClears:0};
+  let trackedDays=0,scoreDays=0,scoreTotal=0,strongDays=0,questClears=0;
+  for (let date=new Date(first);date<=last;date=addDays(date,1)) {
+    const dateKey=localDateKey(date);
+    const score=dailyScoreFor(date);
+    const hasScore=plannedXpForDate(date)>0;
+    const clears=Object.values(state.completions?.[dateKey] || {}).filter(Boolean).length;
+    trackedDays+=1;
+    questClears+=clears;
+    if (hasScore) {
+      scoreDays+=1;
+      scoreTotal+=score;
+      if (score>=80) strongDays+=1;
+    }
+  }
+  return {
+    tracked:true,trackedDays,scoreDays,
+    averageScore:scoreDays ? Math.round(scoreTotal/scoreDays) : 0,
+    strongDays,questClears
+  };
+}
+
+function stoicWeekGrade(metrics) {
+  if (!metrics?.tracked || metrics.strongDays===0) return 0;
+  if (metrics.strongDays>=5) return 3;
+  if (metrics.strongDays>=3) return 2;
+  return 1;
+}
+
+function stoicCellState(ageYear,weekIndex,position,trackingStart,today=new Date()) {
+  const index=ageYear*52+weekIndex;
+  if (!position?.withinHorizon || index>position.index) return {className:"future",metrics:null};
+  const bounds=stoicWeekBounds(state.stoicCalendar.birthDate,ageYear,weekIndex);
+  if (bounds.end<trackingStart) {
+    const reflected=Boolean(state.stoicCalendar.weeks[stoicWeekRecordKey(ageYear,weekIndex)]);
+    return {className:`${index===position.index ? "current " : ""}elapsed${reflected ? " reflected" : ""}`,metrics:null};
+  }
+  const metrics=stoicWeekMetrics(bounds.start,bounds.end,today);
+  const grade=stoicWeekGrade(metrics);
+  const classes=["tracked",`grade-${grade}`];
+  if (metrics.questClears) classes.push("has-activity");
+  if (index===position.index) classes.push("current");
+  return {className:classes.join(" "),metrics};
+}
+
+function formatStoicDateRange(start,end) {
+  const formatter=new Intl.DateTimeFormat(undefined,{month:"short",day:"numeric",year:"numeric"});
+  return `${formatter.format(start)} – ${formatter.format(end)}`;
+}
+
+function renderStoicCalendar() {
+  const setup=$("#stoicCalendarSetup");
+  const content=$("#stoicCalendarContent");
+  if (!setup || !content) return;
+  const configured=Boolean(state.stoicCalendar.birthDate);
+  setup.hidden=configured;
+  content.hidden=!configured;
+  $("#editStoicCalendarBtn").textContent=configured ? "Edit view" : "Set up";
+  if (!configured) return;
+
+  const today=new Date();
+  const position=stoicPositionForDate(state.stoicCalendar.birthDate,state.stoicCalendar.horizonYears,today);
+  if (!position) return;
+  const trackingStart=stoicTrackingStartDate();
+  let deliberateWeeks=0;
+  const rows=[];
+  for (let year=0;year<state.stoicCalendar.horizonYears;year+=1) {
+    const cells=[];
+    for (let week=0;week<52;week+=1) {
+      const cell=stoicCellState(year,week,position,trackingStart,today);
+      if (cell.metrics?.strongDays>=4) deliberateWeeks+=1;
+      cells.push(`<i class="stoic-week-cell ${cell.className}" aria-hidden="true"></i>`);
+    }
+    const label=year%5===0 || year===position.year ? year : "";
+    rows.push(`<button type="button" class="stoic-life-row${year===position.year?" is-current-year":""}" data-stoic-year="${year}" aria-label="Open life year ${year+1}, age ${year} to ${year+1}"><span class="stoic-year-label">${label}</span><span class="stoic-life-weeks">${cells.join("")}</span></button>`);
+  }
+  $("#stoicCalendarGrid").innerHTML=rows.join("");
+  $("#stoicWeekPosition").textContent=position.withinHorizon ? `${position.index+1} / ${position.totalWeeks}` : `${position.totalWeeks}+`;
+  $("#stoicLifeYearStat").textContent=position.year+1;
+  $("#stoicDeliberateWeekStat").textContent=deliberateWeeks;
+  $("#stoicHorizonLabel").textContent=`${state.stoicCalendar.horizonYears}-year planning horizon`;
+
+  if (!position.withinHorizon) {
+    $("#stoicCurrentWeekCard").hidden=true;
+    return;
+  }
+  $("#stoicCurrentWeekCard").hidden=false;
+  const bounds=stoicWeekBounds(state.stoicCalendar.birthDate,position.year,position.week);
+  const metrics=stoicWeekMetrics(bounds.start,bounds.end,today);
+  const record=state.stoicCalendar.weeks[stoicWeekRecordKey(position.year,position.week)] || {};
+  $("#stoicCurrentLifeWeek").textContent=`Life year ${position.year+1} · week ${position.week+1}`;
+  $("#stoicCurrentWeekDates").textContent=formatStoicDateRange(bounds.start,bounds.end);
+  $("#stoicCurrentWeekScore").textContent=metrics.averageScore;
+  $("#stoicCurrentWeekStrongDays").textContent=metrics.strongDays;
+  $("#stoicCurrentWeekClears").textContent=metrics.questClears;
+  $("#stoicCurrentIntention").value=record.intention || "";
+}
+
+function renderStoicWeekDetail(ageYear,weekIndex) {
+  const detail=$("#stoicWeekDetail");
+  const birthDate=state.stoicCalendar.birthDate;
+  const position=stoicPositionForDate(birthDate,state.stoicCalendar.horizonYears,new Date());
+  const bounds=stoicWeekBounds(birthDate,ageYear,weekIndex);
+  const index=ageYear*52+weekIndex;
+  const future=!position || index>position.index;
+  const trackingStart=stoicTrackingStartDate();
+  const beforeTracking=bounds.end<trackingStart;
+  const key=stoicWeekRecordKey(ageYear,weekIndex);
+  const record=state.stoicCalendar.weeks[key] || {};
+  const heading=`Age ${ageYear} · week ${weekIndex+1}`;
+  if (future) {
+    detail.innerHTML=`<div class="stoic-week-detail-head"><span class="kicker">${escapeHtml(heading)}</span><strong>${escapeHtml(formatStoicDateRange(bounds.start,bounds.end))}</strong></div><div class="empty-state compact">Not lived yet. Leave it open and return to the present week.</div>`;
+    return;
+  }
+  if (beforeTracking && !record.intention && !record.control && !record.reaction && !record.correction) {
+    detail.innerHTML=`<div class="stoic-week-detail-head"><span class="kicker">${escapeHtml(heading)}</span><strong>${escapeHtml(formatStoicDateRange(bounds.start,bounds.end))}</strong></div><div class="empty-state compact">This week came before Level90 tracking began. It is elapsed time, not a failed week.</div>`;
+    return;
+  }
+  const metrics=stoicWeekMetrics(bounds.start,bounds.end,new Date());
+  detail.innerHTML=`
+    <div class="stoic-week-detail-head"><span class="kicker">${escapeHtml(heading)}</span><strong>${escapeHtml(formatStoicDateRange(bounds.start,bounds.end))}</strong></div>
+    <div class="stoic-week-stats">
+      <div><strong>${metrics.averageScore}</strong><span>Average score</span></div>
+      <div><strong>${metrics.strongDays}</strong><span>80+ days</span></div>
+      <div><strong>${metrics.questClears}</strong><span>Quest clears</span></div>
+    </div>
+    <div class="stoic-reflection-fields" data-stoic-record="${key}">
+      <label>What was within my control?<textarea data-stoic-field="intention" maxlength="${STOIC_TEXT_LIMITS.intention}" placeholder="Choose the response, action or standard that belongs to you.">${escapeHtml(record.intention || "")}</textarea></label>
+      <label>What did I handle well?<textarea data-stoic-field="control" maxlength="${STOIC_TEXT_LIMITS.control}" placeholder="Name the choices that reflected your character.">${escapeHtml(record.control || "")}</textarea></label>
+      <label>Where did I react instead of choose?<textarea data-stoic-field="reaction" maxlength="${STOIC_TEXT_LIMITS.reaction}" placeholder="Observe it without turning the review into punishment.">${escapeHtml(record.reaction || "")}</textarea></label>
+      <label>One correction for the next week<textarea data-stoic-field="correction" maxlength="${STOIC_TEXT_LIMITS.correction}" placeholder="Keep the correction specific and within your control.">${escapeHtml(record.correction || "")}</textarea></label>
+    </div>`;
+}
+
+function renderStoicYearDialog() {
+  if (selectedStoicYear===null) return;
+  const position=stoicPositionForDate(state.stoicCalendar.birthDate,state.stoicCalendar.horizonYears,new Date());
+  const trackingStart=stoicTrackingStartDate();
+  $("#stoicYearTitle").textContent=`Age ${selectedStoicYear}–${selectedStoicYear+1}`;
+  const year=stoicYearBounds(state.stoicCalendar.birthDate,selectedStoicYear);
+  $("#stoicYearDates").textContent=formatStoicDateRange(year.start,addDays(year.endExclusive,-1));
+  $("#stoicYearWeekGrid").innerHTML=Array.from({length:52},(_,week)=>{
+    const cell=stoicCellState(selectedStoicYear,week,position,trackingStart,new Date());
+    return `<button type="button" class="stoic-zoom-week ${cell.className}${week===selectedStoicWeek?" selected":""}" data-stoic-week="${week}" aria-label="Week ${week+1}" aria-pressed="${week===selectedStoicWeek}">${week+1}</button>`;
+  }).join("");
+  renderStoicWeekDetail(selectedStoicYear,selectedStoicWeek);
+}
+
+function openStoicYearDialog(ageYear,weekIndex=null) {
+  const position=stoicPositionForDate(state.stoicCalendar.birthDate,state.stoicCalendar.horizonYears,new Date());
+  selectedStoicYear=Math.max(0,Math.min(state.stoicCalendar.horizonYears-1,Number(ageYear)));
+  selectedStoicWeek=weekIndex===null
+    ? selectedStoicYear===position?.year ? position.week : selectedStoicYear<(position?.year ?? 0) ? 51 : 0
+    : Math.max(0,Math.min(51,Number(weekIndex)));
+  renderStoicYearDialog();
+  const dialog=$("#stoicYearDialog");
+  if (!dialog.open) dialog.showModal();
+}
+
+function openStoicSetupDialog() {
+  $("#stoicBirthDateInput").value=state.stoicCalendar.birthDate || "";
+  $("#stoicBirthDateInput").max=localDateKey();
+  $("#stoicHorizonInput").value=state.stoicCalendar.horizonYears || STOIC_DEFAULT_HORIZON;
+  $("#stoicSetupError").textContent="";
+  $("#stoicSetupDialog").showModal();
+}
+
+function saveStoicSetup(event) {
+  event.preventDefault();
+  const birthDate=$("#stoicBirthDateInput").value;
+  const horizonYears=Math.round(Number($("#stoicHorizonInput").value));
+  const error=$("#stoicSetupError");
+  if (!isValidLocalDateKey(birthDate) || birthDate>localDateKey()) {
+    error.textContent="Enter a valid date of birth.";
+    return;
+  }
+  if (horizonYears<STOIC_MIN_HORIZON || horizonYears>STOIC_MAX_HORIZON) {
+    error.textContent=`Choose a horizon from ${STOIC_MIN_HORIZON} to ${STOIC_MAX_HORIZON} years.`;
+    return;
+  }
+  const position=stoicPositionForDate(birthDate,horizonYears,new Date());
+  if (!position?.withinHorizon) {
+    error.textContent="Choose a planning horizon beyond your current age.";
+    return;
+  }
+  state.stoicCalendar=normalizeStoicCalendar({...state.stoicCalendar,birthDate,horizonYears});
+  save();
+  renderCharacter();
+  $("#stoicSetupDialog").close();
+  showToast("Stoic Calendar updated");
+}
+
+function saveStoicWeekField(recordKey,field,value) {
+  if (!Object.hasOwn(STOIC_TEXT_LIMITS,field)) return;
+  const record={
+    intention:"",control:"",reaction:"",correction:"",
+    ...(state.stoicCalendar.weeks[recordKey] || {})
+  };
+  record[field]=normalizeStoicText(value,STOIC_TEXT_LIMITS[field]).trim();
+  record.updatedAt=new Date().toISOString();
+  if (record.intention || record.control || record.reaction || record.correction) state.stoicCalendar.weeks[recordKey]=record;
+  else delete state.stoicCalendar.weeks[recordKey];
+  save();
+  const position=stoicPositionForDate(state.stoicCalendar.birthDate,state.stoicCalendar.horizonYears,new Date());
+  if (position && recordKey===stoicWeekRecordKey(position.year,position.week)) $("#stoicCurrentIntention").value=record.intention || "";
+  showToast("Stoic reflection saved");
+}
+
 function renderCharacter() {
   const overallLevel = levelFromXp(totalXp());
   const nextRank = nextRankForLevel(overallLevel);
@@ -750,6 +1066,7 @@ function renderCharacter() {
   $("#totalXpStat").textContent = totalXp();
   $("#completedQuestStat").textContent = Object.values(state.completions).reduce((s,d)=>s+Object.values(d).filter(Boolean).length,0);
   $("#strongDayStat").textContent = strongDayCount();
+  renderStoicCalendar();
 }
 
 function toggleQuestCompletionForDate(id,dateKey,completedAt=new Date().toISOString()) {
@@ -1084,12 +1401,41 @@ function bindEvents() {
       historyMonth=new Date(selected.getFullYear(),selected.getMonth(),1);
       renderHistory();
     }
+    const stoicYear=e.target.closest("[data-stoic-year]");
+    if(stoicYear){
+      openStoicYearDialog(stoicYear.dataset.stoicYear);
+      return;
+    }
+    const stoicWeek=e.target.closest("[data-stoic-week]");
+    if(stoicWeek){
+      selectedStoicWeek=Number(stoicWeek.dataset.stoicWeek);
+      renderStoicYearDialog();
+    }
   });
 
   $("#previousDayBtn").addEventListener("click",()=>stepHistoryDay(-1));
   $("#nextDayBtn").addEventListener("click",()=>stepHistoryDay(1));
   $("#previousMonthBtn").addEventListener("click",()=>shiftHistoryMonth(-1));
   $("#nextMonthBtn").addEventListener("click",()=>shiftHistoryMonth(1));
+
+  $("#setupStoicCalendarBtn").addEventListener("click",openStoicSetupDialog);
+  $("#editStoicCalendarBtn").addEventListener("click",openStoicSetupDialog);
+  $("#closeStoicSetupDialog").addEventListener("click",()=>$("#stoicSetupDialog").close());
+  $("#stoicSetupForm").addEventListener("submit",saveStoicSetup);
+  $("#closeStoicYearDialog").addEventListener("click",()=>$("#stoicYearDialog").close());
+  $("#stoicOpenCurrentReviewBtn").addEventListener("click",()=>{
+    const position=stoicPositionForDate(state.stoicCalendar.birthDate,state.stoicCalendar.horizonYears,new Date());
+    if(position?.withinHorizon) openStoicYearDialog(position.year,position.week);
+  });
+  $("#stoicCurrentIntention").addEventListener("change",e=>{
+    const position=stoicPositionForDate(state.stoicCalendar.birthDate,state.stoicCalendar.horizonYears,new Date());
+    if(position?.withinHorizon) saveStoicWeekField(stoicWeekRecordKey(position.year,position.week),"intention",e.target.value);
+  });
+  $("#stoicWeekDetail").addEventListener("change",e=>{
+    const field=e.target.closest("[data-stoic-field]");
+    const container=e.target.closest("[data-stoic-record]");
+    if(field && container) saveStoicWeekField(container.dataset.stoicRecord,field.dataset.stoicField,field.value);
+  });
 
   $$(".filter-chip").forEach(b=>b.addEventListener("click",()=>{
     if(reorderMode) return;
