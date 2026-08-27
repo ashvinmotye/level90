@@ -2,6 +2,15 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 38 Stoic view swap
+
+- Makes the selected 52-week life-year view the default Stoic workspace inside Character.
+- Places the selected week's Level90 record and all four Stoic question inputs directly below the year grid.
+- Replaces the extra **Open review** step with **Show Life**, which opens the complete Memento Mori horizon for perspective.
+- Selecting a life year from the full horizon closes that view and brings the chosen year directly into Character.
+- Preserves the Version 37 score colours, weekly entries, Supabase sync and zero-XP reflection rule without requiring another SQL migration.
+- Version-tags the updated app shell and cache as Version 38.
+
 ## Version 37 Stoic Calendar
 
 - Adds a **Memento Mori Life Calendar** to Character with 52 weeks across each year of a configurable 50–120 year planning horizon; the default is Level90's 90-year view.
@@ -204,7 +213,7 @@ Keep the VAPID private key only in Supabase secrets; never add it to the PWA. On
 
 The migration creates four Level90-only tables with per-user composite keys and Row Level Security. It does not modify Workout tables. Existing Level90 browser data remains stored under the same local-storage key and is migrated in place before cloud sync begins.
 
-Run `node tests/state-and-sync.test.cjs` to check legacy-data migration, streak continuity, historical XP, Stoic week calculations, profile sync, queue compaction, quest-order sync, composite upserts, first-upload protection, secondary-device upload blocking, exact cloud replacement and cloud tombstones. Run `node tests/stoic-calendar.test.cjs` to check the Version 37 interface, recurring-score integration, reflection/XP separation, migration and cache version. Run `node tests/notifications.test.cjs` to check device support, permission, subscription registration, test-send, disconnect and smart-setting behavior. Run `node tests/smart-notifications.test.cjs` to check streak qualification, learned timing, the fallback window, quiet hours, completed-quest suppression, schedule matching and longest-streak priority.
+Run `node tests/state-and-sync.test.cjs` to check legacy-data migration, streak continuity, historical XP, Stoic week calculations, profile sync, queue compaction, quest-order sync, composite upserts, first-upload protection, secondary-device upload blocking, exact cloud replacement and cloud tombstones. Run `node tests/stoic-calendar.test.cjs` to check the current Stoic interface, year/life view swap, recurring-score integration, reflection/XP separation, migration and cache version. Run `node tests/notifications.test.cjs` to check device support, permission, subscription registration, test-send, disconnect and smart-setting behavior. Run `node tests/smart-notifications.test.cjs` to check streak qualification, learned timing, the fallback window, quiet hours, completed-quest suppression, schedule matching and longest-streak priority.
 
 ## Version 15 streaks and Today flow
 - Calculates current and best recurring-quest streaks from existing completion history.

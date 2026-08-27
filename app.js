@@ -899,6 +899,18 @@ function renderStoicCalendar() {
   $("#editStoicCalendarBtn").textContent=configured ? "Edit view" : "Set up";
   if (!configured) return;
 
+  const position=stoicPositionForDate(state.stoicCalendar.birthDate,state.stoicCalendar.horizonYears,new Date());
+  if (!position) return;
+  if (selectedStoicYear===null || selectedStoicYear<0 || selectedStoicYear>=state.stoicCalendar.horizonYears) {
+    selectedStoicYear=position.withinHorizon ? position.year : state.stoicCalendar.horizonYears-1;
+    selectedStoicWeek=position.withinHorizon ? position.week : 51;
+  } else if (selectedStoicWeek===null || selectedStoicWeek<0 || selectedStoicWeek>51) {
+    selectedStoicWeek=selectedStoicYear===position.year ? position.week : selectedStoicYear<position.year ? 51 : 0;
+  }
+  renderStoicYearView();
+}
+
+function renderStoicLifeView() {
   const today=new Date();
   const position=stoicPositionForDate(state.stoicCalendar.birthDate,state.stoicCalendar.horizonYears,today);
   if (!position) return;
@@ -920,21 +932,6 @@ function renderStoicCalendar() {
   $("#stoicLifeYearStat").textContent=position.year+1;
   $("#stoicDeliberateWeekStat").textContent=deliberateWeeks;
   $("#stoicHorizonLabel").textContent=`${state.stoicCalendar.horizonYears}-year planning horizon`;
-
-  if (!position.withinHorizon) {
-    $("#stoicCurrentWeekCard").hidden=true;
-    return;
-  }
-  $("#stoicCurrentWeekCard").hidden=false;
-  const bounds=stoicWeekBounds(state.stoicCalendar.birthDate,position.year,position.week);
-  const metrics=stoicWeekMetrics(bounds.start,bounds.end,today);
-  const record=state.stoicCalendar.weeks[stoicWeekRecordKey(position.year,position.week)] || {};
-  $("#stoicCurrentLifeWeek").textContent=`Life year ${position.year+1} · week ${position.week+1}`;
-  $("#stoicCurrentWeekDates").textContent=formatStoicDateRange(bounds.start,bounds.end);
-  $("#stoicCurrentWeekScore").textContent=metrics.averageScore;
-  $("#stoicCurrentWeekStrongDays").textContent=metrics.strongDays;
-  $("#stoicCurrentWeekClears").textContent=metrics.questClears;
-  $("#stoicCurrentIntention").value=record.intention || "";
 }
 
 function renderStoicWeekDetail(ageYear,weekIndex) {
@@ -973,7 +970,7 @@ function renderStoicWeekDetail(ageYear,weekIndex) {
     </div>`;
 }
 
-function renderStoicYearDialog() {
+function renderStoicYearView() {
   if (selectedStoicYear===null) return;
   const position=stoicPositionForDate(state.stoicCalendar.birthDate,state.stoicCalendar.horizonYears,new Date());
   const trackingStart=stoicTrackingStartDate();
@@ -987,14 +984,20 @@ function renderStoicYearDialog() {
   renderStoicWeekDetail(selectedStoicYear,selectedStoicWeek);
 }
 
-function openStoicYearDialog(ageYear,weekIndex=null) {
+function selectStoicYear(ageYear,weekIndex=null) {
   const position=stoicPositionForDate(state.stoicCalendar.birthDate,state.stoicCalendar.horizonYears,new Date());
   selectedStoicYear=Math.max(0,Math.min(state.stoicCalendar.horizonYears-1,Number(ageYear)));
   selectedStoicWeek=weekIndex===null
     ? selectedStoicYear===position?.year ? position.week : selectedStoicYear<(position?.year ?? 0) ? 51 : 0
     : Math.max(0,Math.min(51,Number(weekIndex)));
-  renderStoicYearDialog();
-  const dialog=$("#stoicYearDialog");
+  renderStoicYearView();
+  const dialog=$("#stoicLifeDialog");
+  if (dialog.open) dialog.close();
+}
+
+function openStoicLifeDialog() {
+  renderStoicLifeView();
+  const dialog=$("#stoicLifeDialog");
   if (!dialog.open) dialog.showModal();
 }
 
@@ -1025,6 +1028,8 @@ function saveStoicSetup(event) {
     return;
   }
   state.stoicCalendar=normalizeStoicCalendar({...state.stoicCalendar,birthDate,horizonYears});
+  selectedStoicYear=null;
+  selectedStoicWeek=null;
   save();
   renderCharacter();
   $("#stoicSetupDialog").close();
@@ -1042,8 +1047,6 @@ function saveStoicWeekField(recordKey,field,value) {
   if (record.intention || record.control || record.reaction || record.correction) state.stoicCalendar.weeks[recordKey]=record;
   else delete state.stoicCalendar.weeks[recordKey];
   save();
-  const position=stoicPositionForDate(state.stoicCalendar.birthDate,state.stoicCalendar.horizonYears,new Date());
-  if (position && recordKey===stoicWeekRecordKey(position.year,position.week)) $("#stoicCurrentIntention").value=record.intention || "";
   showToast("Stoic reflection saved");
 }
 
@@ -1403,13 +1406,13 @@ function bindEvents() {
     }
     const stoicYear=e.target.closest("[data-stoic-year]");
     if(stoicYear){
-      openStoicYearDialog(stoicYear.dataset.stoicYear);
+      selectStoicYear(stoicYear.dataset.stoicYear);
       return;
     }
     const stoicWeek=e.target.closest("[data-stoic-week]");
     if(stoicWeek){
       selectedStoicWeek=Number(stoicWeek.dataset.stoicWeek);
-      renderStoicYearDialog();
+      renderStoicYearView();
     }
   });
 
@@ -1422,15 +1425,8 @@ function bindEvents() {
   $("#editStoicCalendarBtn").addEventListener("click",openStoicSetupDialog);
   $("#closeStoicSetupDialog").addEventListener("click",()=>$("#stoicSetupDialog").close());
   $("#stoicSetupForm").addEventListener("submit",saveStoicSetup);
-  $("#closeStoicYearDialog").addEventListener("click",()=>$("#stoicYearDialog").close());
-  $("#stoicOpenCurrentReviewBtn").addEventListener("click",()=>{
-    const position=stoicPositionForDate(state.stoicCalendar.birthDate,state.stoicCalendar.horizonYears,new Date());
-    if(position?.withinHorizon) openStoicYearDialog(position.year,position.week);
-  });
-  $("#stoicCurrentIntention").addEventListener("change",e=>{
-    const position=stoicPositionForDate(state.stoicCalendar.birthDate,state.stoicCalendar.horizonYears,new Date());
-    if(position?.withinHorizon) saveStoicWeekField(stoicWeekRecordKey(position.year,position.week),"intention",e.target.value);
-  });
+  $("#stoicShowLifeBtn").addEventListener("click",openStoicLifeDialog);
+  $("#closeStoicLifeDialog").addEventListener("click",()=>$("#stoicLifeDialog").close());
   $("#stoicWeekDetail").addEventListener("change",e=>{
     const field=e.target.closest("[data-stoic-field]");
     const container=e.target.closest("[data-stoic-record]");

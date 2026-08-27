@@ -11,7 +11,7 @@
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon-v36.png" />
-  <link rel="stylesheet" href="./styles.css?v=37" />
+  <link rel="stylesheet" href="./styles.css?v=38" />
 </head>
 <body>
   <svg class="aura-icon-sprite" aria-hidden="true" focusable="false">
@@ -271,7 +271,7 @@
           <div class="stoic-calendar-head">
             <div>
               <span class="kicker">MEMENTO MORI</span>
-              <h3>The Life Calendar</h3>
+              <h3>Stoic Calendar</h3>
               <p>You are here. This week remains yours.</p>
             </div>
             <button id="editStoicCalendarBtn" class="pill-btn" type="button">Edit view</button>
@@ -281,33 +281,17 @@
             <button id="setupStoicCalendarBtn" class="primary-btn" type="button">Set up calendar</button>
           </div>
           <div id="stoicCalendarContent" hidden>
-            <div class="stoic-summary-grid">
-              <div><strong id="stoicWeekPosition">0</strong><span>Life week</span></div>
-              <div><strong id="stoicLifeYearStat">0</strong><span>Life year</span></div>
-              <div><strong id="stoicDeliberateWeekStat">0</strong><span>Deliberate weeks</span></div>
-            </div>
-            <div class="stoic-grid-caption"><span>AGE</span><small id="stoicHorizonLabel">90-year planning horizon</small></div>
-            <div id="stoicCalendarGrid" class="stoic-life-grid" aria-label="Life calendar. Select a year to inspect its weeks."></div>
-            <div class="stoic-legend" aria-label="Calendar legend">
-              <span><i class="elapsed"></i>Before tracking</span>
-              <span><i class="tracked grade-1"></i>1–2 strong days</span>
-              <span><i class="tracked grade-2"></i>3–4</span>
-              <span><i class="tracked grade-3"></i>5+</span>
-              <span><i class="future"></i>Future</span>
-            </div>
-            <p class="stoic-horizon-note">This is a chosen planning horizon, not a prediction of lifespan.</p>
-            <div id="stoicCurrentWeekCard" class="stoic-current-week">
-              <div class="stoic-current-head">
-                <div><span class="kicker">THIS LIFE WEEK</span><strong id="stoicCurrentLifeWeek">Life year 1 · week 1</strong><small id="stoicCurrentWeekDates">Date range</small></div>
-                <button id="stoicOpenCurrentReviewBtn" class="secondary-btn" type="button">Open review</button>
+            <div class="stoic-inline-year-head">
+              <div>
+                <span class="kicker">SELECTED LIFE YEAR</span>
+                <h4 id="stoicYearTitle">Age 0–1</h4>
+                <small id="stoicYearDates" class="stoic-year-dates">Date range</small>
               </div>
-              <div class="stoic-week-stats compact">
-                <div><strong id="stoicCurrentWeekScore">0</strong><span>Average score</span></div>
-                <div><strong id="stoicCurrentWeekStrongDays">0</strong><span>80+ days</span></div>
-                <div><strong id="stoicCurrentWeekClears">0</strong><span>Quest clears</span></div>
-              </div>
-              <label class="stoic-intention-field">What is within my control this week?<textarea id="stoicCurrentIntention" maxlength="220" placeholder="Choose one response, action or standard that belongs to you."></textarea></label>
+              <button id="stoicShowLifeBtn" class="secondary-btn" type="button">Show Life</button>
             </div>
+            <p class="stoic-year-intro">Select a week to see its record and answer the questions below.</p>
+            <div id="stoicYearWeekGrid" class="stoic-year-week-grid" aria-label="Weeks in this life year"></div>
+            <div id="stoicWeekDetail" class="stoic-week-detail"></div>
           </div>
         </div>
       </section>
@@ -600,18 +584,30 @@
     </form>
   </dialog>
 
-  <dialog id="stoicYearDialog" class="modal stoic-year-dialog">
+  <dialog id="stoicLifeDialog" class="modal stoic-life-dialog">
     <div class="modal-head">
       <div>
-        <span class="kicker">THE 90-YEAR VIEW</span>
-        <h3 id="stoicYearTitle">Age 0–1</h3>
-        <small id="stoicYearDates" class="stoic-year-dates">Date range</small>
+        <span class="kicker">MEMENTO MORI</span>
+        <h3>The Life Calendar</h3>
       </div>
-      <button type="button" class="icon-btn" id="closeStoicYearDialog" aria-label="Close year view">×</button>
+      <button type="button" class="icon-btn" id="closeStoicLifeDialog" aria-label="Close life view">×</button>
     </div>
-    <p class="modal-intro">Select a week to inspect the record and leave an optional Stoic review.</p>
-    <div id="stoicYearWeekGrid" class="stoic-year-week-grid" aria-label="Weeks in this life year"></div>
-    <div id="stoicWeekDetail" class="stoic-week-detail"></div>
+    <p class="modal-intro">The full horizon provides perspective. Select a life year to bring it into Character.</p>
+    <div class="stoic-summary-grid">
+      <div><strong id="stoicWeekPosition">0</strong><span>Life week</span></div>
+      <div><strong id="stoicLifeYearStat">0</strong><span>Life year</span></div>
+      <div><strong id="stoicDeliberateWeekStat">0</strong><span>Deliberate weeks</span></div>
+    </div>
+    <div class="stoic-grid-caption"><span>AGE</span><small id="stoicHorizonLabel">90-year planning horizon</small></div>
+    <div id="stoicCalendarGrid" class="stoic-life-grid" aria-label="Life calendar. Select a year to inspect its weeks."></div>
+    <div class="stoic-legend" aria-label="Calendar legend">
+      <span><i class="elapsed"></i>Before tracking</span>
+      <span><i class="tracked grade-1"></i>1–2 strong days</span>
+      <span><i class="tracked grade-2"></i>3–4</span>
+      <span><i class="tracked grade-3"></i>5+</span>
+      <span><i class="future"></i>Future</span>
+    </div>
+    <p class="stoic-horizon-note">This is a chosen planning horizon, not a prediction of lifespan.</p>
   </dialog>
 
   <div id="toast" class="toast"></div>
@@ -624,8 +620,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3" crossorigin="anonymous" defer></script>
-  <script src="./cloud.js?v=37" defer></script>
-  <script src="./notifications.js?v=37" defer></script>
-  <script src="./app.js?v=37" defer></script>
+  <script src="./cloud.js?v=38" defer></script>
+  <script src="./notifications.js?v=38" defer></script>
+  <script src="./app.js?v=38" defer></script>
 </body>
 </html>

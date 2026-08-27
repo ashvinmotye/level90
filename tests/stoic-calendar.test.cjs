@@ -13,15 +13,21 @@ const serviceWorker = fs.readFileSync(path.join(root,"service-worker.js"),"utf8"
 const migration = fs.readFileSync(path.join(root,"supabase","migrations","20260827_add_level90_stoic_calendar.sql"),"utf8");
 
 for (const id of [
-  "stoicCalendarGrid","stoicCurrentIntention","stoicSetupDialog","stoicYearDialog",
+  "stoicCalendarGrid","stoicSetupDialog","stoicLifeDialog","stoicShowLifeBtn",
   "stoicYearWeekGrid","stoicWeekDetail"
 ]) assert.match(html,new RegExp(`id="${id}"`),`missing ${id}`);
 
 assert.match(html,/MEMENTO MORI/);
+assert.match(html,/>Show Life</);
+assert.doesNotMatch(html,/>Open review</i);
 assert.match(html,/planning horizon, not a prediction of lifespan/i);
-assert.match(html,/styles\.css\?v=37/);
+assert.ok(html.indexOf('id="stoicWeekDetail"') < html.indexOf('id="view-settings"'),"selected-week questions should render directly inside Character");
+assert.match(html,/styles\.css\?v=38/);
 assert.match(app,/const STOIC_DEFAULT_HORIZON = 90/);
 assert.match(app,/Array\.from\(\{length:52\}/);
+assert.match(app,/function renderStoicYearView\(\)/);
+assert.match(app,/function openStoicLifeDialog\(\)/);
+assert.match(app,/function selectStoicYear\(/);
 assert.match(app,/dailyScoreFor\(date\)/,"calendar should reuse the recurring-only daily score");
 assert.match(app,/metrics\?\.strongDays>=4/,"deliberate weeks should come from 80+ score days");
 assert.doesNotMatch(app,/saveStoicWeekField[\s\S]{0,1200}xpForQuest/,"Stoic reflections must not award XP");
@@ -30,6 +36,6 @@ assert.match(css,/\.stoic-week-cell\.future/);
 assert.match(cloud,/stoic_calendar:record\.stoicCalendar/);
 assert.match(cloud,/schema_version, stoic_calendar/);
 assert.match(migration,/add column if not exists stoic_calendar jsonb/);
-assert.match(serviceWorker,/level90-v37/);
+assert.match(serviceWorker,/level90-v38/);
 
 console.log("Level90 Stoic Calendar tests passed");

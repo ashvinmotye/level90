@@ -657,22 +657,19 @@ body.light .move-btn { color:var(--accent); }
 .stoic-legend span { display:inline-flex; align-items:center; gap:4px; }
 .stoic-legend i { width:7px; flex:0 0 7px; }
 .stoic-horizon-note { margin:10px auto 0; color:var(--muted); font-size:7px; line-height:1.45; text-align:center; }
-.stoic-current-week { margin-top:18px; padding:15px; border:1px solid rgb(var(--accent-rgb) / .22); border-radius:20px; background:linear-gradient(145deg,rgb(var(--accent-rgb) / .09),rgba(255,255,255,.025)); }
-.stoic-current-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
-.stoic-current-head strong,.stoic-current-head small { display:block; }
-.stoic-current-head strong { margin-top:5px; font-size:15px; }
-.stoic-current-head small { margin-top:3px; color:var(--muted); font-size:8px; }
-.stoic-current-head .secondary-btn { flex:0 0 auto; padding:9px 11px; border-radius:13px; font-size:8px; }
+.stoic-inline-year-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-top:18px; }
+.stoic-inline-year-head h4 { margin:5px 0 0; font-size:20px; letter-spacing:-.025em; }
+.stoic-inline-year-head .secondary-btn { flex:0 0 auto; padding:10px 13px; border-radius:14px; font-size:9px; }
+.stoic-year-intro { margin:11px 0 15px; color:var(--muted); font-size:9px; line-height:1.5; }
 .stoic-week-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin:14px 0; }
 .stoic-week-stats > div { padding:10px 7px; border:1px solid var(--line); border-radius:14px; background:rgba(255,255,255,.03); text-align:center; }
 .stoic-week-stats strong,.stoic-week-stats span { display:block; }
 .stoic-week-stats strong { font-size:18px; }
 .stoic-week-stats span { margin-top:3px; color:var(--muted); font-size:7px; }
-.stoic-week-stats.compact { margin-bottom:12px; }
-.stoic-intention-field,.stoic-reflection-fields label { display:block; color:var(--muted); font-size:9px; font-weight:850; }
-.stoic-intention-field textarea,.stoic-reflection-fields textarea { width:100%; resize:vertical; min-height:70px; margin-top:7px; padding:11px 12px; border:1px solid var(--line); border-radius:14px; outline:none; background:rgba(255,255,255,.04); color:var(--text); font-size:11px; line-height:1.45; }
-.stoic-intention-field textarea:focus,.stoic-reflection-fields textarea:focus { border-color:rgb(var(--accent-rgb) / .62); box-shadow:0 0 0 3px rgb(var(--accent-rgb) / .11); }
-.stoic-year-dialog { width:min(calc(100% - 24px),570px); }
+.stoic-reflection-fields label { display:block; color:var(--muted); font-size:9px; font-weight:850; }
+.stoic-reflection-fields textarea { width:100%; resize:vertical; min-height:70px; margin-top:7px; padding:11px 12px; border:1px solid var(--line); border-radius:14px; outline:none; background:rgba(255,255,255,.04); color:var(--text); font-size:11px; line-height:1.45; }
+.stoic-reflection-fields textarea:focus { border-color:rgb(var(--accent-rgb) / .62); box-shadow:0 0 0 3px rgb(var(--accent-rgb) / .11); }
+.stoic-life-dialog { width:min(calc(100% - 24px),570px); }
 .stoic-year-dates { display:block; margin-top:4px; color:var(--muted); font-size:8px; }
 .stoic-year-week-grid { display:grid; grid-template-columns:repeat(13,1fr); gap:4px; margin-bottom:17px; }
 .stoic-zoom-week { aspect-ratio:1; min-width:0; padding:0; border:1px solid transparent; border-radius:7px; background:rgba(255,255,255,.12); color:var(--muted); cursor:pointer; font-size:6px; font-weight:900; }
@@ -1012,8 +1009,8 @@ body.light .bottom-nav { background:rgba(255,255,255,.84); }
   .stoic-life-weeks { grid-template-columns:repeat(52,minmax(3px,4px)); }
   .stoic-summary-grid { gap:6px; }
   .stoic-summary-grid > div { padding:10px 6px; }
-  .stoic-current-head { align-items:stretch; flex-direction:column; }
-  .stoic-current-head .secondary-btn { width:100%; }
+  .stoic-inline-year-head { align-items:stretch; flex-direction:column; }
+  .stoic-inline-year-head .secondary-btn { width:100%; }
   .stoic-year-week-grid { gap:3px; }
   .cloud-sync-row { grid-template-columns:1fr; }
   .cloud-migration-actions { display:grid; grid-template-columns:1fr; }
