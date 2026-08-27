@@ -1,6 +1,7 @@
 "use strict";
 
 const assert = require("node:assert/strict");
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 
@@ -8,6 +9,7 @@ const root = path.resolve(__dirname,"..");
 const html = fs.readFileSync(path.join(root,"index.html"),"utf8");
 const css = fs.readFileSync(path.join(root,"styles.css"),"utf8");
 const app = fs.readFileSync(path.join(root,"app.js"),"utf8");
+const manifest = JSON.parse(fs.readFileSync(path.join(root,"manifest.webmanifest"),"utf8"));
 
 function pngDimensions(fileName){
   const png = fs.readFileSync(path.join(root,"icons",fileName));
@@ -16,10 +18,12 @@ function pngDimensions(fileName){
 }
 
 const appIconSizes = new Map([
+  ["icon-source.png",[2048,2048]],
   ["icon-master.png",[1024,1024]],
   ["icon-512.png",[512,512]],
   ["icon-192.png",[192,192]],
-  ["apple-touch-icon-v36.png",[180,180]],
+  ["apple-touch-icon-v39.png",[180,180]],
+  ["apple-touch-icon.png",[180,180]],
   ["favicon-32.png",[32,32]],
   ["icon-maskable-512.png",[512,512]],
   ["icon-maskable-192.png",[192,192]]
@@ -28,17 +32,16 @@ for (const [fileName,expected] of appIconSizes) {
   assert.deepEqual(pngDimensions(fileName),expected,`${fileName} has the wrong dimensions`);
 }
 
-const appIconSource = fs.readFileSync(path.join(root,"icons","icon-source.svg"),"utf8");
-const appleIconSource = fs.readFileSync(path.join(root,"icons","apple-touch-icon-source.svg"),"utf8");
-assert.match(appIconSource,/Framework7 Icons/,"app icon source should retain the supplied SVG attribution");
-assert.match(appIconSource,/translate\("?148 148\)? scale\("?13\)?/,"supplied refresh\/90 mark should remain centered");
-for (const auraColor of ["#065b98","#1b7fdc","#087d95"]) {
-  assert.match(appIconSource,new RegExp(auraColor,"i"),`app icon should use AuraOS color ${auraColor}`);
-}
-assert.match(html,/apple-touch-icon-v36\.png/,"iOS should request the cache-busting Apple Touch icon filename");
-assert.match(appleIconSource,/id="iosPanel"/,"Apple Touch icon should use its dedicated iOS-safe panel");
-assert.match(appleIconSource,/rx="222"/,"Apple Touch frame should follow the iOS squircle corners");
-assert.match(appleIconSource,/icon-master\.png/,"Apple Touch composition should preserve the Level90 icon master");
+const appIconSource = fs.readFileSync(path.join(root,"icons","icon-source.png"));
+assert.equal(
+  crypto.createHash("sha256").update(appIconSource).digest("hex"),
+  "11ec9ffa1763b9f894d642b6f3e244d022699f197de455494017d441a11e22b7",
+  "the supplied Level90 source artwork must remain unchanged"
+);
+assert.match(html,/apple-touch-icon-v39\.png/,"iOS should request the current cache-busting Apple Touch icon filename");
+assert.equal(manifest.background_color,"#193546","manifest background should match the supplied icon");
+assert.ok(manifest.icons.some(icon=>icon.src === "./icons/icon-512.png" && icon.purpose === "any"),"manifest should include the standard Level90 icon");
+assert.ok(manifest.icons.some(icon=>icon.src === "./icons/icon-maskable-512.png" && icon.purpose === "maskable"),"manifest should include the safe-zone Level90 icon");
 
 const icons = ["notification","fire","rocket","import","export","reset","today","quest","history","character","moon","sun","reorder","categories","wave"];
 for (const icon of icons) assert.match(html,new RegExp(`id="icon-${icon}"`),`missing ${icon} symbol`);

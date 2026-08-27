@@ -1,15 +1,15 @@
-const CACHE = "level90-v38";
+const CACHE = "level90-v39";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=38",
-  "./cloud.js?v=38",
-  "./notifications.js?v=38",
-  "./app.js?v=38",
+  "./styles.css?v=39",
+  "./cloud.js?v=39",
+  "./notifications.js?v=39",
+  "./app.js?v=39",
   "./data/initial-data.json",
   "./manifest.webmanifest",
   "./icons/favicon-32.png",
-  "./icons/apple-touch-icon-v36.png",
+  "./icons/apple-touch-icon-v39.png",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/icon-maskable-192.png",

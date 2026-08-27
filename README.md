@@ -2,6 +2,14 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 39 supplied Level90 icon
+
+- Replaces the complete install-icon family with the supplied navy refresh/90 artwork.
+- Preserves the original 2048px PNG as `icons/icon-source.png` and derives the standard PWA, Apple Touch and favicon sizes from it.
+- Adds centered safe-zone padding only to the Android maskable variants so launcher crops do not clip the circular arrow.
+- Gives the Apple Touch icon a new versioned filename and advances the app-shell cache to Version 39 so installed copies request the new assets.
+- Requires only the updated PWA files; there is no Supabase migration or Edge Function deployment for this version.
+
 ## Version 38 Stoic view swap
 
 - Makes the selected 52-week life-year view the default Stoic workspace inside Character.
