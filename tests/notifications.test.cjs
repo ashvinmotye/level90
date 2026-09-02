@@ -8,6 +8,17 @@ const {webcrypto} = require("node:crypto");
 
 const root = path.resolve(__dirname,"..");
 const source = fs.readFileSync(path.join(root,"notifications.js"),"utf8");
+const html = fs.readFileSync(path.join(root,"index.html"),"utf8");
+const css = fs.readFileSync(path.join(root,"styles.css"),"utf8");
+const app = fs.readFileSync(path.join(root,"app.js"),"utf8");
+
+assert.match(html,/id="notificationCenterButton"/);
+assert.match(html,/id="notificationUnreadBadge"[^>]*hidden/);
+assert.match(html,/id="view-notifications"/);
+assert.match(html,/id="clearAllNotificationsButton"/);
+assert.match(css,/\.notification-center-btn\.is-disabled \.notification-bell::after/);
+assert.match(app,/"notifications","settings"/);
+assert.match(app,/LEVEL90_NOTIFICATION_RECEIVED/);
 
 function element() {
   const classes = new Set();
@@ -39,6 +50,7 @@ function notificationContext({ios=false,standalone=true,smartRuleVersion=0,histo
   const writes = [];
   const invocations = [];
   const toasts = [];
+  const views = [];
   let currentSubscription = null;
   let requestCount = 0;
   let unsubscribeCount = 0;
@@ -153,6 +165,7 @@ function notificationContext({ios=false,standalone=true,smartRuleVersion=0,histo
     level90AuthSession:{user:{id:"user-a",email:"ashvin@example.com"}},
     level90AuthClient:client,
     showToast:message=>toasts.push(message),
+    showView:view=>views.push(view),
     escapeHtml:value=>String(value)
   });
   vm.runInContext(`${source}\n;globalThis.notificationApi={
@@ -161,10 +174,15 @@ function notificationContext({ios=false,standalone=true,smartRuleVersion=0,histo
     enable:level90EnableNotifications,
     sendTest:level90SendTestNotification,
     disable:level90DisableNotifications,
-    saveSmart:level90SaveSmartNotificationSettings
+    saveSmart:level90SaveSmartNotificationSettings,
+    refreshInbox:refreshLevel90NotificationInbox,
+    openInbox:level90OpenNotificationCenter,
+    clearOne:level90ClearNotification,
+    clearAll:level90ClearAllNotifications,
+    unreadCount:()=>level90NotificationInboxItems.length
   };`,context);
   return {
-    context,elements,writes,invocations,toasts,
+    context,elements,writes,invocations,toasts,views,
     requestCount:()=>requestCount,
     unsubscribeCount:()=>unsubscribeCount
   };
@@ -263,6 +281,31 @@ async function run() {
   assert.equal(keyRecoveryHarness.elements.get("#testNotificationButton").disabled,false);
   assert.ok(keyRecoveryHarness.writes.some(write=>write.table === "level90_push_subscriptions" && write.kind === "upsert"));
 
+  const inboxHarness = notificationContext({
+    smartRuleVersion:2,
+    historyItems:[
+      {id:"notification-a",rule_key:"morning_brief",title:"Morning briefing",body:"Five quests are ready.",status:"sent",created_at:"2099-08-25T06:00:00.000Z",sent_at:"2099-08-25T06:00:02.000Z"},
+      {id:"notification-b",rule_key:"streak_rescue",title:"Protect your streak 🔥",body:"One quest needs you.",status:"pending",sent_count:1,created_at:"2099-08-25T18:00:00.000Z",sent_at:"2099-08-25T18:00:02.000Z"}
+    ]
+  });
+  await inboxHarness.context.notificationApi.openInbox();
+  assert.equal(inboxHarness.views.at(-1),"settings","a disconnected bell should open notification settings");
+  await inboxHarness.context.notificationApi.refresh();
+  await inboxHarness.context.notificationApi.enable();
+  assert.equal(inboxHarness.context.notificationApi.unreadCount(),2);
+  assert.equal(inboxHarness.elements.get("#notificationUnreadBadge").textContent,"2");
+  assert.equal(inboxHarness.elements.get("#notificationUnreadBadge").hidden,false);
+  assert.equal(inboxHarness.elements.get("#notificationCenterButton").classList.contains("is-disabled"),false);
+  await inboxHarness.context.notificationApi.openInbox();
+  assert.equal(inboxHarness.views.at(-1),"notifications","a connected bell should open the unread inbox");
+  assert.equal(inboxHarness.context.notificationApi.unreadCount(),2,"opening the inbox must not clear its badge");
+  inboxHarness.context.notificationApi.clearOne("notification-a");
+  assert.equal(inboxHarness.context.notificationApi.unreadCount(),1);
+  assert.equal(inboxHarness.elements.get("#notificationUnreadBadge").textContent,"1");
+  inboxHarness.context.notificationApi.clearAll();
+  assert.equal(inboxHarness.context.notificationApi.unreadCount(),0);
+  assert.equal(inboxHarness.elements.get("#notificationUnreadBadge").hidden,true);
+
   await runServiceWorkerTests();
 
   console.log("Level90 notification tests passed");
@@ -318,7 +361,10 @@ async function runServiceWorkerTests() {
   });
   await clickPromise;
   assert.equal(focused,1);
-  assert.equal(JSON.stringify(messages),JSON.stringify([{type:"LEVEL90_OPEN_VIEW",view:"today"}]));
+  assert.equal(JSON.stringify(messages),JSON.stringify([
+    {type:"LEVEL90_NOTIFICATION_RECEIVED"},
+    {type:"LEVEL90_OPEN_VIEW",view:"today"}
+  ]));
 }
 
 run().catch(error=>{

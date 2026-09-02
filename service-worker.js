@@ -1,11 +1,11 @@
-const CACHE = "level90-v39";
+const CACHE = "level90-v40";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=39",
-  "./cloud.js?v=39",
-  "./notifications.js?v=39",
-  "./app.js?v=39",
+  "./styles.css?v=40",
+  "./cloud.js?v=40",
+  "./notifications.js?v=40",
+  "./app.js?v=40",
   "./data/initial-data.json",
   "./manifest.webmanifest",
   "./icons/favicon-32.png",
@@ -63,14 +63,19 @@ self.addEventListener("push", event => {
   const targetUrl = new URL(payload.url || "./index.html#today",self.registration.scope).href;
   const icon = new URL(payload.icon || "./icons/icon-192.png",self.registration.scope).href;
   const badge = new URL(payload.badge || "./icons/icon-192.png",self.registration.scope).href;
-  event.waitUntil(self.registration.showNotification(title,{
-    body:payload.body || "Your next level is waiting.",
-    icon,
-    badge,
-    tag:payload.tag || "level90-notification",
-    renotify:false,
-    data:{url:targetUrl}
-  }));
+  event.waitUntil(Promise.all([
+    self.registration.showNotification(title,{
+      body:payload.body || "Your next level is waiting.",
+      icon,
+      badge,
+      tag:payload.tag || "level90-notification",
+      renotify:false,
+      data:{url:targetUrl}
+    }),
+    self.clients.matchAll({type:"window",includeUncontrolled:true}).then(windows=>{
+      windows.forEach(client=>client.postMessage({type:"LEVEL90_NOTIFICATION_RECEIVED"}));
+    })
+  ]));
 });
 
 self.addEventListener("notificationclick", event => {

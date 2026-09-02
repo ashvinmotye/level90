@@ -11,7 +11,7 @@
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon-v39.png" />
-  <link rel="stylesheet" href="./styles.css?v=39" />
+  <link rel="stylesheet" href="./styles.css?v=40" />
 </head>
 <body>
   <svg class="aura-icon-sprite" aria-hidden="true" focusable="false">
@@ -118,6 +118,10 @@
         <strong>Level up, <span id="greetingName" class="greeting-name">Player</span>!</strong><span class="greeting-wave" aria-hidden="true"><svg class="aura-icon"><use href="#icon-wave"></use></svg></span>
       </button>
       <div class="topbar-actions">
+        <button id="notificationCenterButton" class="icon-btn notification-center-btn is-disabled" type="button" aria-label="Notifications are off. Open settings" title="Notifications">
+          <span class="notification-bell" aria-hidden="true"><svg class="aura-icon"><use href="#icon-notification"></use></svg></span>
+          <span id="notificationUnreadBadge" class="notification-unread-badge" hidden>0</span>
+        </button>
         <button id="themeBtn" class="icon-btn theme-toggle-btn" aria-label="Switch to light mode" title="Switch to light mode">
           <svg class="aura-icon theme-icon theme-icon-sun" aria-hidden="true" focusable="false"><use href="#icon-sun"></use></svg>
           <svg class="aura-icon theme-icon theme-icon-moon" aria-hidden="true" focusable="false"><use href="#icon-moon"></use></svg>
@@ -294,6 +298,28 @@
             <div id="stoicWeekDetail" class="stoic-week-detail"></div>
           </div>
         </div>
+      </section>
+
+      <section id="view-notifications" class="view notifications-view">
+        <div class="settings-page-head notifications-page-head">
+          <button type="button" class="icon-btn settings-back-btn" id="closeNotifications" aria-label="Return to previous screen">‹</button>
+          <div class="page-heading settings-page-title">
+            <span class="kicker">INBOX</span>
+            <h2>Notifications</h2>
+            <p>Notifications stay unread until you clear them.</p>
+          </div>
+        </div>
+
+        <section class="panel notification-inbox-panel">
+          <div class="notification-inbox-toolbar">
+            <div><span class="kicker">UNREAD</span><strong id="notificationInboxCount">Checking…</strong></div>
+            <button id="clearAllNotificationsButton" class="secondary-btn" type="button" disabled>Clear all</button>
+          </div>
+          <div id="notificationInboxList" class="notification-inbox-list" role="list" aria-live="polite">
+            <div class="notification-inbox-empty"><strong>Checking your inbox…</strong><span>New Level90 alerts will appear here.</span></div>
+          </div>
+          <p id="notificationInboxMessage" class="account-message notification-inbox-message" role="status" aria-live="polite"></p>
+        </section>
       </section>
 
       <section id="view-settings" class="view settings-view">
@@ -620,8 +646,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3" crossorigin="anonymous" defer></script>
-  <script src="./cloud.js?v=39" defer></script>
-  <script src="./notifications.js?v=39" defer></script>
-  <script src="./app.js?v=39" defer></script>
+  <script src="./cloud.js?v=40" defer></script>
+  <script src="./notifications.js?v=40" defer></script>
+  <script src="./app.js?v=40" defer></script>
 </body>
 </html>

@@ -10,10 +10,11 @@ let levelGlowAnimation = null;
 let lastSavedStateJson = "";
 let activeView = "today";
 let settingsReturnView = "today";
+let notificationsReturnView = "today";
 let selectedStoicYear = null;
 let selectedStoicWeek = null;
 const PALETTES = ["arctic","jade","aurora","rose"];
-const APP_VIEWS = ["today","quests","journey","character","settings"];
+const APP_VIEWS = ["today","quests","journey","character","notifications","settings"];
 const STOIC_DEFAULT_HORIZON = 90;
 const STOIC_MIN_HORIZON = 50;
 const STOIC_MAX_HORIZON = 120;
@@ -255,6 +256,7 @@ function viewFromLocation() {
 function showView(view,options={}) {
   const nextView = APP_VIEWS.includes(view) ? view : "today";
   if (nextView === "settings" && activeView !== "settings" && options.remember !== false) settingsReturnView = activeView;
+  if (nextView === "notifications" && activeView !== "notifications" && options.remember !== false) notificationsReturnView = activeView;
   activeView = nextView;
   $$(".view").forEach(item=>item.classList.toggle("active",item.id === `view-${nextView}`));
   $$(".nav-btn").forEach(button=>button.classList.toggle("active",button.dataset.view === nextView));
@@ -266,6 +268,9 @@ function showView(view,options={}) {
   if (nextView === "settings" && typeof refreshLevel90NotificationSettings === "function") {
     refreshLevel90NotificationSettings().catch(()=>{});
   }
+  if (nextView === "notifications" && typeof refreshLevel90NotificationInbox === "function") {
+    refreshLevel90NotificationInbox().catch(()=>{});
+  }
 }
 
 function openSettingsPage() {
@@ -274,6 +279,11 @@ function openSettingsPage() {
 
 function closeSettingsPage() {
   showView(settingsReturnView === "settings" ? "today" : settingsReturnView);
+  requestNameIfNeeded();
+}
+
+function closeNotificationsPage() {
+  showView(notificationsReturnView === "notifications" ? "today" : notificationsReturnView);
   requestNameIfNeeded();
 }
 
@@ -1458,6 +1468,7 @@ function bindEvents() {
   $("#menuBtn").addEventListener("click",openSettingsPage);
   $("#profileGreetingBtn").addEventListener("click",openSettingsPage);
   $("#closeSettings").addEventListener("click",closeSettingsPage);
+  $("#closeNotifications").addEventListener("click",closeNotificationsPage);
   $("#profileNameInput").addEventListener("input",e=>{
     state.profileName=e.target.value.trimStart();
     $("#greetingName").textContent=state.profileName || "Player";
@@ -1516,6 +1527,11 @@ function registerSW() {
     navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
     navigator.serviceWorker.addEventListener("message",event=>{
       if (event.data?.type === "LEVEL90_OPEN_VIEW") showView(event.data.view || "today");
+      if (event.data?.type === "LEVEL90_NOTIFICATION_RECEIVED" && typeof refreshLevel90NotificationInbox === "function") {
+        refreshLevel90NotificationInbox({silent:true}).catch(()=>{});
+        window.setTimeout(()=>refreshLevel90NotificationInbox({silent:true}).catch(()=>{}),1500);
+        window.setTimeout(()=>refreshLevel90NotificationInbox({silent:true}).catch(()=>{}),4500);
+      }
     });
   }
 }

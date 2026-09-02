@@ -2,6 +2,17 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 40 notification inbox
+
+- Adds a notification bell to the header on every Level90 page.
+- Shows the familiar crossed-out bell when Web Push is unavailable or this device is not connected; selecting it opens Settings directly.
+- Shows a persistent unread count after Level90 delivers a morning briefing, evening recap or streak-rescue push.
+- Adds a dedicated Notifications page containing every unread alert with its title, message, lane and delivery time.
+- Keeps alerts unread when the page is opened. Only the individual **Clear** action or **Clear all** removes them and reduces the badge.
+- Keeps the unread state and recent inbox cache local to each signed-in device, so the inbox remains useful offline without changing cloud data or notification schedules.
+- Also mirrors the unread count to the installed app badge when the browser supports the Badging API.
+- Requires only the updated PWA files; there is no Supabase migration or Edge Function deployment for this version.
+
 ## Version 39 supplied Level90 icon
 
 - Replaces the complete install-icon family with the supplied navy refresh/90 artwork.
@@ -221,7 +232,7 @@ Keep the VAPID private key only in Supabase secrets; never add it to the PWA. On
 
 The migration creates four Level90-only tables with per-user composite keys and Row Level Security. It does not modify Workout tables. Existing Level90 browser data remains stored under the same local-storage key and is migrated in place before cloud sync begins.
 
-Run `node tests/state-and-sync.test.cjs` to check legacy-data migration, streak continuity, historical XP, Stoic week calculations, profile sync, queue compaction, quest-order sync, composite upserts, first-upload protection, secondary-device upload blocking, exact cloud replacement and cloud tombstones. Run `node tests/stoic-calendar.test.cjs` to check the current Stoic interface, year/life view swap, recurring-score integration, reflection/XP separation, migration and cache version. Run `node tests/notifications.test.cjs` to check device support, permission, subscription registration, test-send, disconnect and smart-setting behavior. Run `node tests/smart-notifications.test.cjs` to check streak qualification, learned timing, the fallback window, quiet hours, completed-quest suppression, schedule matching and longest-streak priority.
+Run `node tests/state-and-sync.test.cjs` to check legacy-data migration, streak continuity, historical XP, Stoic week calculations, profile sync, queue compaction, quest-order sync, composite upserts, first-upload protection, secondary-device upload blocking, exact cloud replacement and cloud tombstones. Run `node tests/stoic-calendar.test.cjs` to check the current Stoic interface, year/life view swap, recurring-score integration, reflection/XP separation, migration and cache version. Run `node tests/notifications.test.cjs` to check device support, permission, subscription registration, test-send, disconnect, smart settings, the crossed-out bell, unread persistence and manual clearing. Run `node tests/smart-notifications.test.cjs` to check streak qualification, learned timing, the fallback window, quiet hours, completed-quest suppression, schedule matching and longest-streak priority.
 
 ## Version 15 streaks and Today flow
 - Calculates current and best recurring-quest streaks from existing completion history.
