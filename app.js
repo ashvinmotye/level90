@@ -15,6 +15,7 @@ let notificationsReturnView = "today";
 let selectedStoicYear = null;
 let selectedStoicWeek = null;
 const PALETTES = ["arctic","jade","aurora","rose"];
+const LEVEL_FONTS = ["default","moirai-one","rubik-lines","zen-tokyo-zoo"];
 const APP_VIEWS = ["today","quests","journey","character","notifications","settings"];
 const STOIC_DEFAULT_HORIZON = 90;
 const STOIC_MIN_HORIZON = 50;
@@ -178,13 +179,14 @@ function startLevelNumberGlow() {
 }
 function freshState() {
   return {
-    schemaVersion: 5,
+    schemaVersion: 6,
     startedOn: localDateKey(),
     quests: structuredClone(CONFIG.quests),
     categories: structuredClone(CONFIG.categories),
     completions: {},
     theme: "dark",
     palette: "arctic",
+    levelFont: "default",
     profileName: "",
     stoicCalendar:freshStoicCalendar()
   };
@@ -194,9 +196,10 @@ function migrateState() {
   state.categories ||= structuredClone(CONFIG.categories);
   state.completions ||= {};
   state.startedOn ||= localDateKey();
-  state.schemaVersion = 5;
+  state.schemaVersion = 6;
   state.theme ||= "dark";
   if (!PALETTES.includes(state.palette)) state.palette = "arctic";
+  if (!LEVEL_FONTS.includes(state.levelFont)) state.levelFont = "default";
   state.profileName = typeof state.profileName === "string" ? state.profileName.trim() : "";
   state.stoicCalendar = normalizeStoicCalendar(state.stoicCalendar);
   const migrationTimestamp = new Date().toISOString();
@@ -291,6 +294,7 @@ function closeNotificationsPage() {
 function applyTheme() {
   document.body.classList.toggle("light", state.theme === "light");
   document.body.dataset.palette = state.palette || "arctic";
+  document.body.dataset.levelFont = state.levelFont || "default";
   const quickToggle = $("#themeBtn");
   if (quickToggle) {
     const label = state.theme === "dark" ? "Switch to light mode" : "Switch to dark mode";
@@ -299,6 +303,11 @@ function applyTheme() {
   }
   $$("[data-theme-mode]").forEach(button=>button.classList.toggle("selected",button.dataset.themeMode===state.theme));
   $$("[data-palette]").forEach(button=>button.classList.toggle("selected",button.dataset.palette===state.palette));
+  $$("[data-level-font]").forEach(button=>{
+    const selected=button.dataset.levelFont===state.levelFont;
+    button.classList.toggle("selected",selected);
+    button.setAttribute("aria-pressed",String(selected));
+  });
   const browserColor=getComputedStyle(document.body).getPropertyValue("--bg").trim();
   const themeMeta=$("meta[name='theme-color']");
   if(themeMeta && browserColor) themeMeta.setAttribute("content",browserColor);
@@ -1594,6 +1603,12 @@ function bindEvents() {
     const option=e.target.closest("[data-palette]"); if(!option)return;
     state.palette=option.dataset.palette; applyTheme(); save();
     showToast(`${option.querySelector("strong").textContent} activated`);
+  });
+
+  $("#levelFontPicker").addEventListener("click",e=>{
+    const option=e.target.closest("[data-level-font]"); if(!option)return;
+    state.levelFont=option.dataset.levelFont; applyTheme(); save();
+    showToast(`${option.querySelector("strong").textContent} level font activated`);
   });
 
   $("#menuBtn").addEventListener("click",openSettingsPage);

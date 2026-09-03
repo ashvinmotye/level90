@@ -379,7 +379,8 @@ function level90ProfileComparable(source) {
     profileName:source.profileName || "",
     theme:source.theme || "dark",
     palette:source.palette || "arctic",
-    schemaVersion:Number(source.schemaVersion) || 5,
+    levelFont:source.levelFont || "default",
+    schemaVersion:Number(source.schemaVersion) || 6,
     stoicCalendar:level90StoicComparable(source.stoicCalendar)
   };
 }
@@ -470,7 +471,7 @@ function level90CompletionCount(source=state) {
 }
 
 function level90HasMeaningfulLocalData() {
-  if (level90CompletionCount() > 0 || state.profileName || state.startedOn !== localDateKey() || state.theme !== "dark" || state.palette !== "arctic" || state.stoicCalendar?.birthDate || Object.keys(state.stoicCalendar?.weeks || {}).length) return true;
+  if (level90CompletionCount() > 0 || state.profileName || state.startedOn !== localDateKey() || state.theme !== "dark" || state.palette !== "arctic" || state.levelFont !== "default" || state.stoicCalendar?.birthDate || Object.keys(state.stoicCalendar?.weeks || {}).length) return true;
   const categories = (state.categories || []).map((record,index)=>level90CategoryComparable(record,index));
   const defaultCategories = (CONFIG.categories || []).map((record,index)=>level90CategoryComparable(record,index));
   const quests = (state.quests || []).map((record,index)=>{
@@ -504,6 +505,7 @@ function level90CloudRow(operation) {
       profile_name:record.profileName,
       theme:record.theme,
       palette:record.palette,
+      level_font:record.levelFont,
       schema_version:record.schemaVersion,
       stoic_calendar:record.stoicCalendar,
       client_updated_at:operation.clientUpdatedAt
@@ -587,6 +589,7 @@ function level90ApplyCloudSnapshot(snapshot,options={}) {
     state.profileName = profile.profile_name || "";
     state.theme = profile.theme || "dark";
     state.palette = profile.palette || "arctic";
+    state.levelFont = profile.level_font || "default";
     state.stoicCalendar = level90StoicComparable(profile.stoic_calendar);
   }
   state.categories = level90MergeCloudList(state.categories,snapshot.categories,level90CategoryFromCloud,protectLocal,cloudOnly);
@@ -621,7 +624,7 @@ function level90ApplyCloudSnapshot(snapshot,options={}) {
 
 async function level90FetchCloudSnapshot() {
   const [profile,categories,quests,completions] = await Promise.all([
-    level90AuthClient.from("level90_profiles").select("user_id, started_on, profile_name, theme, palette, schema_version, stoic_calendar, client_updated_at, updated_at"),
+    level90AuthClient.from("level90_profiles").select("user_id, started_on, profile_name, theme, palette, level_font, schema_version, stoic_calendar, client_updated_at, updated_at"),
     level90AuthClient.from("level90_categories").select("id, name, icon, description, sort_order, client_created_at, client_updated_at, deleted_at, updated_at").order("sort_order",{ascending:true}),
     level90AuthClient.from("level90_quests").select("id, title, category_id, difficulty, quest_type, schedule, active, sort_order, created_on, client_created_at, client_updated_at, deleted_at, updated_at").order("sort_order",{ascending:true}),
     level90AuthClient.from("level90_completions").select("id, quest_id, completion_date, completed_at, quest_title, category_id, difficulty, xp_awarded, completion_count, client_updated_at, deleted_at, updated_at").order("completion_date",{ascending:true})

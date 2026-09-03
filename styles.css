@@ -320,6 +320,9 @@ body.light .theme-icon-moon { display:block; }
   animation:levelNumberBreathe 5.2s ease-in-out infinite;
   will-change:transform,filter,background-position;
 }
+body[data-level-font="moirai-one"] #levelNumber { font-family:"Moirai One",system-ui,sans-serif; font-weight:400; letter-spacing:-.02em; }
+body[data-level-font="rubik-lines"] #levelNumber { font-family:"Rubik Lines",system-ui,sans-serif; font-weight:400; letter-spacing:-.02em; }
+body[data-level-font="zen-tokyo-zoo"] #levelNumber { font-family:"Zen Tokyo Zoo",system-ui,sans-serif; font-weight:400; letter-spacing:.01em; }
 @keyframes levelNumberBreathe {
   0%,100% { transform:scale(1); filter:drop-shadow(0 4px 0 rgb(var(--accent-2-rgb) / .20)) drop-shadow(0 14px 24px rgb(var(--accent-rgb) / .42)) drop-shadow(0 0 12px rgb(var(--gold-rgb) / .25)); }
   50% { transform:scale(1.045); filter:drop-shadow(0 5px 0 rgb(var(--accent-2-rgb) / .24)) drop-shadow(0 18px 32px rgb(var(--accent-rgb) / .52)) drop-shadow(0 0 20px rgb(var(--gold-rgb) / .34)); }
@@ -961,6 +964,19 @@ body.light .bottom-nav { background:rgba(255,255,255,.84); }
 .palette-jade i:nth-child(1){background:#B7E5BA}.palette-jade i:nth-child(2){background:#5CA87C}.palette-jade i:nth-child(3){background:#288760}.palette-jade i:nth-child(4){background:#1A5140}
 .palette-aurora i:nth-child(1){background:#F9D4E0}.palette-aurora i:nth-child(2){background:#EB96FF}.palette-aurora i:nth-child(3){background:#0B5777}.palette-aurora i:nth-child(4){background:#193153}
 .palette-rose i:nth-child(1){background:#F7C7D9}.palette-rose i:nth-child(2){background:#E888D1}.palette-rose i:nth-child(3){background:#F7C7D9}.palette-rose i:nth-child(4){background:#E888D1}
+.level-font-fieldset { min-width:0; margin:14px 0 0; padding:14px 0 0; border:0; border-top:1px solid var(--line); }
+.level-font-fieldset legend { float:left; width:100%; padding:0; color:var(--text); font-size:11px; font-weight:900; }
+.level-font-fieldset > p { clear:both; margin:4px 0 10px; color:var(--muted); font-size:8px; line-height:1.45; }
+.level-font-picker { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.level-font-option { position:relative; min-width:0; min-height:74px; display:grid; grid-template-columns:56px minmax(0,1fr); align-items:center; gap:9px; padding:9px; text-align:left; border-radius:16px; border:1px solid var(--line); background:rgba(255,255,255,.03); color:var(--text); cursor:pointer; }
+.level-font-option.selected { border-color:var(--accent); background:rgb(var(--accent-rgb) / .08); box-shadow:0 0 0 2px rgb(var(--accent-rgb) / .10); }
+.level-font-option.selected::after { content:"✓"; position:absolute; right:7px; top:7px; width:18px; height:18px; display:grid; place-items:center; border-radius:7px; background:var(--accent); color:white; font-size:10px; font-weight:950; }
+.level-font-option span { display:grid; place-items:center; min-height:54px; border-radius:12px; background:rgb(var(--accent-rgb) / .08); color:var(--accent-soft); font-size:32px; line-height:1; }
+.level-font-option strong { min-width:0; padding-right:18px; font-size:10px; line-height:1.25; overflow-wrap:anywhere; }
+.level-font-default span { font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; font-weight:950; letter-spacing:-.04em; }
+.level-font-moirai-one span { font-family:"Moirai One",system-ui,sans-serif; }
+.level-font-rubik-lines span { font-family:"Rubik Lines",system-ui,sans-serif; }
+.level-font-zen-tokyo-zoo span { font-family:"Zen Tokyo Zoo",system-ui,sans-serif; }
 .settings-stack { display:grid; gap:9px; }
 .settings-btn, .file-label {
   width:100%; display:flex; align-items:center; gap:10px; padding:14px; text-align:left; border-radius:16px; background:rgba(255,255,255,.045);

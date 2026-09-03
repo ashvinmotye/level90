@@ -11,7 +11,10 @@
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon-v39.png" />
-  <link rel="stylesheet" href="./styles.css?v=42" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Moirai+One&amp;family=Rubik+Lines&amp;family=Zen+Tokyo+Zoo&amp;display=swap" />
+  <link rel="stylesheet" href="./styles.css?v=43" />
 </head>
 <body>
   <svg class="aura-icon-sprite" aria-hidden="true" focusable="false">
@@ -491,6 +494,16 @@
                 <strong>Rosé Sunrise</strong><small>Warm red · soft pink glow</small>
               </button>
             </div>
+            <fieldset class="level-font-fieldset">
+              <legend>Level number font</legend>
+              <p>Only changes the level number inside Today’s orb.</p>
+              <div id="levelFontPicker" class="level-font-picker">
+                <button type="button" class="level-font-option level-font-default" data-level-font="default"><span aria-hidden="true">90</span><strong>Default</strong></button>
+                <button type="button" class="level-font-option level-font-moirai-one" data-level-font="moirai-one"><span aria-hidden="true">90</span><strong>Moirai One</strong></button>
+                <button type="button" class="level-font-option level-font-rubik-lines" data-level-font="rubik-lines"><span aria-hidden="true">90</span><strong>Rubik Lines</strong></button>
+                <button type="button" class="level-font-option level-font-zen-tokyo-zoo" data-level-font="zen-tokyo-zoo"><span aria-hidden="true">90</span><strong>Zen Tokyo Zoo</strong></button>
+              </div>
+            </fieldset>
           </section>
 
           <section class="panel settings-page-card data-settings-section settings-stack">
@@ -673,8 +686,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3" crossorigin="anonymous" defer></script>
-  <script src="./cloud.js?v=42" defer></script>
-  <script src="./notifications.js?v=42" defer></script>
-  <script src="./app.js?v=42" defer></script>
+  <script src="./cloud.js?v=43" defer></script>
+  <script src="./notifications.js?v=43" defer></script>
+  <script src="./app.js?v=43" defer></script>
 </body>
 </html>

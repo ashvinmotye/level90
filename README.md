@@ -2,6 +2,17 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 43 Today-orb fonts
+
+- Adds a Level number font picker to Settings → Appearance with Default, Moirai One, Rubik Lines and Zen Tokyo Zoo in alphabetical order.
+- Loads the three display faces from Google Fonts and falls back to the existing Level90 typeface if a font is unavailable.
+- Applies the selected face only to the large level number inside Today's orb; all other interface and Character typography remains unchanged.
+- Saves the selection locally and synchronizes it through the signed-in Level90 profile.
+
+### Version 43 Supabase update
+
+Run `supabase/migrations/20260903_add_level90_level_fonts.sql` once before deploying the Version 43 PWA files. No Edge Function redeployment is required.
+
 ## Version 42 repeat quest clears
 
 - Allows every Today quest, including a one-off mission, to be cleared more than once on the same day.

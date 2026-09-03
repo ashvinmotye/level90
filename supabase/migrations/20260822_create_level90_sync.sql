@@ -11,7 +11,9 @@ create table if not exists public.level90_profiles (
     check (theme in ('dark', 'light')),
   palette text not null default 'arctic'
     check (palette in ('arctic', 'jade', 'aurora', 'rose')),
-  schema_version smallint not null default 4
+  level_font text not null default 'default'
+    check (level_font in ('default', 'moirai-one', 'rubik-lines', 'zen-tokyo-zoo')),
+  schema_version smallint not null default 6
     check (schema_version >= 1),
   stoic_calendar jsonb not null default '{"birthDate":"","horizonYears":90,"weeks":{}}'::jsonb
     constraint level90_profiles_stoic_calendar_object

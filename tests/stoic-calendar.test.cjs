@@ -23,7 +23,7 @@ assert.match(html,/>Show Life</);
 assert.doesNotMatch(html,/>Open review</i);
 assert.match(html,/planning horizon, not a prediction of lifespan/i);
 assert.ok(html.indexOf('id="stoicWeekDetail"') < html.indexOf('id="view-settings"'),"selected-week questions should render directly inside Character");
-assert.match(html,/styles\.css\?v=42/);
+assert.match(html,/styles\.css\?v=43/);
 assert.match(app,/const STOIC_DEFAULT_HORIZON = 90/);
 assert.match(app,/Array\.from\(\{length:52\}/);
 assert.match(app,/function renderStoicYearView\(\)/);
@@ -41,6 +41,6 @@ assert.match(html,/id="stoicReflectionToggle"/);
 assert.match(html,/id="stoicReflectionTime"[^>]*value="19:00"/);
 assert.match(reminderMigration,/add column if not exists stoic_reflection_enabled boolean not null default true/);
 assert.match(reminderMigration,/stoic_reflection/);
-assert.match(serviceWorker,/level90-v42/);
+assert.match(serviceWorker,/level90-v43/);
 
 console.log("Level90 Stoic Calendar tests passed");
