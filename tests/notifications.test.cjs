@@ -58,6 +58,7 @@ function notificationContext({ios=false,standalone=true,smartRuleVersion=0,histo
     user_id:"user-a",timezone:"UTC",smart_enabled:false,streak_rescue_enabled:true,
     morning_brief_enabled:true,morning_brief_time:"10:00:00",
     evening_recap_enabled:true,evening_recap_time:"21:00:00",
+    stoic_reflection_enabled:true,stoic_reflection_time:"19:00:00",
     rescue_intensity:"aggressive",final_rescue_time:"20:15:00",
     quiet_start:"21:30:00",quiet_end:"08:00:00",max_daily:3,min_streak:3,
     adaptive_grace_minutes:30,cooldown_minutes:90,last_evaluated_at:null,
@@ -218,7 +219,7 @@ async function run() {
   assert.equal(iosSupport.installRequired,true);
 
   const smartHarness = notificationContext({
-    smartRuleVersion:2,
+    smartRuleVersion:3,
     historyItems:[{
       id:"notification-a",rule_key:"morning_brief",title:"Level90 morning briefing 🔥",
       body:"Yesterday: 80%. Today: 5 quests.",status:"sent",
@@ -236,6 +237,7 @@ async function run() {
   assert.match(smartHarness.elements.get("#smartNotificationHistory").innerHTML,/Morning/);
   assert.equal(smartHarness.elements.get('[data-time-display-for="morningBriefTime"]').textContent,"10:00");
   assert.equal(smartHarness.elements.get('[data-time-display-for="eveningRecapTime"]').textContent,"21:00");
+  assert.equal(smartHarness.elements.get('[data-time-display-for="stoicReflectionTime"]').textContent,"19:00");
   assert.equal(smartHarness.elements.get('[data-time-display-for="smartQuietStart"]').textContent,"21:30");
   assert.equal(smartHarness.elements.get('[data-time-display-for="smartQuietEnd"]').textContent,"08:00");
   await smartHarness.context.notificationApi.enable();
@@ -245,6 +247,8 @@ async function run() {
   smartHarness.elements.get("#eveningRecapToggle").checked = true;
   smartHarness.elements.get("#eveningRecapTime").value = "20:45";
   smartHarness.elements.get("#streakRescueToggle").checked = true;
+  smartHarness.elements.get("#stoicReflectionToggle").checked = true;
+  smartHarness.elements.get("#stoicReflectionTime").value = "19:30";
   smartHarness.elements.get("#smartMinimumStreak").value = "5";
   smartHarness.elements.get("#smartRescueIntensity").value = "aggressive";
   smartHarness.elements.get("#smartQuietStart").value = "22:00";
@@ -253,8 +257,10 @@ async function run() {
   smartHarness.elements.get("#smartQuietEnd").dispatch("change");
   smartHarness.elements.get("#morningBriefTime").dispatch("change");
   smartHarness.elements.get("#eveningRecapTime").dispatch("change");
+  smartHarness.elements.get("#stoicReflectionTime").dispatch("change");
   assert.equal(smartHarness.elements.get('[data-time-display-for="morningBriefTime"]').textContent,"09:45");
   assert.equal(smartHarness.elements.get('[data-time-display-for="eveningRecapTime"]').textContent,"20:45");
+  assert.equal(smartHarness.elements.get('[data-time-display-for="stoicReflectionTime"]').textContent,"19:30");
   assert.equal(smartHarness.elements.get('[data-time-display-for="smartQuietStart"]').textContent,"22:00");
   assert.equal(smartHarness.elements.get('[data-time-display-for="smartQuietEnd"]').textContent,"07:30");
   await smartHarness.context.notificationApi.saveSmart();
@@ -264,6 +270,8 @@ async function run() {
   assert.equal(smartWrite.record.morning_brief_time,"09:45");
   assert.equal(smartWrite.record.evening_recap_time,"20:45");
   assert.equal(smartWrite.record.streak_rescue_enabled,true);
+  assert.equal(smartWrite.record.stoic_reflection_enabled,true);
+  assert.equal(smartWrite.record.stoic_reflection_time,"19:30");
   assert.equal(smartWrite.record.rescue_intensity,"aggressive");
   assert.equal(smartWrite.record.max_daily,3);
   assert.equal(smartWrite.record.adaptive_grace_minutes,30);
@@ -271,7 +279,7 @@ async function run() {
   assert.equal(smartWrite.record.quiet_start,"22:00");
   assert.equal(smartHarness.elements.get("#smartNotificationStatus").textContent,"Active");
 
-  const keyRecoveryHarness = notificationContext({smartRuleVersion:2});
+  const keyRecoveryHarness = notificationContext({smartRuleVersion:3});
   await keyRecoveryHarness.context.notificationApi.refresh();
   keyRecoveryHarness.context.Notification.permission = "granted";
   vm.runInContext("level90NotificationPublicKey = null;",keyRecoveryHarness.context);
@@ -282,7 +290,7 @@ async function run() {
   assert.ok(keyRecoveryHarness.writes.some(write=>write.table === "level90_push_subscriptions" && write.kind === "upsert"));
 
   const inboxHarness = notificationContext({
-    smartRuleVersion:2,
+    smartRuleVersion:3,
     historyItems:[
       {id:"notification-a",rule_key:"morning_brief",title:"Morning briefing",body:"Five quests are ready.",status:"sent",created_at:"2099-08-25T06:00:00.000Z",sent_at:"2099-08-25T06:00:02.000Z"},
       {id:"notification-b",rule_key:"streak_rescue",title:"Protect your streak 🔥",body:"One quest needs you.",status:"pending",sent_count:1,created_at:"2099-08-25T18:00:00.000Z",sent_at:"2099-08-25T18:00:02.000Z"}

@@ -25,6 +25,9 @@ const level90NotificationDom = {
   eveningRecapTime:document.querySelector("#eveningRecapTime"),
   eveningRecapTimeDisplay:document.querySelector('[data-time-display-for="eveningRecapTime"]'),
   streakRescueToggle:document.querySelector("#streakRescueToggle"),
+  stoicReflectionToggle:document.querySelector("#stoicReflectionToggle"),
+  stoicReflectionTime:document.querySelector("#stoicReflectionTime"),
+  stoicReflectionTimeDisplay:document.querySelector('[data-time-display-for="stoicReflectionTime"]'),
   smartMinimumStreak:document.querySelector("#smartMinimumStreak"),
   smartRescueIntensity:document.querySelector("#smartRescueIntensity"),
   smartQuietStart:document.querySelector("#smartQuietStart"),
@@ -190,7 +193,8 @@ function level90NotificationLaneDetails(ruleKey) {
   return {
     morning_brief:{label:"Morning briefing",icon:"sun"},
     evening_recap:{label:"Evening recap",icon:"moon"},
-    streak_rescue:{label:"Streak rescue",icon:"fire"}
+    streak_rescue:{label:"Streak rescue",icon:"fire"},
+    stoic_reflection:{label:"Stoic reflection",icon:"character"}
   }[ruleKey] || {label:"Level90",icon:"notification"};
 }
 
@@ -369,6 +373,7 @@ function level90SyncSmartTimeDisplay(input,display) {
 function level90SyncSmartTimeDisplays() {
   level90SyncSmartTimeDisplay(level90NotificationDom.morningBriefTime,level90NotificationDom.morningBriefTimeDisplay);
   level90SyncSmartTimeDisplay(level90NotificationDom.eveningRecapTime,level90NotificationDom.eveningRecapTimeDisplay);
+  level90SyncSmartTimeDisplay(level90NotificationDom.stoicReflectionTime,level90NotificationDom.stoicReflectionTimeDisplay);
   level90SyncSmartTimeDisplay(level90NotificationDom.smartQuietStart,level90NotificationDom.smartQuietStartDisplay);
   level90SyncSmartTimeDisplay(level90NotificationDom.smartQuietEnd,level90NotificationDom.smartQuietEndDisplay);
 }
@@ -378,6 +383,7 @@ function level90SetSmartControlsEnabled(enabled) {
     level90NotificationDom.smartToggle,level90NotificationDom.morningBriefToggle,
     level90NotificationDom.morningBriefTime,level90NotificationDom.eveningRecapToggle,
     level90NotificationDom.eveningRecapTime,level90NotificationDom.streakRescueToggle,
+    level90NotificationDom.stoicReflectionToggle,level90NotificationDom.stoicReflectionTime,
     level90NotificationDom.smartMinimumStreak,level90NotificationDom.smartRescueIntensity,
     level90NotificationDom.smartQuietStart,
     level90NotificationDom.smartQuietEnd,level90NotificationDom.smartSaveButton
@@ -416,6 +422,7 @@ function level90FriendlyNotificationError(error) {
   const message = String(error?.message || error || "").trim();
   const normalized = message.toLowerCase();
   if (!navigator.onLine || normalized.includes("failed to fetch") || normalized.includes("network")) return "Connect to the internet and try again.";
+  if (normalized.includes("stoic_reflection")) return "Run the included Level90 Stoic-reminder migration in Supabase, then redeploy the Edge Function.";
   if (normalized.includes("morning_brief") || normalized.includes("rescue_intensity") || normalized.includes("final_rescue_time")) return "Run the included Level90 Phase 3 notification migration in Supabase, then redeploy the Edge Function.";
   if (normalized.includes("min_streak") || normalized.includes("notification_outbox") || normalized.includes("last_evaluated_at")) return "Run the included Level90 smart-notification migrations in Supabase.";
   if (normalized.includes("level90_push_subscriptions") || normalized.includes("schema cache") || normalized.includes("relation")) return "Run the included Level90 notification migration in Supabase.";
@@ -475,7 +482,7 @@ function level90SmartRuleStateText(preference) {
     queued_final:"The final grouped streak check was queued for delivery.",
     reserved_final:`The adaptive quota is full. A final grouped check is reserved for ${detail.final_rescue_local || "20:15"}.`,
     already_queued:"Today's matching notification was already handled.",
-    summary_only:"Daily summaries are active; streak rescue is paused.",
+    summary_only:"Scheduled notification lanes are active; streak rescue is paused.",
     all_rules_paused:"All notification lanes are paused.",
     no_device:"No connected notification device was found.",
     error:"The last rule check failed. Open the Edge Function logs for details."
@@ -493,7 +500,7 @@ function level90RenderSmartHistory(items=[]) {
   level90NotificationDom.smartHistory.innerHTML = items.map(item=>{
     const when = new Intl.DateTimeFormat(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}).format(new Date(item.sent_at || item.created_at));
     const status = item.status === "sent" ? "Delivered" : item.status === "pending" ? "Pending" : item.status;
-    const labels = {morning_brief:"Morning",evening_recap:"Evening",streak_rescue:"Rescue"};
+    const labels = {morning_brief:"Morning",evening_recap:"Evening",streak_rescue:"Rescue",stoic_reflection:"Stoic"};
     const lane = labels[item.rule_key] || "Level90";
     return `<div class="smart-history-item"><div><strong>${renderText(item.title)}</strong><span>${renderText(item.body)}</span></div><small>${escapeHtml(lane)} · ${escapeHtml(status)} · ${escapeHtml(when)}</small></div>`;
   }).join("");
@@ -507,13 +514,13 @@ async function level90LoadSmartNotificationSettings() {
     level90DisableSmartSettings("Signed out","Sign in to manage smart reminders.");
     return;
   }
-  if (level90NotificationSmartRuleVersion < 2) {
-    level90DisableSmartSettings("Update required","Run the Phase 3 migration and deploy the updated Level90 notification Edge Function.");
+  if (level90NotificationSmartRuleVersion < 3) {
+    level90DisableSmartSettings("Update required","Run the Stoic-reminder migration and deploy the updated Level90 notification Edge Function.");
     return;
   }
   const {data:preference,error} = await level90AuthClient
     .from("level90_notification_preferences")
-    .select("timezone,smart_enabled,morning_brief_enabled,morning_brief_time,evening_recap_enabled,evening_recap_time,streak_rescue_enabled,rescue_intensity,final_rescue_time,quiet_start,quiet_end,max_daily,min_streak,adaptive_grace_minutes,cooldown_minutes,last_evaluated_at,last_rule_result,last_rule_detail,updated_at")
+    .select("timezone,smart_enabled,morning_brief_enabled,morning_brief_time,evening_recap_enabled,evening_recap_time,streak_rescue_enabled,stoic_reflection_enabled,stoic_reflection_time,rescue_intensity,final_rescue_time,quiet_start,quiet_end,max_daily,min_streak,adaptive_grace_minutes,cooldown_minutes,last_evaluated_at,last_rule_result,last_rule_detail,updated_at")
     .eq("user_id",user.id)
     .maybeSingle();
   if (error) throw error;
@@ -524,6 +531,8 @@ async function level90LoadSmartNotificationSettings() {
   level90NotificationDom.eveningRecapToggle.checked = Boolean(preference.evening_recap_enabled);
   level90NotificationDom.eveningRecapTime.value = level90TimeInputValue(preference.evening_recap_time,"21:00");
   level90NotificationDom.streakRescueToggle.checked = Boolean(preference.streak_rescue_enabled);
+  level90NotificationDom.stoicReflectionToggle.checked = Boolean(preference.stoic_reflection_enabled);
+  level90NotificationDom.stoicReflectionTime.value = level90TimeInputValue(preference.stoic_reflection_time,"19:00");
   level90NotificationDom.smartMinimumStreak.value = String(preference.min_streak || 3);
   level90NotificationDom.smartRescueIntensity.value = preference.rescue_intensity || "aggressive";
   level90NotificationDom.smartQuietStart.value = level90TimeInputValue(preference.quiet_start,"21:30");
@@ -590,6 +599,8 @@ async function level90SaveSmartNotificationSettings() {
       evening_recap_enabled:Boolean(level90NotificationDom.eveningRecapToggle.checked),
       evening_recap_time:level90NotificationDom.eveningRecapTime.value || "21:00",
       streak_rescue_enabled:Boolean(level90NotificationDom.streakRescueToggle.checked),
+      stoic_reflection_enabled:Boolean(level90NotificationDom.stoicReflectionToggle.checked),
+      stoic_reflection_time:level90NotificationDom.stoicReflectionTime.value || "19:00",
       rescue_intensity:rescueIntensity,
       final_rescue_time:"20:15",
       min_streak:Number(level90NotificationDom.smartMinimumStreak.value || 3),
@@ -845,7 +856,7 @@ async function level90CatchupNotifications(force=false) {
   } catch {
     return;
   }
-  if (level90NotificationSmartRuleVersion < 2) return;
+  if (level90NotificationSmartRuleVersion < 3) return;
   const key = level90NotificationCatchupKey(user.id);
   const lastCheck = Number(key ? localStorage.getItem(key) : 0) || 0;
   if (!force && Date.now()-lastCheck < 15*60000) return;
@@ -877,6 +888,7 @@ function level90BindNotificationSettings() {
   [
     [level90NotificationDom.morningBriefTime,level90NotificationDom.morningBriefTimeDisplay],
     [level90NotificationDom.eveningRecapTime,level90NotificationDom.eveningRecapTimeDisplay],
+    [level90NotificationDom.stoicReflectionTime,level90NotificationDom.stoicReflectionTimeDisplay],
     [level90NotificationDom.smartQuietStart,level90NotificationDom.smartQuietStartDisplay],
     [level90NotificationDom.smartQuietEnd,level90NotificationDom.smartQuietEndDisplay]
   ].forEach(([input,display])=>{

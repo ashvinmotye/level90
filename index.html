@@ -11,7 +11,7 @@
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon-v39.png" />
-  <link rel="stylesheet" href="./styles.css?v=40" />
+  <link rel="stylesheet" href="./styles.css?v=41" />
 </head>
 <body>
   <svg class="aura-icon-sprite" aria-hidden="true" focusable="false">
@@ -78,6 +78,25 @@
     <!-- Dmitriy Novikov, CC Attribution: https://www.figma.com/@novaslide -->
     <symbol id="icon-categories" viewBox="0 0 24 24" fill="none">
       <path d="M3 6C3 4.34315 4.34315 3 6 3H7C8.65685 3 10 4.34315 10 6V7C10 8.65685 8.65685 10 7 10H6C4.34315 10 3 8.65685 3 7V6ZM14 6C14 4.34315 15.3431 3 17 3H18C19.6569 3 21 4.34315 21 6V7C21 8.65685 19.6569 10 18 10H17C15.3431 10 14 8.65685 14 7V6ZM14 17C14 15.3431 15.3431 14 17 14H18C19.6569 14 21 15.3431 21 17V18C21 19.6569 19.6569 21 18 21H17C15.3431 21 14 19.6569 14 18V17ZM3 17C3 15.3431 4.34315 14 6 14H7C8.65685 14 10 15.3431 10 17V18C10 19.6569 8.65685 21 7 21H6C4.34315 21 3 19.6569 3 18V17Z" stroke="currentColor" stroke-width="2" />
+    </symbol>
+    <!-- Lucide icons, ISC License: https://lucide.dev/ -->
+    <symbol id="icon-plus" viewBox="0 0 24 24" fill="none">
+      <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-edit" viewBox="0 0 24 24" fill="none">
+      <path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-active" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" /><path d="m8 12 2.6 2.6L16.5 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-paused" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" /><path d="M10 9v6M14 9v6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-delete" viewBox="0 0 24 24" fill="none">
+      <path d="m7 7 10 10M17 7 7 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-drag" viewBox="0 0 24 24">
+      <circle cx="9" cy="6" r="1.5" fill="currentColor" /><circle cx="15" cy="6" r="1.5" fill="currentColor" /><circle cx="9" cy="12" r="1.5" fill="currentColor" /><circle cx="15" cy="12" r="1.5" fill="currentColor" /><circle cx="9" cy="18" r="1.5" fill="currentColor" /><circle cx="15" cy="18" r="1.5" fill="currentColor" />
     </symbol>
     <!-- Khushmeen Sidhu, Public Domain: https://khushmeen.com/icons.html -->
     <symbol id="icon-wave" viewBox="-16.5 0 152 152">
@@ -192,11 +211,11 @@
           <p>Create repeatable habits or one-time missions, then arrange them in the order that works for you.</p>
         </div>
         <div class="quest-library-actions">
-          <button id="addQuestBtn" class="primary-btn">＋ Create quest</button>
-          <button id="manageCategoriesBtn" class="secondary-btn"><svg class="aura-icon quest-action-icon" aria-hidden="true"><use href="#icon-categories"></use></svg><span>Categories</span></button>
-          <button id="reorderBtn" class="secondary-btn"><svg class="aura-icon quest-action-icon" aria-hidden="true"><use href="#icon-reorder"></use></svg><span>Reorder</span></button>
+          <button id="addQuestBtn" class="primary-btn" type="button" aria-label="Create quest" title="Create quest"><svg class="aura-icon quest-action-icon" aria-hidden="true"><use href="#icon-plus"></use></svg><span class="quest-action-label">Create quest</span></button>
+          <button id="manageCategoriesBtn" class="secondary-btn" type="button" aria-label="Manage categories" title="Categories"><svg class="aura-icon quest-action-icon" aria-hidden="true"><use href="#icon-categories"></use></svg><span class="quest-action-label">Categories</span></button>
+          <button id="reorderBtn" class="secondary-btn" type="button" aria-label="Sort quests" title="Sort quests"><svg class="aura-icon quest-action-icon" aria-hidden="true"><use href="#icon-reorder"></use></svg><span class="quest-action-label">Sort</span></button>
         </div>
-        <div id="reorderHint" class="reorder-hint hidden">Use the arrows to arrange your quests. The Today screen follows this order.</div>
+        <div id="reorderHint" class="reorder-hint hidden">Press and drag the grip on any card. The Today screen follows this order.</div>
         <div class="filter-row">
           <button class="filter-chip active" data-filter="all">All</button>
           <button class="filter-chip" data-filter="recurring">Recurring</button>
@@ -388,7 +407,7 @@
                 <span id="smartNotificationStatus" class="account-status is-offline">Inactive</span>
               </div>
               <label class="smart-master-toggle">
-                <span><strong>Level90 notifications</strong><small>Master switch for all three deterministic notification lanes.</small></span>
+                <span><strong>Level90 notifications</strong><small>Master switch for all four deterministic notification lanes.</small></span>
                 <input id="smartNotificationsToggle" type="checkbox" role="switch" disabled />
               </label>
               <div class="notification-lane-grid">
@@ -408,12 +427,20 @@
                   </div>
                   <label class="notification-lane-time">Delivery time<span class="smart-time-control"><span class="smart-time-display" data-time-display-for="eveningRecapTime" aria-hidden="true">21:00</span><input id="eveningRecapTime" type="time" value="21:00" disabled /></span></label>
                 </section>
-                <section class="notification-lane notification-lane-wide">
+                <section class="notification-lane">
                   <div class="notification-lane-head">
                     <span class="notification-lane-icon notification-lane-icon-streak" aria-hidden="true"><svg class="aura-icon"><use href="#icon-fire"></use></svg></span>
                     <div><strong>Streak rescue</strong><small>Checks every qualifying unfinished quest and groups up to three urgent streaks in one alert.</small></div>
                     <input id="streakRescueToggle" type="checkbox" role="switch" aria-label="Streak rescue" disabled />
                   </div>
+                </section>
+                <section class="notification-lane">
+                  <div class="notification-lane-head">
+                    <span class="notification-lane-icon notification-lane-icon-stoic" aria-hidden="true"><svg class="aura-icon"><use href="#icon-character"></use></svg></span>
+                    <div><strong>Stoic journal</strong><small>Reminds you once on Sunday when every field in the current week's reflection is still empty.</small></div>
+                    <input id="stoicReflectionToggle" type="checkbox" role="switch" aria-label="Stoic journal reminder" disabled />
+                  </div>
+                  <label class="notification-lane-time">Sunday reminder<span class="smart-time-control"><span class="smart-time-display" data-time-display-for="stoicReflectionTime" aria-hidden="true">19:00</span><input id="stoicReflectionTime" type="time" value="19:00" disabled /></span></label>
                 </section>
               </div>
               <div class="smart-rule-explainer">
@@ -427,7 +454,7 @@
                 <label class="smart-time-field">Quiet hours end<span class="smart-time-control"><span class="smart-time-display" data-time-display-for="smartQuietEnd" aria-hidden="true">08:00</span><input id="smartQuietEnd" type="time" value="08:00" disabled /></span></label>
               </div>
               <div class="smart-preference-actions">
-                <div><small id="smartTimezoneLabel">Timezone: checking…</small><span id="smartRuleState">Run the Phase 3 migration and deploy the updated function to activate all lanes.</span></div>
+                <div><small id="smartTimezoneLabel">Timezone: checking…</small><span id="smartRuleState">Run the Version 41 Stoic-reminder migration and deploy the updated function to activate all lanes.</span></div>
                 <button id="saveSmartNotificationSettingsButton" class="primary-btn" type="button" disabled>Save notification settings</button>
               </div>
               <div id="smartNotificationHistory" class="smart-notification-history"><small>No notifications sent yet.</small></div>
@@ -646,8 +673,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3" crossorigin="anonymous" defer></script>
-  <script src="./cloud.js?v=40" defer></script>
-  <script src="./notifications.js?v=40" defer></script>
-  <script src="./app.js?v=40" defer></script>
+  <script src="./cloud.js?v=41" defer></script>
+  <script src="./notifications.js?v=41" defer></script>
+  <script src="./app.js?v=41" defer></script>
 </body>
 </html>

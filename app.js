@@ -4,6 +4,7 @@ let CONFIG = null;
 let state = null;
 let questFilter = "all";
 let reorderMode = false;
+let questDragState = null;
 let selectedHistoryDate = null;
 let historyMonth = null;
 let levelGlowAnimation = null;
@@ -638,22 +639,21 @@ function questCard(q, todayMode=false, dateKey=localDateKey()) {
       <button class="tile-hit" data-complete="${q.id}" aria-label="${done ? "Reopen" : "Complete"} ${escapeHtml(q.title)}">${done ? "✓" : ""}</button>
     </article>`;
   return `
-  <article class="quest-card ${done ? "completed" : ""}" data-id="${q.id}">
-    <div>
+  <article class="quest-card ${reorderMode ? "reorder-item" : ""} ${done ? "completed" : ""}" data-id="${q.id}">
+    <div class="quest-card-content">
       <div class="quest-title">${escapeHtml(q.title)}</div>
       <div class="quest-meta">
-        <span class="quest-meta-item">${escapeHtml(cat.name)}</span><i class="quest-meta-separator" aria-hidden="true">•</i><span class="quest-meta-item quest-meta-difficulty">${difficultyDot(q.difficulty)}<span>${escapeHtml(d.label)}</span></span><i class="quest-meta-separator" aria-hidden="true">•</i><span class="quest-meta-item">${repeat}</span>
+        <span class="quest-meta-item">${escapeHtml(cat.name)}</span><i class="quest-meta-separator" aria-hidden="true">•</i><span class="quest-meta-item quest-meta-difficulty">${difficultyDot(q.difficulty)}<span>${escapeHtml(d.label)}</span></span><i class="quest-meta-separator" aria-hidden="true">•</i><span class="quest-meta-item quest-meta-schedule">${repeat}</span>
       </div>
       ${questProgress}
     </div>
-    ${reorderMode ? `<div class="reorder-controls">
-          <button class="move-btn" data-move="up" data-move-id="${q.id}" aria-label="Move ${escapeHtml(q.title)} up">↑</button>
-          <button class="move-btn" data-move="down" data-move-id="${q.id}" aria-label="Move ${escapeHtml(q.title)} down">↓</button>
-        </div>` : `<div class="quest-actions">
+    ${reorderMode ? `<button type="button" class="drag-handle" data-drag-handle aria-label="Drag ${escapeHtml(q.title)} to reorder" title="Drag to reorder">
+          ${auraIcon("drag","quest-card-action-icon")}<span>Drag</span>
+        </button>` : `<div class="quest-actions">
           <span class="xp-chip">+${d.xp} XP</span>
-          <button class="mini-btn" data-edit="${q.id}">Edit</button>
-          <button class="mini-btn" data-toggle="${q.id}">${q.active ? "Active" : "Paused"}</button>
-          <button class="mini-btn" data-delete="${q.id}">✕</button>
+          <button type="button" class="mini-btn" data-edit="${q.id}" aria-label="Edit ${escapeHtml(q.title)}" title="Edit">${auraIcon("edit","quest-card-action-icon")}<span class="quest-card-action-label">Edit</span></button>
+          <button type="button" class="mini-btn quest-toggle-btn ${q.active ? "is-active" : "is-paused"}" data-toggle="${q.id}" aria-label="${q.active ? "Pause" : "Activate"} ${escapeHtml(q.title)}" title="${q.active ? "Active — tap to pause" : "Paused — tap to activate"}">${auraIcon(q.active ? "active" : "paused","quest-card-action-icon")}<span class="quest-card-action-label">${q.active ? "Active" : "Paused"}</span></button>
+          <button type="button" class="mini-btn danger" data-delete="${q.id}" aria-label="Delete ${escapeHtml(q.title)}" title="Delete">${auraIcon("delete","quest-card-action-icon")}</button>
         </div>`}
   </article>`;
 }
@@ -669,7 +669,9 @@ function renderQuestLibrary() {
     `<div class="empty-state">Nothing here yet.</div>`;
   const reorderButton = $("#reorderBtn");
   reorderButton.classList.toggle("active", reorderMode);
-  reorderButton.querySelector("span").textContent = reorderMode ? "Done ordering" : "Reorder";
+  reorderButton.querySelector("span").textContent = reorderMode ? "Done" : "Sort";
+  reorderButton.setAttribute("aria-label",reorderMode ? "Finish sorting quests" : "Sort quests");
+  reorderButton.title = reorderMode ? "Finish sorting" : "Sort quests";
   $("#reorderHint").classList.toggle("hidden", !reorderMode);
   $("#questLibrary").classList.toggle("reordering", reorderMode);
 }
@@ -770,13 +772,82 @@ function reviewQuestRow(q,date,dateKey,editableDate) {
   return `<button type="button" class="review-quest editable ${done ? "done" : "missed"}" data-history-complete="${q.id}" aria-pressed="${done}" aria-label="${done ? "Reopen" : "Mark completed"} ${escapeHtml(q.title)} for yesterday">${content}</button>`;
 }
 
-function moveQuest(id, direction) {
-  const index = state.quests.findIndex(q=>q.id===id);
-  const target = direction === "up" ? index - 1 : index + 1;
-  if (index < 0 || target < 0 || target >= state.quests.length) return;
-  [state.quests[index], state.quests[target]] = [state.quests[target], state.quests[index]];
+function commitQuestDragOrder(ids) {
+  if (!Array.isArray(ids) || ids.length !== state.quests.length) return false;
+  const byId = new Map(state.quests.map(quest=>[quest.id,quest]));
+  if (new Set(ids).size !== state.quests.length || ids.some(id=>!byId.has(id))) return false;
+  const previous = state.quests.map(quest=>quest.id);
+  if (previous.every((id,index)=>id===ids[index])) return false;
+  state.quests = ids.map(id=>byId.get(id));
   save();
   renderAll();
+  showToast("Quest order saved");
+  return true;
+}
+
+function questOrderIdsFromDom() {
+  return $$(".quest-card[data-id]",$("#questLibrary")).map(card=>card.dataset.id);
+}
+
+function finishQuestDrag(cancelled=false) {
+  if (!questDragState) return;
+  const drag = questDragState;
+  questDragState = null;
+  drag.card.classList.remove("dragging");
+  $("#questLibrary").classList.remove("is-dragging");
+  if (cancelled) {
+    renderQuestLibrary();
+    return;
+  }
+  commitQuestDragOrder(questOrderIdsFromDom());
+}
+
+function bindQuestDragAndDrop() {
+  const list = $("#questLibrary");
+  list.addEventListener("pointerdown",event=>{
+    const handle=event.target.closest("[data-drag-handle]");
+    const card=handle?.closest(".quest-card[data-id]");
+    if(!reorderMode || !handle || !card || (event.button !== undefined && event.button !== 0)) return;
+    questDragState={pointerId:event.pointerId,handle,card,lastY:event.clientY};
+    handle.setPointerCapture?.(event.pointerId);
+    card.classList.add("dragging");
+    list.classList.add("is-dragging");
+    event.preventDefault();
+  });
+  list.addEventListener("pointermove",event=>{
+    if(!questDragState || event.pointerId!==questDragState.pointerId) return;
+    questDragState.lastY=event.clientY;
+    const hit=document.elementFromPoint(event.clientX,event.clientY)?.closest(".quest-card[data-id]");
+    if(hit && hit!==questDragState.card && hit.parentElement===list){
+      const rect=hit.getBoundingClientRect();
+      list.insertBefore(questDragState.card,event.clientY < rect.top + rect.height/2 ? hit : hit.nextSibling);
+    }
+    const edge=72;
+    if(event.clientY<edge) window.scrollBy?.({top:-10,behavior:"auto"});
+    else if(event.clientY>window.innerHeight-edge) window.scrollBy?.({top:10,behavior:"auto"});
+    event.preventDefault();
+  });
+  list.addEventListener("pointerup",event=>{
+    if(!questDragState || event.pointerId!==questDragState.pointerId) return;
+    questDragState.handle.releasePointerCapture?.(event.pointerId);
+    finishQuestDrag(false);
+  });
+  list.addEventListener("pointercancel",event=>{
+    if(questDragState && event.pointerId===questDragState.pointerId) finishQuestDrag(true);
+  });
+  list.addEventListener("keydown",event=>{
+    const handle=event.target.closest("[data-drag-handle]");
+    const card=handle?.closest(".quest-card[data-id]");
+    if(!reorderMode || !card || !["ArrowUp","ArrowDown"].includes(event.key)) return;
+    const sibling=event.key==="ArrowUp" ? card.previousElementSibling : card.nextElementSibling;
+    if(!sibling?.matches(".quest-card[data-id]")) return;
+    if(event.key==="ArrowUp") list.insertBefore(card,sibling);
+    else list.insertBefore(sibling,card);
+    event.preventDefault();
+    const focusId=card.dataset.id;
+    commitQuestDragOrder(questOrderIdsFromDom());
+    $(`.quest-card[data-id="${CSS.escape(focusId)}"] [data-drag-handle]`,list)?.focus();
+  });
 }
 
 function stepHistoryDay(amount) {
@@ -1340,6 +1411,7 @@ function bindEvents() {
     }
     renderQuestLibrary();
   });
+  bindQuestDragAndDrop();
   $("#closeQuestDialog").addEventListener("click",()=>$("#questDialog").close());
   $("#questForm").addEventListener("submit",saveQuest);
   $("#closeCategoryDialog").addEventListener("click",()=>$("#categoryDialog").close());
@@ -1401,8 +1473,6 @@ function bindEvents() {
         state.quests=state.quests.filter(x=>x.id!==q.id); save(); renderAll();
       }
     }
-    const move=e.target.closest("[data-move-id]");
-    if(move) moveQuest(move.dataset.moveId, move.dataset.move);
     const categoryEdit=e.target.closest("[data-category-edit]");
     if(categoryEdit) editCategory(categoryEdit.dataset.categoryEdit);
     const categoryDelete=e.target.closest("[data-category-delete]");

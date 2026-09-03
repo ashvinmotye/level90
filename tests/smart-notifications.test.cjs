@@ -15,7 +15,8 @@ function loadRuleApi(environment={}) {
   source += `\nglobalThis.smartRuleApi={
     timeMinutes,minuteLabel,isQuietMinute,zonedParts,dateKeyAdd,weekdayForDateKey,
     questScheduledOn,questPlannedOn,streakBeforeToday,median,adaptiveTriggerMinute,
-    summaryDue,evaluateStreakRescue,notificationSummaryStats,morningBrief,eveningRecap,rescueCopy
+    summaryDue,evaluateStreakRescue,notificationSummaryStats,morningBrief,eveningRecap,rescueCopy,
+    validDateKey,stoicPositionForDateKey,stoicJournalHasEntry,evaluateStoicReflection
   };`;
   const context = vm.createContext({
     console,Date,Intl,Map,Set,Promise,Response,JSON,Object,Math,Number,String,Array,
@@ -31,6 +32,7 @@ function preference(overrides={}) {
     user_id:"user-a",timezone:"UTC",smart_enabled:true,streak_rescue_enabled:true,
     morning_brief_enabled:true,morning_brief_time:"10:00",
     evening_recap_enabled:true,evening_recap_time:"21:00",
+    stoic_reflection_enabled:true,stoic_reflection_time:"19:00",
     rescue_intensity:"aggressive",final_rescue_time:"20:15",
     quiet_start:"21:30",quiet_end:"08:00",max_daily:3,min_streak:3,
     adaptive_grace_minutes:30,cooldown_minutes:90,...overrides
@@ -104,6 +106,24 @@ async function run() {
   assert.equal(api.summaryDue(21*60,10*60,12*60),true,"the morning brief remains catch-up eligible later that day");
   assert.equal(api.summaryDue(22*60+1,10*60,12*60),false,"the morning catch-up window expires after 12 hours");
   assert.equal(api.summaryDue(21*60,21*60,3*60),true,"the evening recap is independently due at 21:00");
+
+  const emptyStoicCalendar = {birthDate:"1990-08-27",horizonYears:90,weeks:{}};
+  const stoicPosition = api.stoicPositionForDateKey(emptyStoicCalendar,"2026-09-06");
+  assert.equal(stoicPosition.recordKey,"36:01","the server must address the same birthday-anchored Stoic week as Character");
+  const stoicDue = api.evaluateStoicReflection(preference(),emptyStoicCalendar,new Date("2026-09-06T19:00:00.000Z"));
+  assert.equal(stoicDue.due,true,"an empty current Stoic week should be reminded on Sunday at the configured time");
+  assert.equal(stoicDue.position.recordKey,"36:01");
+  const stoicEarly = api.evaluateStoicReflection(preference(),emptyStoicCalendar,new Date("2026-09-06T18:59:00.000Z"));
+  assert.equal(stoicEarly.due,false,"the reminder must not arrive before its configured time");
+  const writtenStoicCalendar = {
+    ...emptyStoicCalendar,
+    weeks:{"36:01":{correction:"Pause before reacting."}}
+  };
+  const stoicComplete = api.evaluateStoicReflection(preference(),writtenStoicCalendar,new Date("2026-09-06T20:00:00.000Z"));
+  assert.equal(stoicComplete.due,false,"any saved field should count as a journal entry and suppress the reminder");
+  assert.equal(stoicComplete.result,"stoic_complete");
+  const stoicUnconfigured = api.evaluateStoicReflection(preference(),{birthDate:"",horizonYears:90,weeks:{}},new Date("2026-09-06T20:00:00.000Z"));
+  assert.equal(stoicUnconfigured.due,false,"the reminder should stay silent until Character has a valid birth date");
 
   const summaryHistory = [
     completion("2026-08-20"),completion("2026-08-21"),completion("2026-08-22"),completion("2026-08-23")

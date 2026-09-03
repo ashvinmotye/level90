@@ -11,7 +11,7 @@ const corsHeaders = {
 const difficultyXp:Record<string,number> = {tiny:5,easy:10,medium:20,hard:40,major:75,epic:100};
 
 type DatabaseClient = ReturnType<typeof createClient>;
-type RuleKey = "morning_brief" | "evening_recap" | "streak_rescue";
+type RuleKey = "morning_brief" | "evening_recap" | "streak_rescue" | "stoic_reflection";
 type SmartPreference = {
   user_id:string;
   timezone:string;
@@ -21,6 +21,8 @@ type SmartPreference = {
   evening_recap_enabled:boolean;
   evening_recap_time:string;
   streak_rescue_enabled:boolean;
+  stoic_reflection_enabled:boolean;
+  stoic_reflection_time:string;
   rescue_intensity:string;
   final_rescue_time:string;
   quiet_start:string;
@@ -45,6 +47,24 @@ type CompletionRecord = {
   completion_date:string;
   completed_at:string;
   xp_awarded?:number;
+};
+type StoicWeekRecord = {
+  intention?:string;
+  control?:string;
+  reaction?:string;
+  correction?:string;
+};
+type StoicCalendar = {
+  birthDate?:string;
+  horizonYears?:number;
+  weeks?:Record<string,StoicWeekRecord>;
+};
+type StoicPosition = {year:number;week:number;recordKey:string};
+type StoicReflectionResult = {
+  due:boolean;
+  result:string;
+  detail:Record<string,unknown>;
+  position:StoicPosition | null;
 };
 type NotificationPayload = {
   title:string;
@@ -158,6 +178,65 @@ function dateKeyAdd(dateKey:string,days:number) {
 function weekdayForDateKey(dateKey:string) {
   const [year,month,day] = dateKey.split("-").map(Number);
   return new Date(Date.UTC(year,month-1,day)).getUTCDay();
+}
+
+function validDateKey(value:string | null | undefined) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ""));
+  if (!match) return false;
+  const date = new Date(Date.UTC(Number(match[1]),Number(match[2])-1,Number(match[3])));
+  return date.getUTCFullYear() === Number(match[1]) && date.getUTCMonth() === Number(match[2])-1 && date.getUTCDate() === Number(match[3]);
+}
+
+function utcDateFromKey(dateKey:string) {
+  const [year,month,day] = dateKey.split("-").map(Number);
+  return new Date(Date.UTC(year,month-1,day));
+}
+
+function addUtcYearsClamped(date:Date,years:number) {
+  const year = date.getUTCFullYear()+years;
+  const month = date.getUTCMonth();
+  const lastDay = new Date(Date.UTC(year,month+1,0)).getUTCDate();
+  return new Date(Date.UTC(year,month,Math.min(date.getUTCDate(),lastDay)));
+}
+
+function utcCalendarDaysBetween(a:Date,b:Date) {
+  return Math.round((a.getTime()-b.getTime())/86400000);
+}
+
+function stoicPositionForDateKey(calendar:StoicCalendar | null | undefined,dateKey:string):StoicPosition | null {
+  const birthDateKey = calendar?.birthDate;
+  if (!validDateKey(birthDateKey) || !validDateKey(dateKey) || dateKey < birthDateKey!) return null;
+  const birthDate = utcDateFromKey(birthDateKey!);
+  const date = utcDateFromKey(dateKey);
+  let ageYear = date.getUTCFullYear()-birthDate.getUTCFullYear();
+  if (date < addUtcYearsClamped(birthDate,ageYear)) ageYear -= 1;
+  const horizonYears = Math.max(50,Math.min(120,Math.round(Number(calendar?.horizonYears) || 90)));
+  if (ageYear < 0 || ageYear >= horizonYears) return null;
+  const start = addUtcYearsClamped(birthDate,ageYear);
+  const endExclusive = addUtcYearsClamped(birthDate,ageYear+1);
+  const daysInYear = utcCalendarDaysBetween(endExclusive,start);
+  const elapsedDays = utcCalendarDaysBetween(date,start);
+  const week = Math.min(51,Math.max(0,Math.floor(elapsedDays*52/daysInYear)));
+  return {year:ageYear,week,recordKey:`${ageYear}:${String(week).padStart(2,"0")}`};
+}
+
+function stoicJournalHasEntry(calendar:StoicCalendar | null | undefined,recordKey:string) {
+  const record = calendar?.weeks?.[recordKey];
+  return [record?.intention,record?.control,record?.reaction,record?.correction]
+    .some(value=>typeof value === "string" && value.trim().length > 0);
+}
+
+function evaluateStoicReflection(preference:SmartPreference,calendar:StoicCalendar | null | undefined,now:Date):StoicReflectionResult {
+  const local = zonedParts(now,preference.timezone || "UTC");
+  const detail:Record<string,unknown> = {local_date:local.dateKey,local_time:minuteLabel(local.minuteOfDay)};
+  if (!preference.stoic_reflection_enabled) return {due:false,result:"disabled",detail,position:null};
+  if (weekdayForDateKey(local.dateKey) !== 0) return {due:false,result:"not_sunday",detail,position:null};
+  if (local.minuteOfDay < timeMinutes(preference.stoic_reflection_time)) return {due:false,result:"before_stoic_time",detail,position:null};
+  const position = stoicPositionForDateKey(calendar,local.dateKey);
+  if (!position) return {due:false,result:"stoic_calendar_unconfigured",detail,position:null};
+  Object.assign(detail,{stoic_year:position.year,stoic_week:position.week,record_key:position.recordKey});
+  if (stoicJournalHasEntry(calendar,position.recordKey)) return {due:false,result:"stoic_complete",detail,position};
+  return {due:true,result:"stoic_due",detail,position};
 }
 
 function questScheduledOn(quest:QuestRecord,dateKey:string) {
@@ -420,12 +499,32 @@ async function evaluateSmartUser(admin:DatabaseClient,preference:SmartPreference
     .select("quest_id,completion_date,completed_at,xp_awarded")
     .eq("user_id",preference.user_id).is("deleted_at",null);
   if (completionError) throw completionError;
+  let stoicCalendar:StoicCalendar | null = null;
+  if (preference.stoic_reflection_enabled) {
+    const {data:profile,error:profileError} = await admin
+      .from("level90_profiles").select("stoic_calendar")
+      .eq("user_id",preference.user_id).maybeSingle();
+    if (profileError) throw profileError;
+    stoicCalendar = (profile?.stoic_calendar || null) as StoicCalendar | null;
+  }
 
   const allQuests = (quests || []) as QuestRecord[];
   const allCompletions = (completions || []) as CompletionRecord[];
   const local = zonedParts(now,preference.timezone || "UTC");
   const stats = notificationSummaryStats(preference,allQuests,allCompletions,now);
   const outcomes:string[] = [];
+
+  const stoicRule = evaluateStoicReflection(preference,stoicCalendar,now);
+  if (stoicRule.due && stoicRule.position) {
+    const title = "Your Stoic week is still unwritten";
+    const body = "Take a few quiet minutes to review what was within your control and choose one correction.";
+    const outcome = await queueNotification(
+      admin,preference,subscriptions,"stoic_reflection",local.dateKey,`stoic_reflection:${stoicRule.position.recordKey}`,
+      title,body,notificationPayload(title,body,`stoic-${stoicRule.position.recordKey}`,"./index.html#character",5*60*60),
+      stoicRule.detail
+    );
+    outcomes.push(`stoic_${outcome}`);
+  }
 
   if (preference.morning_brief_enabled && summaryDue(local.minuteOfDay,timeMinutes(preference.morning_brief_time),12*60)) {
     const copy = morningBrief(stats);
@@ -448,7 +547,8 @@ async function evaluateSmartUser(admin:DatabaseClient,preference:SmartPreference
   }
 
   if (!preference.streak_rescue_enabled) {
-    const result = outcomes.length ? "summary_only" : "all_rules_paused";
+    const scheduledLaneEnabled = preference.morning_brief_enabled || preference.evening_recap_enabled || preference.stoic_reflection_enabled;
+    const result = outcomes.length || scheduledLaneEnabled ? "summary_only" : "all_rules_paused";
     await updateRuleState(admin,preference.user_id,result,{local_date:local.dateKey,local_time:minuteLabel(local.minuteOfDay)});
     return outcomes.length ? outcomes : [result];
   }
@@ -571,12 +671,13 @@ async function processPendingDeliveries(admin:DatabaseClient,now:Date,userId:str
     if (claimError) throw claimError;
     if (!claim) continue;
     const [{data:preference},{data:subscription},{data:notification}] = await Promise.all([
-      admin.from("level90_notification_preferences").select("smart_enabled,morning_brief_enabled,evening_recap_enabled,streak_rescue_enabled").eq("user_id",delivery.user_id).maybeSingle(),
+      admin.from("level90_notification_preferences").select("smart_enabled,morning_brief_enabled,evening_recap_enabled,streak_rescue_enabled,stoic_reflection_enabled").eq("user_id",delivery.user_id).maybeSingle(),
       admin.from("level90_push_subscriptions").select("id,endpoint,p256dh,auth,enabled").eq("user_id",delivery.user_id).eq("id",delivery.subscription_id).maybeSingle(),
       admin.from("level90_notification_outbox").select("payload,quest_id,local_date,status,rule_key").eq("id",delivery.notification_id).maybeSingle()
     ]);
     const laneEnabled = notification?.rule_key === "morning_brief" ? preference?.morning_brief_enabled
       : notification?.rule_key === "evening_recap" ? preference?.evening_recap_enabled
+      : notification?.rule_key === "stoic_reflection" ? preference?.stoic_reflection_enabled
       : preference?.streak_rescue_enabled;
     if (!preference?.smart_enabled || !laneEnabled) {
       await admin.from("level90_notification_deliveries").update({status:"cancelled",last_error:"Notification rule disabled"}).eq("id",delivery.id);
@@ -644,7 +745,7 @@ async function processPendingDeliveries(admin:DatabaseClient,now:Date,userId:str
 async function dispatchSmartNotifications(admin:DatabaseClient,now=new Date(),userId:string | null=null) {
   let preferenceQuery = admin
     .from("level90_notification_preferences")
-    .select("user_id,timezone,smart_enabled,morning_brief_enabled,morning_brief_time,evening_recap_enabled,evening_recap_time,streak_rescue_enabled,rescue_intensity,final_rescue_time,quiet_start,quiet_end,max_daily,min_streak,adaptive_grace_minutes,cooldown_minutes")
+    .select("user_id,timezone,smart_enabled,morning_brief_enabled,morning_brief_time,evening_recap_enabled,evening_recap_time,streak_rescue_enabled,stoic_reflection_enabled,stoic_reflection_time,rescue_intensity,final_rescue_time,quiet_start,quiet_end,max_daily,min_streak,adaptive_grace_minutes,cooldown_minutes")
     .eq("smart_enabled",true);
   if (userId) preferenceQuery = preferenceQuery.eq("user_id",userId);
   const {data:preferences,error} = await preferenceQuery.limit(userId ? 1 : 500);
@@ -704,7 +805,7 @@ Deno.serve(async request=>{
   const {data:{user},error:userError} = await supabase.auth.getUser();
   if (userError || !user) return json({error:"Your Level90 session is not valid."},401);
 
-  if (payload.action === "config") return json({publicKey,smartRuleVersion:2});
+  if (payload.action === "config") return json({publicKey,smartRuleVersion:3});
   if (payload.action === "catchup") {
     if (!secretKey) return json({error:"Supabase server key is unavailable for notification catch-up."},503);
     const admin = createClient(supabaseUrl,secretKey,{auth:{persistSession:false,autoRefreshToken:false}});
@@ -725,7 +826,7 @@ Deno.serve(async request=>{
 
   const notification:NotificationPayload = {
     title:"Level90 is connected 🔥",
-    body:`Test successful on ${subscription.device_name}. Briefings, recaps and streak rescue are ready.`,
+    body:`Test successful on ${subscription.device_name}. Briefings, recaps, streak rescue and Stoic reflection are ready.`,
     icon:"./icons/icon-192.png",badge:"./icons/icon-192.png",
     tag:`level90-test-${Date.now()}`,url:"./index.html#today"
   };

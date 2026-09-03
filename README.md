@@ -2,6 +2,19 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 41 mobile Quests and Stoic reminder
+
+- Makes the three Quests toolbar actions icon-only below 520px while keeping accessible labels and desktop text.
+- Reflows mobile quest cards into a calmer information band and action band, retaining title, category, difficulty, schedule, streak, completion ratio, percentage, XP and active state.
+- Replaces stepwise sorting buttons with direct press-and-drag ordering for mouse, touch and pen; focused drag grips also support the Up and Down arrow keys.
+- Saves the resulting quest order through the existing local and cloud sync path, and uses it on Today.
+- Adds a dedicated weekly Stoic reflection notification lane. On Sunday at 19:00 in the saved device timezone, Level90 reminds the user only when all four fields for the current birthday-anchored Stoic week are empty.
+- Keeps the reminder configurable in Settings and records delivered reminders in the existing notification inbox until manually cleared.
+
+### Version 41 Supabase update
+
+Run `supabase/migrations/20260903_add_level90_stoic_reflection_reminder.sql` once, then redeploy the included `level90-notifications` Edge Function. The existing 15-minute notification Cron job does not need to change.
+
 ## Version 40 notification inbox
 
 - Adds a notification bell to the header on every Level90 page.

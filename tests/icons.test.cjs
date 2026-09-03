@@ -43,7 +43,7 @@ assert.equal(manifest.background_color,"#193546","manifest background should mat
 assert.ok(manifest.icons.some(icon=>icon.src === "./icons/icon-512.png" && icon.purpose === "any"),"manifest should include the standard Level90 icon");
 assert.ok(manifest.icons.some(icon=>icon.src === "./icons/icon-maskable-512.png" && icon.purpose === "maskable"),"manifest should include the safe-zone Level90 icon");
 
-const icons = ["notification","fire","rocket","import","export","reset","today","quest","history","character","moon","sun","reorder","categories","wave"];
+const icons = ["notification","fire","rocket","import","export","reset","today","quest","history","character","moon","sun","reorder","categories","wave","plus","edit","active","paused","delete","drag"];
 for (const icon of icons) assert.match(html,new RegExp(`id="icon-${icon}"`),`missing ${icon} symbol`);
 
 const staticUses = ["notification","fire","rocket","import","export","reset","today","quest","history","character","moon","sun","reorder","categories","wave"];
@@ -54,6 +54,9 @@ assert.doesNotMatch(html,/(👋|◫|↕️?)/u,"greeting and Quests action glyph
 assert.match(app,/auraIcon\("fire","streak-icon"\)/,"Today and Quests streaks should use the fire symbol");
 assert.doesNotMatch(app,/reorderBtn"\)\.textContent/,"Quests rendering must preserve the Reorder SVG");
 assert.match(app,/reorderButton\.querySelector\("span"\)\.textContent/,"Quests rendering should update only the Reorder label");
+assert.match(app,/data-drag-handle/,"Quests sorting should expose a direct drag handle");
+assert.doesNotMatch(app,/data-move-id/,"Quests sorting should not use stepwise arrow buttons");
+assert.match(css,/@media \(max-width: 520px\)[\s\S]*\.quest-card-action-label \{[^}]*clip-path:inset\(50%\)/,"mobile quest action labels should be visually hidden while remaining accessible");
 assert.doesNotMatch(app,/quickToggle\.textContent/,"theme updates must preserve the inline sun and moon SVGs");
 assert.match(css,/body\.light \.theme-icon-sun \{ display:none; \}/,"light mode should show the moon action");
 assert.match(css,/\.nav-btn\.active \.nav-icon \{[^}]*color:var\(--accent-soft\)/,"active navigation icons should use the AuraOS accent");
