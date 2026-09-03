@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Moirai+One&amp;family=Rubik+Lines&amp;family=Zen+Tokyo+Zoo&amp;display=swap" />
-  <link rel="stylesheet" href="./styles.css?v=46" />
+  <link rel="stylesheet" href="./styles.css?v=48" />
 </head>
 <body>
   <svg class="aura-icon-sprite" aria-hidden="true" focusable="false">
@@ -108,10 +108,11 @@
   </svg>
   <section id="authScreen" class="auth-screen" aria-labelledby="authTitle">
     <div class="auth-card">
+      <div class="auth-contours" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
       <div class="auth-mark" aria-hidden="true">90</div>
-      <span class="kicker">YOUR AURAOS ACCOUNT</span>
-      <h1 id="authTitle">Continue your ascent</h1>
-      <p>Use the same account as Workout to sync Level90 across your devices.</p>
+      <span class="kicker">ONE FINITE LIFE · NINETY LEVELS</span>
+      <h1 id="authTitle">Make the weeks count.</h1>
+      <p>Turn deliberate actions into a visible ascent. Your quests shape the character—and the life—you build.</p>
 
       <div id="authLoading" class="auth-loading" role="status">
         <span class="auth-spinner" aria-hidden="true"></span>
@@ -128,6 +129,11 @@
           <label>Password<input id="authPassword" type="password" minlength="6" autocomplete="current-password" required /><small id="authPasswordHelp">Use the same account as your Workout app.</small></label>
           <button id="authSubmitButton" class="primary-btn wide" type="submit">Sign in</button>
         </form>
+        <div class="auth-showcase-entry">
+          <span>or</span>
+          <button id="showcaseModeButton" class="secondary-btn wide" type="button">Explore the Level90 journey</button>
+          <small>Enter a ready-made four-week ascent. No account or setup required.</small>
+        </div>
         <p id="authMessage" class="auth-message" role="status" aria-live="polite"></p>
         <small class="auth-offline-note">Your first sign-in requires an internet connection. Afterwards, Level90 remains available offline.</small>
       </div>
@@ -151,15 +157,35 @@
         <button id="menuBtn" class="icon-btn" aria-label="Open settings">⋯</button>
       </div>
     </header>
+    <aside id="showcaseBanner" class="showcase-banner" hidden>
+      <div><span class="kicker">SHOWCASE JOURNEY</span><strong>Explore a fully lived Level90 week</strong></div>
+      <button id="exitShowcaseButton" class="secondary-btn" type="button">Exit demo</button>
+    </aside>
 
     <main>
       <section id="view-today" class="view active" tabindex="-1" aria-label="Today">
-        <div class="mock-home">
+        <div class="today-layout">
+        <div class="mock-home ascent-world" id="ascentWorld">
+          <svg class="ascent-terrain" viewBox="0 0 520 620" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <path class="terrain-contour terrain-contour-1" d="M-58 559C38 467 120 516 174 398C224 290 147 222 254 131C349 50 438 83 583-22" />
+            <path class="terrain-contour terrain-contour-2" d="M-72 607C48 506 145 565 210 437C263 332 190 267 293 178C383 100 466 132 601 32" />
+            <path class="terrain-contour terrain-contour-3" d="M-49 491C23 420 83 459 121 365C158 274 98 198 185 115C261 43 330 62 421-20" />
+            <path class="terrain-contour terrain-contour-4" d="M34 651C142 579 251 612 315 510C377 411 315 344 399 273C464 218 518 231 577 183" />
+            <path class="terrain-contour terrain-contour-5" d="M-28 386C32 332 64 354 88 286C117 203 70 153 142 81C195 28 237 23 291-18" />
+            <path class="ascent-route-base" d="M48 543C119 494 174 512 220 455C262 403 266 333 298 280C328 230 368 215 397 165" />
+            <path id="ascentRouteProgress" class="ascent-route-progress" pathLength="100" d="M48 543C119 494 174 512 220 455C262 403 266 333 298 280C328 230 368 215 397 165" />
+            <circle class="ascent-waypoint ascent-waypoint-1" cx="48" cy="543" r="7" />
+            <circle class="ascent-waypoint ascent-waypoint-2" cx="220" cy="455" r="7" />
+            <circle class="ascent-waypoint ascent-waypoint-3" cx="298" cy="280" r="7" />
+            <circle class="ascent-waypoint ascent-waypoint-4" cx="397" cy="165" r="7" />
+          </svg>
+          <div id="ascentEnergy" class="ascent-energy" aria-hidden="true"></div>
           <div class="journey-meta minimal-meta">
             <span id="journeyDayLabel">JOURNEY DAY 1</span>
             <span id="dateLabel">Ready to begin.</span>
           </div>
 
+          <span id="altitudeLabel" class="altitude-label">CURRENT ALTITUDE</span>
           <div id="levelOrb" class="level-orb">
             <div class="level-halos" aria-hidden="true"><i></i><i></i><i></i></div>
             <div class="level-orb-inner">
@@ -186,6 +212,7 @@
           </div>
         </div>
 
+        <div class="today-missions">
         <div class="section-heading">
           <div>
             <span class="kicker">TODAY'S LOADOUT</span>
@@ -204,14 +231,16 @@
           </div>
           <div id="completedTodayQuests" class="quest-list today-quest-grid"></div>
         </section>
+        </div>
+        </div>
 
       </section>
 
       <section id="view-quests" class="view" tabindex="-1" aria-label="Quests">
-        <div class="page-heading">
+        <div class="page-heading terrain-page-heading">
           <span class="kicker">QUEST LOG</span>
-          <h2>Build your routine</h2>
-          <p>Create repeatable habits or one-time missions, then arrange them in the order that works for you.</p>
+          <h2>Choose your routes</h2>
+          <p>Each quest is a path up the mountain. Build the routes you want to walk repeatedly, then order the climb around your life.</p>
         </div>
         <div class="quest-library-actions">
           <button id="addQuestBtn" class="primary-btn" type="button" aria-label="Create quest" title="Create quest"><svg class="aura-icon quest-action-icon" aria-hidden="true"><use href="#icon-plus"></use></svg><span class="quest-action-label">Create quest</span></button>
@@ -270,18 +299,18 @@
       </section>
 
       <section id="view-character" class="view" tabindex="-1" aria-label="Character">
-        <div class="page-heading">
-          <span class="kicker">CHARACTER SHEET</span>
+        <div class="page-heading terrain-page-heading">
+          <span class="kicker">THE PERSON THE CLIMB IS SHAPING</span>
           <h2 id="characterLevelTitle">Level 1</h2>
-          <p>Your XP shows what you actually invest in.</p>
+          <p>Your XP reveals where your finite time is going. Strengthen the terrain that matters.</p>
         </div>
-        <div class="panel next-rank-card">
-          <span class="kicker">NEXT TITLE</span>
+        <div class="panel next-rank-card terrain-panel">
+          <span class="kicker">NEXT RIDGE</span>
           <strong id="nextMilestoneTitle">Momentum Builder</strong>
           <p id="nextMilestoneText">Reach Level 5 to unlock this rank.</p>
         </div>
-        <div class="panel character-road-card">
-          <div class="level-road-label"><span>LEVEL ROAD</span><small>Level 90 is the ultimate rank</small></div>
+        <div class="panel character-road-card terrain-panel">
+          <div class="level-road-label"><span>ASCENT MAP</span><small>Level 90 is the ultimate ridge</small></div>
           <div id="levelRoad" class="level-road"></div>
         </div>
         <div id="characterStats" class="character-list"></div>
@@ -293,12 +322,12 @@
             <div><strong id="strongDayStat">0</strong><span>80+ score days</span></div>
           </div>
         </div>
-        <div class="panel stoic-calendar-card">
+        <div class="panel stoic-calendar-card life-terrain-panel">
           <div class="stoic-calendar-head">
             <div>
               <span class="kicker">MEMENTO MORI</span>
-              <h3>Stoic Calendar</h3>
-              <p>You are here. This week remains yours.</p>
+              <h3>Life Terrain</h3>
+              <p>Every square is one unrepeatable week. You are here; this week remains yours.</p>
             </div>
             <button id="editStoicCalendarBtn" class="pill-btn" type="button">Edit view</button>
           </div>
@@ -700,9 +729,10 @@
   <div id="interactionAnnouncer" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="levelUpOverlay" class="level-up-overlay" aria-hidden="true">
     <div class="level-up-card">
-      <span>LEVEL UP</span>
+      <div class="level-up-contours" aria-hidden="true"><i></i><i></i><i></i></div>
+      <span>NEW RIDGE REVEALED</span>
       <strong id="levelUpNumber">2</strong>
-      <small>Keep ascending.</small>
+      <small>Your terrain has changed.</small>
     </div>
   </div>
   <div id="dailyClearMoment" class="daily-clear-moment" aria-hidden="true">
@@ -713,8 +743,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3" crossorigin="anonymous" defer></script>
-  <script src="./cloud.js?v=46" defer></script>
-  <script src="./notifications.js?v=46" defer></script>
-  <script src="./app.js?v=46" defer></script>
+  <script src="./cloud.js?v=48" defer></script>
+  <script src="./notifications.js?v=48" defer></script>
+  <script src="./app.js?v=48" defer></script>
 </body>
 </html>

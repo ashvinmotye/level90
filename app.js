@@ -19,6 +19,7 @@ let selectedStoicWeek = null;
 let confirmationResolve = null;
 let pendingStoicSave = null;
 let stoicSaveTimer = null;
+let showcaseMode = false;
 const viewScrollPositions = new Map();
 const PALETTES = ["arctic","jade","aurora","rose"];
 const LEVEL_FONTS = ["default","moirai-one","rubik-lines","zen-tokyo-zoo"];
@@ -201,6 +202,99 @@ function freshState() {
     stoicCalendar:freshStoicCalendar()
   };
 }
+
+function buildShowcaseState(asOf=new Date()) {
+  const sample = freshState();
+  const today = parseLocalDate(localDateKey(asOf));
+  const started = addDays(today,-27);
+  sample.startedOn = localDateKey(started);
+  sample.profileName = "Explorer";
+  sample.theme = "dark";
+  sample.palette = "arctic";
+  sample.quests = sample.quests.map(quest=>({...quest,createdOn:sample.startedOn}));
+  sample.completions = {};
+
+  for (let offset=-27;offset<=0;offset+=1) {
+    const date = addDays(today,offset);
+    const dateKey = localDateKey(date);
+    const planned = sample.quests.filter(quest=>quest.type === "recurring" && isScheduledOn(quest,date));
+    planned.forEach((quest,index)=>{
+      const shouldComplete = offset === 0 ? index < Math.max(1,planned.length-1) : (Math.abs(offset)*3+index*2)%7 !== 0;
+      if (!shouldComplete) return;
+      const hour = 7 + ((Math.abs(offset)+index*3)%13);
+      sample.completions[dateKey] ||= {};
+      sample.completions[dateKey][quest.id] = {
+        completedAt:new Date(date.getFullYear(),date.getMonth(),date.getDate(),hour,15).toISOString(),
+        questTitle:quest.title,
+        categoryId:quest.categoryId,
+        difficulty:quest.difficulty,
+        xpAwarded:CONFIG.difficulty[quest.difficulty]?.xp || 10,
+        count:offset === 0 && index === 0 ? 2 : 1
+      };
+    });
+  }
+
+  const completedMission = sample.quests.find(quest=>quest.type === "oneoff");
+  if (completedMission) {
+    const missionDate = addDays(today,-9);
+    const missionKey = localDateKey(missionDate);
+    sample.completions[missionKey] ||= {};
+    sample.completions[missionKey][completedMission.id] = {
+      completedAt:new Date(missionDate.getFullYear(),missionDate.getMonth(),missionDate.getDate(),18,30).toISOString(),
+      questTitle:completedMission.title,
+      categoryId:completedMission.categoryId,
+      difficulty:completedMission.difficulty,
+      xpAwarded:CONFIG.difficulty[completedMission.difficulty]?.xp || 75,
+      count:1
+    };
+  }
+
+  const birthDate = new Date(today.getFullYear()-36,today.getMonth(),today.getDate());
+  sample.stoicCalendar = {birthDate:localDateKey(birthDate),horizonYears:90,weeks:{}};
+  const position = stoicPositionForDate(sample.stoicCalendar.birthDate,90,today);
+  for (let back=3;back>=0;back-=1) {
+    const weekIndex = Math.max(0,position.index-back);
+    const ageYear = Math.floor(weekIndex/52);
+    const indexWithinYear = weekIndex%52;
+    const recordKey = stoicWeekRecordKey(ageYear,indexWithinYear);
+    sample.stoicCalendar.weeks[recordKey] = {
+      intention:back ? "Protect the morning before reacting to the day." : "Choose the response, even when the situation is not mine to choose.",
+      control:"I kept the promise I made to myself and returned after a difficult day.",
+      reaction:"I let urgency decide what deserved attention.",
+      correction:"Begin tomorrow with one deliberate quest before opening messages.",
+      updatedAt:new Date().toISOString()
+    };
+  }
+  return sample;
+}
+
+function startLevel90Showcase() {
+  showcaseMode = true;
+  window.level90ShowcaseActive = true;
+  state = buildShowcaseState();
+  selectedHistoryDate = localDateKey();
+  historyMonth = new Date(new Date().getFullYear(),new Date().getMonth(),1);
+  selectedStoicYear = null;
+  selectedStoicWeek = null;
+  migrateState();
+  lastSavedStateJson = JSON.stringify(state);
+  document.body.classList.add("showcase-mode");
+  $("#showcaseBanner").hidden = false;
+  if (typeof level90RevealShowcase === "function") level90RevealShowcase();
+  else {
+    $("#authScreen").hidden = true;
+    $("#appShell").hidden = false;
+    renderAll();
+  }
+  showView("today",{remember:false,direction:"forward"});
+  announceInteraction("Showcase journey opened. Explore the completed four-week Level90 ascent.");
+}
+
+function exitLevel90Showcase() {
+  showcaseMode = false;
+  window.level90ShowcaseActive = false;
+  window.location.reload();
+}
 function migrateState() {
   state.quests ||= structuredClone(CONFIG.quests);
   state.categories ||= structuredClone(CONFIG.categories);
@@ -244,6 +338,10 @@ function migrateState() {
   applyTheme();
 }
 function save(options={}) {
+  if (showcaseMode) {
+    lastSavedStateJson = JSON.stringify(state);
+    return;
+  }
   const previous = lastSavedStateJson ? JSON.parse(lastSavedStateJson) : null;
   const nextJson = JSON.stringify(state);
   localStorage.setItem(STORAGE_KEY,nextJson);
@@ -662,6 +760,14 @@ function renderHeader() {
   $("#nextLevelText").textContent = p.maxed ? "LEVEL 90 · ASCENDED" : `NEXT · LEVEL ${p.lvl + 1}`;
   $("#levelProgressFill").style.width=`${p.pct}%`;
   $("#levelProgressTrack").setAttribute("aria-valuenow",String(Math.round(p.pct)));
+  const route = $("#ascentRouteProgress");
+  if (route) route.style.strokeDasharray = `${Math.max(8,Math.round(p.pct))} 100`;
+  const ascentWorld = $("#ascentWorld");
+  if (ascentWorld) {
+    ascentWorld.style.setProperty("--ascent-progress",`${Math.max(8,Math.round(p.pct))}%`);
+    ascentWorld.dataset.ascentState = p.maxed ? "ascended" : p.pct >= 75 ? "near-ridge" : "climbing";
+  }
+  $("#altitudeLabel").textContent = p.maxed ? "SUMMIT HELD" : p.pct >= 75 ? "RIDGE WITHIN REACH" : "CURRENT ALTITUDE";
   $("#journeyDayLabel").textContent = `JOURNEY DAY ${day}`;
   $("#levelPrompt").textContent = p.maxed ? "LEVEL 90 REACHED · KEEP BUILDING YOUR CHARACTER" : nextQuest
     ? `NEXT MOVE · ${nextQuest.title.toUpperCase()} · +${xpForQuest(nextQuest)} XP`
@@ -731,8 +837,9 @@ function questCard(q, todayMode=false, dateKey=localDateKey()) {
   const done = isCompleted(q.id,dateKey);
   const completedCount = done ? completionCount(q.id,dateKey) : 0;
   const streak = q.type === "recurring" ? questStreak(q,parseLocalDate(dateKey)) : null;
-  const streakBadge = todayMode && streak ? `<span class="tile-streak" title="Current streak: ${streak.current} · Best streak: ${streak.best}" aria-label="Current streak ${streak.current}; best streak ${streak.best}">${auraIcon("fire","streak-icon")} ${streak.current}</span>` : "";
+  const streakBadge = todayMode && streak ? `<span class="tile-streak" title="Current streak: ${streak.current} · Best streak: ${streak.best}" aria-label="Current streak ${streak.current}; best streak ${streak.best}"><span aria-hidden="true">·</span>${auraIcon("fire","streak-icon")} ${streak.current}</span>` : "";
   const consistency = !todayMode ? questConsistency(q,parseLocalDate(dateKey)) : null;
+  const ridgeIndex = Math.max(0,state.categories.findIndex(item=>item.id===q.categoryId))+1;
   const questProgress = streak && consistency ? `
       <div class="quest-progress-stats">
         <span class="quest-progress-streak" title="Current streak: ${streak.current} · Best streak: ${streak.best}" aria-label="Current streak ${streak.current}; best streak ${streak.best}">${auraIcon("fire","streak-icon")} <strong>${streak.current}</strong> streak</span>
@@ -743,18 +850,26 @@ function questCard(q, todayMode=false, dateKey=localDateKey()) {
     q.schedule?.mode === "daily" ? "Every day" :
     `Repeats ${weekdayText(q.schedule?.days || [])}`;
   if(todayMode) return `
-    <article class="quest-card today-tile ${done ? "completed" : ""}" data-id="${q.id}">
-      <div class="tile-copy">
+    <article class="quest-card today-tile ridge-${ridgeIndex} ${done ? "completed" : ""}" data-id="${q.id}" data-ridge="${ridgeIndex}">
+      <button class="tile-hit" data-complete="${q.id}" aria-label="${done ? `Complete ${escapeHtml(q.title)} again` : `Complete ${escapeHtml(q.title)}`}">
+        <span class="today-completion-medallion ${done ? "is-complete" : ""}" aria-hidden="true">
+          <span class="today-completion-mark"></span>
+          ${completedCount > 1 ? `<span class="tile-completion-count">×${completedCount}</span>` : ""}
+        </span>
+      </button>
+      ${done ? `<button type="button" class="tile-copy tile-copy-toggle" data-toggle-today-tools="${q.id}" aria-expanded="false" aria-controls="today-card-tools-${q.id}" aria-label="Show actions for ${escapeHtml(q.title)}">` : `<div class="tile-copy">`}
         <div class="quest-title">${escapeHtml(q.title)}</div>
-        <div class="tile-category">${escapeHtml(cat.name)}</div>
-        ${streakBadge}
-        <div class="tile-xp">${d.xp} XP</div>
-      </div>
-      <button class="tile-hit" data-complete="${q.id}" aria-label="${done ? `Complete ${escapeHtml(q.title)} again` : `Complete ${escapeHtml(q.title)}`}">${done ? `<span class="tile-repeat-action"><strong>+1</strong><small>again</small></span>` : ""}</button>
-      ${done ? `<div class="tile-completion-tools">${completedCount > 1 ? `<span class="tile-completion-count" aria-label="Completed ${completedCount} times today">×${completedCount}</span>` : ""}<button type="button" class="tile-undo" data-undo-completion="${q.id}" aria-label="Remove one completion from ${escapeHtml(q.title)}" title="Undo one completion">−</button></div>` : ""}
+        <div class="tile-category">${escapeHtml(cat.name)} <span aria-hidden="true">·</span> Ridge ${ridgeIndex}${streakBadge}</div>
+      ${done ? `</button>` : `</div>`}
+      <div class="tile-xp">+${d.xp} XP</div>
+      ${done ? `<div class="tile-completion-tools" id="today-card-tools-${q.id}" hidden>
+        <span class="tile-completion-summary">${completedCount === 1 ? "Cleared once today" : `${completedCount} clears today`}</span>
+        <button type="button" class="tile-repeat-secondary" data-complete="${q.id}" aria-label="Complete ${escapeHtml(q.title)} again">+1 again</button>
+        <button type="button" class="tile-undo" data-undo-completion="${q.id}" aria-label="Remove one completion from ${escapeHtml(q.title)}" title="Undo one completion"><span>Remove one</span></button>
+      </div>` : ""}
     </article>`;
   return `
-  <article class="quest-card ${reorderMode ? "reorder-item" : ""} ${done ? "completed" : ""}" data-id="${q.id}">
+  <article class="quest-card ridge-${ridgeIndex} ${reorderMode ? "reorder-item" : ""} ${done ? "completed" : ""}" data-id="${q.id}" data-ridge="${ridgeIndex}">
     <div class="quest-card-content">
       <div class="quest-title">${escapeHtml(q.title)}</div>
       <div class="quest-meta">
@@ -1353,11 +1468,11 @@ function renderCharacter() {
   $("#nextMilestoneText").textContent = overallLevel >= maxLevel()
     ? "You reached Level 90. Every quest now strengthens the character you built."
     : `Reach Level ${nextRank.level} to unlock this rank.`;
-  $("#characterStats").innerHTML = state.categories.map(c => {
+  $("#characterStats").innerHTML = state.categories.map((c,index) => {
     const xp = categoryXp(c.id), p = levelProgress(xp);
-    return `<div class="character-row">
+    return `<div class="character-row" data-ridge="${index+1}">
       <div class="character-top">
-        <strong>${escapeHtml(c.icon)} ${escapeHtml(c.name)}</strong><span>LEVEL ${p.lvl} · ${xp} XP</span>
+        <strong><i class="character-ridge-node" aria-hidden="true"></i>${escapeHtml(c.icon)} ${escapeHtml(c.name)}</strong><span>RIDGE ${p.lvl} · ${xp} XP</span>
       </div>
       <div class="character-progress"><i style="width:${p.pct}%"></i></div>
     </div>`;
@@ -1445,13 +1560,31 @@ function animateTodayCardLayout(previousRects,focusQuestId,{repeat=false}={}) {
   });
   const focusCard=$$(".today-tile[data-id]",$("#view-today")).find(card=>card.dataset.id===focusQuestId);
   if (!focusCard) return;
-  const pulseTarget=repeat ? (focusCard.querySelector(".tile-completion-count") || focusCard.querySelector(".tile-repeat-action")) : focusCard;
+  const pulseTarget=repeat ? (focusCard.querySelector(".tile-completion-count") || focusCard.querySelector(".today-completion-medallion")) : focusCard;
   pulseTarget?.animate?.(
     repeat
       ? [{transform:"scale(.78)",opacity:.55},{transform:"scale(1.18)",opacity:1},{transform:"scale(1)",opacity:1}]
       : [{filter:"brightness(1.45)"},{filter:"brightness(1)"}],
     {duration:repeat ? 360 : 520,easing:"cubic-bezier(.2,.8,.2,1)"}
   );
+}
+
+function toggleTodayCardTools(button) {
+  const card=button?.closest?.(".today-tile.completed");
+  const tools=card?.querySelector?.(".tile-completion-tools");
+  if (!card || !tools) return;
+  const shouldOpen=tools.hidden;
+  $$(".today-tile.completed .tile-completion-tools:not([hidden])",$("#view-today")).forEach(openTools=>{
+    if (openTools===tools) return;
+    openTools.hidden=true;
+    const openCard=openTools.closest(".today-tile");
+    openCard?.classList.remove("tools-open");
+    openCard?.querySelector("[data-toggle-today-tools]")?.setAttribute("aria-expanded","false");
+  });
+  tools.hidden=!shouldOpen;
+  card.classList.toggle("tools-open",shouldOpen);
+  button.setAttribute("aria-expanded",String(shouldOpen));
+  if (shouldOpen) announceInteraction(`${card.querySelector(".quest-title")?.textContent || "Quest"} actions shown.`);
 }
 
 function restoreCompletionSnapshot(id,dateKey,record) {
@@ -1594,10 +1727,21 @@ function xpPop(anchor, xp) {
   el.style.setProperty("--travel-x",`${target.left + target.width/2 - (r.left + r.width/2)}px`);
   el.style.setProperty("--travel-y",`${target.top + target.height/2 - (r.top + r.height/2)}px`);
   document.body.appendChild(el);
+  animateAscentEnergy();
   setTimeout(()=>{
     orb.classList.remove("charging"); void orb.offsetWidth; orb.classList.add("charging");
   },520);
   setTimeout(()=>{el.remove();orb.classList.remove("charging")},1050);
+}
+
+function animateAscentEnergy() {
+  const world=$("#ascentWorld");
+  if (!world) return;
+  world.classList.remove("energy-climbing");
+  void world.offsetWidth;
+  world.classList.add("energy-climbing");
+  window.clearTimeout(animateAscentEnergy.timer);
+  animateAscentEnergy.timer=window.setTimeout(()=>world.classList.remove("energy-climbing"),1100);
 }
 function showLevelUp(level) {
   if (prefersReducedMotion()) {
@@ -1610,6 +1754,13 @@ function showLevelUp(level) {
   o.classList.remove("show");
   void o.offsetWidth;
   o.classList.add("show");
+  const world=$("#ascentWorld");
+  world?.classList.remove("ridge-revealed");
+  if (world) {
+    void world.offsetWidth;
+    world.classList.add("ridge-revealed");
+    window.setTimeout(()=>world.classList.remove("ridge-revealed"),1800);
+  }
 }
 function hideToast() {
   const toast=$("#toast");
@@ -1989,6 +2140,11 @@ function bindEvents() {
       toggleHistoryCompletion(historyCompletion.dataset.historyComplete);
       return;
     }
+    const todayToolsToggle=e.target.closest("[data-toggle-today-tools]");
+    if(todayToolsToggle){
+      toggleTodayCardTools(todayToolsToggle);
+      return;
+    }
     const undoCompletion=e.target.closest("[data-undo-completion]");
     if(undoCompletion){
       undoTodayCompletion(undoCompletion.dataset.undoCompletion);
@@ -2150,6 +2306,7 @@ function bindEvents() {
     if(!confirmed) return;
     state=freshState(); selectedHistoryDate=localDateKey(); historyMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1); viewScrollPositions.clear(); save(); document.body.classList.remove("light"); renderAll(); closeSettingsPage(); showToast("App reset");
   });
+  $("#exitShowcaseButton")?.addEventListener("click",exitLevel90Showcase);
 }
 
 function escapeHtml(s) {

@@ -19,6 +19,7 @@ const level90CloudDom = {
   authPassword:document.querySelector("#authPassword"),
   authPasswordHelp:document.querySelector("#authPasswordHelp"),
   authSubmitButton:document.querySelector("#authSubmitButton"),
+  showcaseModeButton:document.querySelector("#showcaseModeButton"),
   authMessage:document.querySelector("#authMessage"),
   signInModeButton:document.querySelector("#signInModeButton"),
   signUpModeButton:document.querySelector("#signUpModeButton"),
@@ -140,7 +141,7 @@ function level90SetAuthMode(mode,clearMessage=true) {
 
 function level90SetAuthBusy(busy) {
   level90AuthBusy = busy;
-  [level90CloudDom.authEmail,level90CloudDom.authPassword,level90CloudDom.signInModeButton,level90CloudDom.signUpModeButton,level90CloudDom.authSubmitButton]
+  [level90CloudDom.authEmail,level90CloudDom.authPassword,level90CloudDom.signInModeButton,level90CloudDom.signUpModeButton,level90CloudDom.authSubmitButton,level90CloudDom.showcaseModeButton]
     .filter(Boolean).forEach(element=>{ element.disabled = busy; });
   if (level90CloudDom.authSubmitButton) {
     level90CloudDom.authSubmitButton.textContent = busy
@@ -208,6 +209,25 @@ function level90RevealApp(user,offline=false) {
   renderAll();
   level90UpdateSyncStatus();
   if (typeof initializeLevel90Notifications === "function") initializeLevel90Notifications().catch(()=>{});
+}
+
+function level90RevealShowcase() {
+  level90AuthSession = null;
+  level90ActiveUserId = "level90-showcase";
+  level90AuthResolved = true;
+  level90InitialSyncResolved = true;
+  level90LastCloudRecordCount = null;
+  level90CloudDom.authScreen.hidden = true;
+  level90CloudDom.appShell.hidden = false;
+  if (level90CloudDom.accountEmail) level90CloudDom.accountEmail.textContent = "Showcase journey";
+  if (level90CloudDom.accountConnectionStatus) {
+    level90CloudDom.accountConnectionStatus.textContent = "Local demo";
+    level90CloudDom.accountConnectionStatus.classList.add("is-offline");
+  }
+  if (level90CloudDom.cloudSyncStatus) level90CloudDom.cloudSyncStatus.textContent = "Showcase changes stay in this session";
+  if (level90CloudDom.syncNowButton) level90CloudDom.syncNowButton.disabled = true;
+  if (level90CloudDom.signOutButton) level90CloudDom.signOutButton.disabled = true;
+  renderAll();
 }
 
 async function level90ShowAuthenticatedApp(session,options={}) {
@@ -840,7 +860,7 @@ async function level90UseCloudData() {
 }
 
 function level90CanAutomaticallySync() {
-  return Boolean(level90AuthClient && level90AuthSession && navigator.onLine && !level90CloudRestoreInProgress && document.visibilityState !== "hidden");
+  return Boolean(!window.level90ShowcaseActive && level90AuthClient && level90AuthSession && navigator.onLine && !level90CloudRestoreInProgress && document.visibilityState !== "hidden");
 }
 
 function level90RequestAutomaticSync(options={}) {
@@ -876,6 +896,7 @@ async function level90RefreshAuthentication() {
 }
 
 function level90HandleAuthStateChange(event,session) {
+  if (window.level90ShowcaseActive) return;
   if (session?.user) {
     level90ShowAuthenticatedApp(session).catch(()=>{});
     return;
@@ -897,6 +918,9 @@ function level90BindCloudEvents() {
   level90CloudDom.signInModeButton.addEventListener("click",()=>level90SetAuthMode("signin"));
   level90CloudDom.signUpModeButton.addEventListener("click",()=>level90SetAuthMode("signup"));
   level90CloudDom.authForm.addEventListener("submit",level90SubmitAuth);
+  level90CloudDom.showcaseModeButton?.addEventListener("click",()=>{
+    if (typeof startLevel90Showcase === "function") startLevel90Showcase();
+  });
   level90CloudDom.signOutButton.addEventListener("click",level90SignOut);
   level90CloudDom.syncNowButton.addEventListener("click",()=>syncLevel90({manual:true}));
   level90CloudDom.useCloudDataButton.addEventListener("click",level90UseCloudData);

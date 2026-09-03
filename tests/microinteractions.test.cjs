@@ -17,7 +17,7 @@ assert.match(html,/id="toastAction"[^>]*hidden/);
 assert.match(html,/id="interactionAnnouncer"[^>]*role="status"/);
 assert.match(html,/id="view-today"[^>]*tabindex="-1"/);
 assert.match(html,/data-view="today" aria-current="page"/);
-assert.match(html,/styles\.css\?v=46/);
+assert.match(html,/styles\.css\?v=48/);
 assert.match(html,/id="confirmationDialog"[^>]*aria-labelledby="confirmationTitle"/);
 assert.match(html,/id="appearanceOrbPreview"[^>]*aria-live="polite"/);
 assert.match(html,/id="dailyClearMoment"/);
@@ -54,7 +54,7 @@ assert.match(notifications,/async function level90AnimateNotificationCardsOut\(/
 assert.match(notifications,/notification-inbox-empty\$\{revealEmpty/);
 assert.match(notifications,/badge\.classList\.remove\?\.\("is-counting"\)/);
 
-assert.match(css,/\.tile-undo \{[^}]*width:44px; height:44px/);
+assert.match(css,/\.tile-undo \{[^}]*min-width:44px/);
 assert.match(css,/\.tile-undo::after \{[^}]*content:""[^}]*top:50%/);
 assert.match(css,/\.notification-clear-btn \{[^}]*min-width:44px; min-height:44px/);
 assert.match(css,/@media \(max-width: 520px\)[\s\S]*\.stoic-year-week-grid \{ grid-template-columns:repeat\(7/);
@@ -68,7 +68,7 @@ assert.match(css,/\.quest-card\.quest-saved-highlight/);
 assert.match(css,/\.toast \{[\s\S]*?min-height:38px/);
 assert.match(css,/\.toast-action \{[^}]*min-height:32px/);
 assert.match(css,/\.toast-action::after \{[^}]*inset:-6px/);
-assert.match(serviceWorker,/level90-v46/);
+assert.match(serviceWorker,/level90-v48/);
 assert.match(backlog,/## Delivered in Version 45 — P1/);
 assert.match(backlog,/## Delivered in Version 46 — P2/);
 

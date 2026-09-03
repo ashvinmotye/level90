@@ -2,6 +2,27 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 48 Ascension Quest Cards
+
+- Replaces Today’s tile grid with sleek full-width quest cards derived from the Ascension Lines visual system.
+- Gives each quest one clear completion medallion, a strong title, quiet category/ridge context and an isolated XP reward.
+- Keeps streak information visible without adding another pill or competing surface.
+- Attaches the `×2`, `×3` repeat count directly to the completion medallion.
+- Reveals repeat and remove-one actions only when a completed quest’s title area is opened, keeping the default card calm.
+- Preserves XP flight, first-clear choreography, repeated clears, undo safety, accessibility and reduced-motion behaviour.
+- Requires only the updated PWA files; there is no Supabase migration or Edge Function deployment for this version.
+
+## Version 47 Ascension Lines
+
+- Introduces a bespoke topographic visual language across Today, Quests and Character: quests are routes, category growth becomes ridges, and the Stoic Calendar becomes Life Terrain.
+- Rebuilds Today around a responsive ascent landscape. The active route reflects progress to the next level and a completed quest sends energy through the terrain into the level orb.
+- Gives desktop a deliberate two-column Today composition, two-column History and an editorial Character layout instead of stretching the mobile stack.
+- Moves mobile Today cards to a roomier two-column grid while retaining every quest title, category, streak, repeat count, undo action and XP value.
+- Reduces repeated pill, border, blur and tile treatments so progression states carry more of the visual hierarchy.
+- Reframes the sign-in experience around Level90's finite-life proposition and adds a no-account showcase journey with four weeks of seeded progress, populated History and Stoic reflections.
+- Keeps showcase edits session-only: they do not overwrite local progress or enter the Supabase sync queue.
+- Requires only the updated PWA files; there is no Supabase migration or Edge Function deployment for this version.
+
 ## Version 46 P2 micro-interactions
 
 - Adds a restrained once-per-day completion moment when the final planned quest moves into Completed Today.
