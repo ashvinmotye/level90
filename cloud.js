@@ -767,7 +767,15 @@ async function syncLevel90(options={}) {
 async function level90UploadExistingData() {
   if (level90MigrationInProgress || level90CloudRestoreInProgress || level90SyncInProgress || !level90AuthSession || !navigator.onLine) return;
   const summary = level90MigrationSummary();
-  if (!window.confirm(`Upload this device's existing Level90 data?\n\n${summary}\n\nUse this only on your main device. Matching cloud records will be updated from this device; cloud-only records will be kept.`)) return;
+  if (typeof window.showAuraConfirmation !== "function") return;
+  const confirmed=await window.showAuraConfirmation({
+    kicker:"UPLOAD JOURNEY",
+    title:"Use this device's journey?",
+    message:`${summary}\n\nUse this only on your main device. Matching cloud records will be updated from this device; cloud-only records will be kept.`,
+    confirmLabel:"Upload journey",
+    danger:false
+  });
+  if (!confirmed) return;
   level90MigrationInProgress = true;
   level90UpdateMigrationUI();
   try {
@@ -793,7 +801,14 @@ function level90SaveRecoveryBackup(userId) {
 
 async function level90UseCloudData() {
   if (level90MigrationInProgress || level90CloudRestoreInProgress || level90SyncInProgress || !level90AuthSession || !navigator.onLine || !(level90LastCloudRecordCount > 0)) return;
-  if (!window.confirm("Replace this device's Level90 journey with the cloud journey?\n\nUse this on your laptop after uploading your main phone. This device's current data and pending changes will be replaced. A JSON backup will be downloaded first.")) return;
+  if (typeof window.showAuraConfirmation !== "function") return;
+  const confirmed=await window.showAuraConfirmation({
+    kicker:"USE CLOUD JOURNEY",
+    title:"Replace this device's journey?",
+    message:"Use this on your laptop after uploading your main phone. This device's current data and pending changes will be replaced. A JSON backup will be downloaded first.",
+    confirmLabel:"Use cloud journey"
+  });
+  if (!confirmed) return;
   const userId = level90AuthSession.user.id;
   level90CloudRestoreInProgress = true;
   level90UpdateMigrationUI();

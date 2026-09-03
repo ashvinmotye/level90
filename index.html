@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Moirai+One&amp;family=Rubik+Lines&amp;family=Zen+Tokyo+Zoo&amp;display=swap" />
-  <link rel="stylesheet" href="./styles.css?v=43" />
+  <link rel="stylesheet" href="./styles.css?v=46" />
 </head>
 <body>
   <svg class="aura-icon-sprite" aria-hidden="true" focusable="false">
@@ -153,7 +153,7 @@
     </header>
 
     <main>
-      <section id="view-today" class="view active">
+      <section id="view-today" class="view active" tabindex="-1" aria-label="Today">
         <div class="mock-home">
           <div class="journey-meta minimal-meta">
             <span id="journeyDayLabel">JOURNEY DAY 1</span>
@@ -207,7 +207,7 @@
 
       </section>
 
-      <section id="view-quests" class="view">
+      <section id="view-quests" class="view" tabindex="-1" aria-label="Quests">
         <div class="page-heading">
           <span class="kicker">QUEST LOG</span>
           <h2>Build your routine</h2>
@@ -220,14 +220,14 @@
         </div>
         <div id="reorderHint" class="reorder-hint hidden">Press and drag the grip on any card. The Today screen follows this order.</div>
         <div class="filter-row">
-          <button class="filter-chip active" data-filter="all">All</button>
-          <button class="filter-chip" data-filter="recurring">Recurring</button>
-          <button class="filter-chip" data-filter="oneoff">One-off</button>
+          <button class="filter-chip active" data-filter="all" aria-pressed="true">All</button>
+          <button class="filter-chip" data-filter="recurring" aria-pressed="false">Recurring</button>
+          <button class="filter-chip" data-filter="oneoff" aria-pressed="false">One-off</button>
         </div>
         <div id="questLibrary" class="quest-list"></div>
       </section>
 
-      <section id="view-journey" class="view">
+      <section id="view-journey" class="view" tabindex="-1" aria-label="History">
         <div class="page-heading">
           <span class="kicker">DAILY HISTORY</span>
           <h2>Review your ascent</h2>
@@ -269,7 +269,7 @@
         </div>
       </section>
 
-      <section id="view-character" class="view">
+      <section id="view-character" class="view" tabindex="-1" aria-label="Character">
         <div class="page-heading">
           <span class="kicker">CHARACTER SHEET</span>
           <h2 id="characterLevelTitle">Level 1</h2>
@@ -322,7 +322,7 @@
         </div>
       </section>
 
-      <section id="view-notifications" class="view notifications-view">
+      <section id="view-notifications" class="view notifications-view" tabindex="-1" aria-label="Notifications">
         <div class="settings-page-head notifications-page-head">
           <button type="button" class="icon-btn settings-back-btn" id="closeNotifications" aria-label="Return to previous screen">‹</button>
           <div class="page-heading settings-page-title">
@@ -344,7 +344,7 @@
         </section>
       </section>
 
-      <section id="view-settings" class="view settings-view">
+      <section id="view-settings" class="view settings-view" tabindex="-1" aria-label="Settings">
         <div class="settings-page-head">
           <button type="button" class="icon-btn settings-back-btn" id="closeSettings" aria-label="Return to previous screen">‹</button>
           <div class="page-heading settings-page-title">
@@ -471,6 +471,10 @@
               <span class="kicker">APPEARANCE</span>
               <p>Choose the atmosphere for your ascent.</p>
             </div>
+            <div id="appearanceOrbPreview" class="appearance-orb-preview" aria-live="polite">
+              <div class="appearance-preview-copy"><span class="kicker">LIVE ORB</span><small id="appearancePreviewLabel">Arctic Depths · Default</small></div>
+              <div class="appearance-preview-orb" aria-hidden="true"><i></i><strong id="appearancePreviewLevel">1</strong></div>
+            </div>
             <label class="profile-name-field">Display name<input id="profileNameInput" maxlength="30" /></label>
             <div id="themeModePicker" class="theme-mode-picker">
               <button type="button" data-theme-mode="dark"><svg class="aura-icon theme-choice-icon" aria-hidden="true"><use href="#icon-moon"></use></svg><span>Dark</span></button>
@@ -521,7 +525,7 @@
     </main>
 
     <nav class="bottom-nav">
-      <button class="nav-btn active" data-view="today"><span class="nav-icon"><svg class="aura-icon" aria-hidden="true"><use href="#icon-today"></use></svg></span><small>Today</small></button>
+      <button class="nav-btn active" data-view="today" aria-current="page"><span class="nav-icon"><svg class="aura-icon" aria-hidden="true"><use href="#icon-today"></use></svg></span><small>Today</small></button>
       <button class="nav-btn" data-view="quests"><span class="nav-icon"><svg class="aura-icon" aria-hidden="true"><use href="#icon-quest"></use></svg></span><small>Quests</small></button>
       <button class="nav-btn" data-view="journey"><span class="nav-icon"><svg class="aura-icon" aria-hidden="true"><use href="#icon-history"></use></svg></span><small>History</small></button>
       <button class="nav-btn" data-view="character"><span class="nav-icon"><svg class="aura-icon" aria-hidden="true"><use href="#icon-character"></use></svg></span><small>Character</small></button>
@@ -676,7 +680,24 @@
     <p class="stoic-horizon-note">This is a chosen planning horizon, not a prediction of lifespan.</p>
   </dialog>
 
-  <div id="toast" class="toast"></div>
+  <dialog id="confirmationDialog" class="modal confirmation-dialog" aria-labelledby="confirmationTitle" aria-describedby="confirmationMessage">
+    <form id="confirmationForm">
+      <div class="confirmation-mark" aria-hidden="true">!</div>
+      <span id="confirmationKicker" class="kicker">CONFIRM ACTION</span>
+      <h3 id="confirmationTitle">Are you sure?</h3>
+      <p id="confirmationMessage" class="modal-intro"></p>
+      <div class="confirmation-actions">
+        <button id="confirmationCancelButton" class="secondary-btn" type="button">Keep it</button>
+        <button id="confirmationConfirmButton" class="primary-btn danger-btn" type="submit">Delete</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true">
+    <span id="toastMessage"></span>
+    <button id="toastAction" class="toast-action" type="button" hidden>Undo</button>
+  </div>
+  <div id="interactionAnnouncer" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="levelUpOverlay" class="level-up-overlay" aria-hidden="true">
     <div class="level-up-card">
       <span>LEVEL UP</span>
@@ -684,10 +705,16 @@
       <small>Keep ascending.</small>
     </div>
   </div>
+  <div id="dailyClearMoment" class="daily-clear-moment" aria-hidden="true">
+    <div class="daily-clear-card">
+      <span class="daily-clear-check">✓</span>
+      <div><small>TODAY COMPLETE</small><strong>Loadout cleared</strong><span id="dailyClearMomentDetail">Protect the momentum.</span></div>
+    </div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3" crossorigin="anonymous" defer></script>
-  <script src="./cloud.js?v=43" defer></script>
-  <script src="./notifications.js?v=43" defer></script>
-  <script src="./app.js?v=43" defer></script>
+  <script src="./cloud.js?v=46" defer></script>
+  <script src="./notifications.js?v=46" defer></script>
+  <script src="./app.js?v=46" defer></script>
 </body>
 </html>

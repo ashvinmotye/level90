@@ -26,6 +26,8 @@ function element() {
   return {
     disabled:false,textContent:"",value:"",dataset:{},
     classList:{
+      add(...names) { names.forEach(name=>classes.add(name)); },
+      remove(...names) { names.forEach(name=>classes.delete(name)); },
       toggle(name,force) {
         const add = force === undefined ? !classes.has(name) : force;
         if (add) classes.add(name); else classes.delete(name);
@@ -157,7 +159,7 @@ function notificationContext({ios=false,standalone=true,smartRuleVersion=0,histo
     matchMedia:()=>({matches:standalone}),
     atob:value=>Buffer.from(value,"base64").toString("binary"),
     btoa:value=>Buffer.from(value,"binary").toString("base64"),
-    addEventListener(){},confirm:()=>true
+    addEventListener(){},showAuraConfirmation:async()=>true
   };
   const context = vm.createContext({
     console,document,navigator,window,Notification:notification,
@@ -165,7 +167,7 @@ function notificationContext({ios=false,standalone=true,smartRuleVersion=0,histo
     Intl,Date,Promise,Buffer,
     level90AuthSession:{user:{id:"user-a",email:"ashvin@example.com"}},
     level90AuthClient:client,
-    showToast:message=>toasts.push(message),
+    showToast:(message,options={})=>toasts.push({message,options}),
     showView:view=>views.push(view),
     escapeHtml:value=>String(value)
   });
@@ -307,12 +309,21 @@ async function run() {
   await inboxHarness.context.notificationApi.openInbox();
   assert.equal(inboxHarness.views.at(-1),"notifications","a connected bell should open the unread inbox");
   assert.equal(inboxHarness.context.notificationApi.unreadCount(),2,"opening the inbox must not clear its badge");
-  inboxHarness.context.notificationApi.clearOne("notification-a");
+  await inboxHarness.context.notificationApi.clearOne("notification-a");
   assert.equal(inboxHarness.context.notificationApi.unreadCount(),1);
   assert.equal(inboxHarness.elements.get("#notificationUnreadBadge").textContent,"1");
-  inboxHarness.context.notificationApi.clearAll();
+  const clearOneToast = inboxHarness.toasts.at(-1);
+  assert.equal(clearOneToast.options.actionLabel,"Undo");
+  clearOneToast.options.onAction();
+  assert.equal(inboxHarness.context.notificationApi.unreadCount(),2,"Undo should restore an individually cleared notification");
+  await inboxHarness.context.notificationApi.clearAll();
   assert.equal(inboxHarness.context.notificationApi.unreadCount(),0);
   assert.equal(inboxHarness.elements.get("#notificationUnreadBadge").hidden,true);
+  const clearAllToast = inboxHarness.toasts.at(-1);
+  assert.equal(clearAllToast.options.actionLabel,"Undo");
+  clearAllToast.options.onAction();
+  assert.equal(inboxHarness.context.notificationApi.unreadCount(),2,"Undo should restore all cleared notifications");
+  assert.equal(inboxHarness.elements.get("#notificationUnreadBadge").textContent,"2");
 
   await runServiceWorkerTests();
 

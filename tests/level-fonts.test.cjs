@@ -20,6 +20,8 @@ for (const family of ["Moirai One","Rubik Lines","Zen Tokyo Zoo"]) assert.match(
 assert.match(css,/body\[data-level-font="moirai-one"\] #levelNumber/);
 assert.match(css,/body\[data-level-font="rubik-lines"\] #levelNumber/);
 assert.match(css,/body\[data-level-font="zen-tokyo-zoo"\] #levelNumber/);
+assert.match(html,/id="appearancePreviewLevel"/);
+assert.match(css,/body\[data-level-font="moirai-one"\] #appearancePreviewLevel/);
 assert.doesNotMatch(css,/body\[data-level-font=[^\n]+\.level-core/,"the selection must not affect Character's level display");
 
 assert.match(app,/const LEVEL_FONTS = \["default","moirai-one","rubik-lines","zen-tokyo-zoo"\]/);

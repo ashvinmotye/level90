@@ -55,6 +55,7 @@ let level90NotificationSmartRuleVersion = 0;
 let level90SmartSettingsBusy = false;
 let level90NotificationCatchupBusy = false;
 let level90NotificationInboxBusy = false;
+let level90NotificationInboxMotionBusy = false;
 let level90NotificationInboxItems = [];
 
 function level90NotificationUser() {
@@ -120,8 +121,18 @@ function level90UpdateHeaderNotificationButton(enabled=level90CachedNotification
     button.title = enabled ? "Notifications" : "Configure notifications";
   }
   if (badge) {
+    const previousCount=Number(badge.dataset.count);
+    const countChanged=badge.dataset.count !== undefined && previousCount !== unreadCount;
     badge.textContent = unreadCount > 99 ? "99+" : String(unreadCount);
     badge.hidden = !enabled || unreadCount === 0;
+    badge.dataset.count=String(unreadCount);
+    badge.classList.remove?.("is-counting");
+    button?.classList.remove?.("badge-cleared");
+    if (countChanged && enabled && !level90NotificationMotionReduced()) {
+      const target=unreadCount > 0 ? badge : button;
+      void target?.offsetWidth;
+      target?.classList.add?.(unreadCount > 0 ? "is-counting" : "badge-cleared");
+    }
   }
   level90SetAppNotificationBadge(unreadCount,enabled);
 }
@@ -198,7 +209,27 @@ function level90NotificationLaneDetails(ruleKey) {
   }[ruleKey] || {label:"Level90",icon:"notification"};
 }
 
-function level90RenderNotificationInbox() {
+function level90NotificationMotionReduced() {
+  return typeof prefersReducedMotion === "function" && prefersReducedMotion();
+}
+
+async function level90AnimateNotificationCardsOut(notificationIds) {
+  if (level90NotificationMotionReduced() || !level90NotificationDom.inboxList?.querySelectorAll) return;
+  const ids=new Set(notificationIds || []);
+  const cards=[...level90NotificationDom.inboxList.querySelectorAll(".notification-inbox-item")]
+    .filter(card=>ids.has(card.dataset.notificationId));
+  await Promise.all(cards.map((card,index)=>{
+    if (typeof card.animate !== "function") return Promise.resolve();
+    card.classList.add("is-clearing");
+    const animation=card.animate([
+      {opacity:1,transform:"translateX(0)",maxHeight:`${card.getBoundingClientRect().height}px`},
+      {opacity:0,transform:"translateX(28px)",maxHeight:"0px",paddingTop:"0px",paddingBottom:"0px",borderWidth:"0px"}
+    ],{duration:240,delay:Math.min(index,5)*24,easing:"cubic-bezier(.4,0,.2,1)",fill:"forwards"});
+    return animation.finished.catch(()=>{});
+  }));
+}
+
+function level90RenderNotificationInbox({revealEmpty=false,animateItems=false}={}) {
   const count = level90NotificationInboxItems.length;
   if (level90NotificationDom.inboxCount) {
     level90NotificationDom.inboxCount.textContent = count === 0
@@ -208,13 +239,13 @@ function level90RenderNotificationInbox() {
   if (level90NotificationDom.clearAllButton) level90NotificationDom.clearAllButton.disabled = count === 0 || level90NotificationInboxBusy;
   if (!level90NotificationDom.inboxList) return;
   if (!count) {
-    level90NotificationDom.inboxList.innerHTML = '<div class="notification-inbox-empty"><svg class="aura-icon" aria-hidden="true"><use href="#icon-notification"></use></svg><strong>You are all caught up</strong><span>New Level90 alerts will stay here until you clear them.</span></div>';
+    level90NotificationDom.inboxList.innerHTML = `<div class="notification-inbox-empty${revealEmpty ? " is-revealing" : ""}"><svg class="aura-icon" aria-hidden="true"><use href="#icon-notification"></use></svg><strong>You are all caught up</strong><span>New Level90 alerts will stay here until you clear them.</span></div>`;
     return;
   }
   level90NotificationDom.inboxList.innerHTML = level90NotificationInboxItems.map(item=>{
     const lane = level90NotificationLaneDetails(item.rule_key);
     const when = new Intl.DateTimeFormat(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}).format(new Date(item.sent_at || item.created_at));
-    return `<article class="notification-inbox-item" data-lane="${level90EscapeNotificationHtml(item.rule_key || "level90")}" role="listitem"><span class="notification-inbox-icon" aria-hidden="true"><svg class="aura-icon"><use href="#icon-${lane.icon}"></use></svg></span><div class="notification-inbox-copy"><strong>${level90RenderNotificationText(item.title)}</strong><span>${level90RenderNotificationText(item.body)}</span><small>${level90EscapeNotificationHtml(lane.label)} · ${level90EscapeNotificationHtml(when)}</small></div><button class="notification-clear-btn" type="button" data-clear-notification="${level90EscapeNotificationHtml(item.id)}" aria-label="Clear ${level90EscapeNotificationHtml(item.title)}">Clear</button></article>`;
+    return `<article class="notification-inbox-item${animateItems ? " is-entering" : ""}" data-notification-id="${level90EscapeNotificationHtml(item.id)}" data-lane="${level90EscapeNotificationHtml(item.rule_key || "level90")}" role="listitem"><span class="notification-inbox-icon" aria-hidden="true"><svg class="aura-icon"><use href="#icon-${lane.icon}"></use></svg></span><div class="notification-inbox-copy"><strong>${level90RenderNotificationText(item.title)}</strong><span>${level90RenderNotificationText(item.body)}</span><small>${level90EscapeNotificationHtml(lane.label)} · ${level90EscapeNotificationHtml(when)}</small></div><button class="notification-clear-btn" type="button" data-clear-notification="${level90EscapeNotificationHtml(item.id)}" aria-label="Clear ${level90EscapeNotificationHtml(item.title)}">Clear</button></article>`;
   }).join("");
 }
 
@@ -263,28 +294,63 @@ async function refreshLevel90NotificationInbox({silent=false}={}) {
   else level90SetNotificationInboxMessage();
 }
 
-function level90ClearNotification(notificationId) {
-  if (!notificationId) return;
+async function level90ClearNotification(notificationId) {
+  if (!notificationId || level90NotificationInboxMotionBusy) return;
+  level90NotificationInboxMotionBusy=true;
+  await level90AnimateNotificationCardsOut([notificationId]);
   const inboxState = level90InitializeNotificationInboxState();
+  const previousState = {version:1,clearedThrough:inboxState.clearedThrough,clearedIds:[...inboxState.clearedIds]};
+  const removedItem = level90NotificationInboxItems.find(item=>item.id === notificationId) || null;
   if (!inboxState.clearedIds.includes(notificationId)) inboxState.clearedIds.push(notificationId);
   level90SaveNotificationInboxState(inboxState);
   level90NotificationInboxItems = level90NotificationInboxItems.filter(item=>item.id !== notificationId);
-  level90RenderNotificationInbox();
+  level90RenderNotificationInbox({revealEmpty:level90NotificationInboxItems.length===0});
   level90UpdateHeaderNotificationButton(level90CachedNotificationConnection());
-  if (typeof showToast === "function") showToast("Notification cleared.");
+  level90NotificationInboxMotionBusy=false;
+  if (typeof showToast === "function") showToast("Notification cleared.",{
+    actionLabel:"Undo",
+    duration:6000,
+    onAction:()=>{
+      level90SaveNotificationInboxState(previousState);
+      if (removedItem && !level90NotificationInboxItems.some(item=>item.id === removedItem.id)) {
+        level90NotificationInboxItems.push(removedItem);
+        level90NotificationInboxItems.sort((a,b)=>level90NotificationTimestamp(b)-level90NotificationTimestamp(a));
+      }
+      level90RenderNotificationInbox({animateItems:true});
+      level90UpdateHeaderNotificationButton(level90CachedNotificationConnection());
+      showToast("Notification restored.");
+    }
+  });
 }
 
-function level90ClearAllNotifications() {
-  if (!level90NotificationInboxItems.length) return;
+async function level90ClearAllNotifications() {
+  if (!level90NotificationInboxItems.length || level90NotificationInboxMotionBusy) return;
+  level90NotificationInboxMotionBusy=true;
+  await level90AnimateNotificationCardsOut(level90NotificationInboxItems.map(item=>item.id));
   const inboxState = level90InitializeNotificationInboxState();
+  const previousState = {version:1,clearedThrough:inboxState.clearedThrough,clearedIds:[...inboxState.clearedIds]};
+  const clearedItems = [...level90NotificationInboxItems];
   const latestReceivedAt = Math.max(Date.now(),...level90NotificationInboxItems.map(level90NotificationTimestamp));
   inboxState.clearedThrough = Math.max(inboxState.clearedThrough,latestReceivedAt);
   inboxState.clearedIds = [];
   level90SaveNotificationInboxState(inboxState);
   level90NotificationInboxItems = [];
-  level90RenderNotificationInbox();
+  level90RenderNotificationInbox({revealEmpty:true});
   level90UpdateHeaderNotificationButton(level90CachedNotificationConnection());
-  if (typeof showToast === "function") showToast("All notifications cleared.");
+  level90NotificationInboxMotionBusy=false;
+  if (typeof showToast === "function") showToast("All notifications cleared.",{
+    actionLabel:"Undo",
+    duration:6000,
+    onAction:()=>{
+      level90SaveNotificationInboxState(previousState);
+      const restored = new Map(level90NotificationInboxItems.map(item=>[item.id,item]));
+      clearedItems.forEach(item=>restored.set(item.id,item));
+      level90NotificationInboxItems=[...restored.values()].sort((a,b)=>level90NotificationTimestamp(b)-level90NotificationTimestamp(a));
+      level90RenderNotificationInbox({animateItems:true});
+      level90UpdateHeaderNotificationButton(level90CachedNotificationConnection());
+      showToast("Notifications restored.");
+    }
+  });
 }
 
 async function level90OpenNotificationCenter() {
@@ -297,10 +363,10 @@ async function level90OpenNotificationCenter() {
     } catch {}
   }
   if (!enabled) {
-    if (typeof showView === "function") showView("settings");
+    if (typeof showView === "function") showView("settings",{direction:"forward"});
     return;
   }
-  if (typeof showView === "function") showView("notifications");
+  if (typeof showView === "function") showView("notifications",{direction:"forward"});
 }
 
 function level90DetectedDeviceName() {
@@ -804,7 +870,14 @@ async function level90SendTestNotification() {
 }
 
 async function level90DisableNotifications() {
-  if (level90NotificationBusy || !window.confirm("Disconnect notifications from this device? You can reconnect it later.")) return;
+  if (level90NotificationBusy || typeof window.showAuraConfirmation !== "function") return;
+  const confirmed=await window.showAuraConfirmation({
+    kicker:"DISCONNECT DEVICE",
+    title:"Disconnect notifications?",
+    message:"This device will stop receiving Level90 alerts. You can reconnect it later.",
+    confirmLabel:"Disconnect"
+  });
+  if (!confirmed) return;
   let resultMessage = "";
   let resultIsError = false;
   level90NotificationBusy = true;
@@ -931,6 +1004,7 @@ function resetLevel90NotificationSettings() {
   level90SmartSettingsBusy = false;
   level90NotificationCatchupBusy = false;
   level90NotificationInboxBusy = false;
+  level90NotificationInboxMotionBusy = false;
   level90NotificationInboxItems = [];
   level90ResetNotificationButtonLabels();
   level90DisableSmartSettings("Signed out","Sign in to manage smart reminders.");

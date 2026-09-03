@@ -23,7 +23,7 @@ assert.match(html,/>Show Life</);
 assert.doesNotMatch(html,/>Open review</i);
 assert.match(html,/planning horizon, not a prediction of lifespan/i);
 assert.ok(html.indexOf('id="stoicWeekDetail"') < html.indexOf('id="view-settings"'),"selected-week questions should render directly inside Character");
-assert.match(html,/styles\.css\?v=43/);
+assert.match(html,/styles\.css\?v=46/);
 assert.match(app,/const STOIC_DEFAULT_HORIZON = 90/);
 assert.match(app,/Array\.from\(\{length:52\}/);
 assert.match(app,/function renderStoicYearView\(\)/);
@@ -34,6 +34,9 @@ assert.match(app,/metrics\?\.strongDays>=4/,"deliberate weeks should come from 8
 assert.doesNotMatch(app,/saveStoicWeekField[\s\S]{0,1200}xpForQuest/,"Stoic reflections must not award XP");
 assert.match(css,/\.stoic-week-cell\.current/);
 assert.match(css,/\.stoic-week-cell\.future/);
+assert.match(css,/\.stoic-save-state/);
+assert.match(app,/function scheduleStoicWeekSave\(/);
+assert.match(app,/classes\.push\("reflected"\)/);
 assert.match(cloud,/stoic_calendar:record\.stoicCalendar/);
 assert.match(cloud,/schema_version, stoic_calendar/);
 assert.match(migration,/add column if not exists stoic_calendar jsonb/);
@@ -41,6 +44,6 @@ assert.match(html,/id="stoicReflectionToggle"/);
 assert.match(html,/id="stoicReflectionTime"[^>]*value="19:00"/);
 assert.match(reminderMigration,/add column if not exists stoic_reflection_enabled boolean not null default true/);
 assert.match(reminderMigration,/stoic_reflection/);
-assert.match(serviceWorker,/level90-v43/);
+assert.match(serviceWorker,/level90-v46/);
 
 console.log("Level90 Stoic Calendar tests passed");

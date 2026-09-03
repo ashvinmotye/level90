@@ -2,6 +2,37 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 46 P2 micro-interactions
+
+- Adds a restrained once-per-day completion moment when the final planned quest moves into Completed Today.
+- Adds a compact live orb inside Settings → Appearance that updates with the selected palette, level font and current level.
+- Slides cleared notification cards away, animates unread-badge changes and reveals the caught-up state gracefully; Undo restores cards with a short entrance.
+- Scrolls to and highlights a newly created or edited quest in the current Today or Quests context.
+- Slims the toast and its visible Undo control while preserving an effective 44px touch target.
+- Requires only the updated PWA files; there is no Supabase migration or Edge Function deployment for this version.
+
+## Version 45 P1 micro-interactions
+
+- Animates surrounding quest cards during drag sorting, adds a clear insertion marker and uses restrained pickup, crossing and drop haptics.
+- Replaces browser confirmation prompts with an AuraOS confirmation sheet and smoothly collapses deleted quest and category cards.
+- Animates only score, XP, momentum and completion values that actually changed.
+- Preserves each page's scroll position and uses directional transitions for primary tabs and Back navigation.
+- Replaces repeated Stoic save toasts with inline **Saving… / Saved** feedback and marks reflected weeks as soon as text is entered.
+- Centres the completed-card minus indicator with a drawn line instead of relying on a font baseline.
+- Requires only the updated PWA files; there is no Supabase migration or Edge Function deployment for this version.
+
+## Version 44 P0 micro-interactions
+
+- Choreographs a first quest clear as one continuous sequence: press confirmation, drawn check, XP flight, synchronized stat update and FLIP movement into Completed Today.
+- Keeps repeat clears intentionally quieter with a short haptic and a focused count-badge pulse.
+- Expands compact mobile interactions to reliable 44px touch targets, including Today undo, quest actions, notification controls, calendar days and Stoic week selection.
+- Makes Today and History completion changes, individual notification clears and Clear all reversible through a six-second Undo action.
+- Adds route focus, current-page semantics, selected-state semantics, live toast announcements and spoken drag positions.
+- Applies reduced-motion preferences to CSS and JavaScript effects, haptics and smooth scrolling.
+- Requires only the updated PWA files; there is no Supabase migration or Edge Function deployment for this version.
+
+The remaining prioritized interaction work is recorded in `docs/microinteraction-backlog.md`.
+
 ## Version 43 Today-orb fonts
 
 - Adds a Level number font picker to Settings → Appearance with Default, Moirai One, Rubik Lines and Zen Tokyo Zoo in alphabetical order.

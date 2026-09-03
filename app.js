@@ -1,5 +1,6 @@
 
 const STORAGE_KEY = "level90-state-v1";
+const FINAL_CLEAR_MOMENT_KEY = "level90-final-clear-moment-v1";
 let CONFIG = null;
 let state = null;
 let questFilter = "all";
@@ -8,15 +9,24 @@ let questDragState = null;
 let selectedHistoryDate = null;
 let historyMonth = null;
 let levelGlowAnimation = null;
+let completionMotionBusy = false;
 let lastSavedStateJson = "";
 let activeView = "today";
 let settingsReturnView = "today";
 let notificationsReturnView = "today";
 let selectedStoicYear = null;
 let selectedStoicWeek = null;
+let confirmationResolve = null;
+let pendingStoicSave = null;
+let stoicSaveTimer = null;
+const viewScrollPositions = new Map();
 const PALETTES = ["arctic","jade","aurora","rose"];
 const LEVEL_FONTS = ["default","moirai-one","rubik-lines","zen-tokyo-zoo"];
+const PALETTE_LABELS = {arctic:"Arctic Depths",jade:"Jade Horizon",aurora:"Aurora Blossom",rose:"Rosé Sunrise"};
+const LEVEL_FONT_LABELS = {default:"Default","moirai-one":"Moirai One","rubik-lines":"Rubik Lines","zen-tokyo-zoo":"Zen Tokyo Zoo"};
 const APP_VIEWS = ["today","quests","journey","character","notifications","settings"];
+const PRIMARY_VIEWS = ["today","quests","journey","character"];
+const VIEW_LABELS = {today:"Today",quests:"Quests",journey:"History",character:"Character",notifications:"Notifications",settings:"Settings"};
 const STOIC_DEFAULT_HORIZON = 90;
 const STOIC_MIN_HORIZON = 50;
 const STOIC_MAX_HORIZON = 120;
@@ -130,7 +140,7 @@ async function bootstrap() {
   migrateState();
   save({queue:false});
   bindEvents();
-  showView(viewFromLocation(),{remember:false,updateHash:false,scroll:false});
+  showView(viewFromLocation(),{remember:false,updateHash:false,scroll:false,focus:false,announce:false});
   renderAll();
   startLevelNumberGlow();
   registerSW();
@@ -257,18 +267,92 @@ function viewFromLocation() {
   return APP_VIEWS.includes(requested) ? requested : "today";
 }
 
+function prefersReducedMotion() {
+  return Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
+}
+
+function announceInteraction(message) {
+  const announcer=$("#interactionAnnouncer");
+  if (!announcer || !message) return;
+  announcer.textContent="";
+  window.setTimeout(()=>{ announcer.textContent=message; },20);
+}
+
+function interactionHaptic(pattern) {
+  if (prefersReducedMotion() || typeof navigator.vibrate !== "function") return;
+  navigator.vibrate(pattern);
+}
+
+function setMetricValue(target,value) {
+  const element=typeof target === "string" ? $(target) : target;
+  if (!element) return;
+  const next=String(value);
+  const previous=element.dataset.metricValue;
+  element.textContent=next;
+  element.dataset.metricValue=next;
+  if (previous === undefined || previous === next || prefersReducedMotion()) return;
+  element.classList.remove("metric-value-changing");
+  void element.offsetWidth;
+  element.classList.add("metric-value-changing");
+  window.clearTimeout(element.metricChangeTimer);
+  element.metricChangeTimer=window.setTimeout(()=>element.classList.remove("metric-value-changing"),360);
+}
+
+function viewTransitionDirection(fromView,toView,explicitDirection) {
+  if (["forward","back"].includes(explicitDirection)) return explicitDirection;
+  const fromIndex=PRIMARY_VIEWS.indexOf(fromView);
+  const toIndex=PRIMARY_VIEWS.indexOf(toView);
+  if (fromIndex>=0 && toIndex>=0) return toIndex>=fromIndex ? "forward" : "back";
+  if (fromIndex<0 && toIndex>=0) return "back";
+  return "forward";
+}
+
+function animateViewEntry(section,direction) {
+  if (!section || prefersReducedMotion()) return;
+  section.classList.remove("view-enter-forward","view-enter-back");
+  void section.offsetWidth;
+  section.classList.add(direction === "back" ? "view-enter-back" : "view-enter-forward");
+  window.clearTimeout(section.viewTransitionTimer);
+  section.viewTransitionTimer=window.setTimeout(()=>section.classList.remove("view-enter-forward","view-enter-back"),330);
+}
+
 function showView(view,options={}) {
   const nextView = APP_VIEWS.includes(view) ? view : "today";
+  const previousView = activeView;
+  const viewChanged = activeView !== nextView;
+  if (viewChanged) {
+    viewScrollPositions.set(previousView,Math.max(0,Number(window.scrollY) || 0));
+    if (previousView === "character") flushStoicWeekSave();
+  }
   if (nextView === "settings" && activeView !== "settings" && options.remember !== false) settingsReturnView = activeView;
   if (nextView === "notifications" && activeView !== "notifications" && options.remember !== false) notificationsReturnView = activeView;
   activeView = nextView;
-  $$(".view").forEach(item=>item.classList.toggle("active",item.id === `view-${nextView}`));
-  $$(".nav-btn").forEach(button=>button.classList.toggle("active",button.dataset.view === nextView));
+  $$(".view").forEach(item=>{
+    const selected=item.id === `view-${nextView}`;
+    item.classList.toggle("active",selected);
+    item.setAttribute("aria-hidden",String(!selected));
+  });
+  $$(".nav-btn").forEach(button=>{
+    const selected=button.dataset.view === nextView;
+    button.classList.toggle("active",selected);
+    if (selected) button.setAttribute("aria-current","page");
+    else button.removeAttribute("aria-current");
+  });
   if (options.updateHash !== false && window.location.hash !== `#${nextView}`) {
     window.history.replaceState(null,"",`#${nextView}`);
   }
   if (nextView === "character" && state && CONFIG) renderCharacter();
-  if (options.scroll !== false) window.scrollTo({top:0,behavior:"smooth"});
+  const activeSection=$(`#view-${nextView}`);
+  if (viewChanged) animateViewEntry(activeSection,viewTransitionDirection(previousView,nextView,options.direction));
+  if (viewChanged && (options.scroll !== false || options.focus !== false)) {
+    const settleView=()=>{
+      if (options.scroll !== false) window.scrollTo({top:viewScrollPositions.get(nextView) || 0,behavior:"auto"});
+      if (options.focus !== false) activeSection?.focus({preventScroll:true});
+    };
+    if (window.requestAnimationFrame) window.requestAnimationFrame(settleView);
+    else window.setTimeout(settleView,0);
+  }
+  if (viewChanged && options.announce !== false) announceInteraction(`${VIEW_LABELS[nextView]} page`);
   if (nextView === "settings" && typeof refreshLevel90NotificationSettings === "function") {
     refreshLevel90NotificationSettings().catch(()=>{});
   }
@@ -278,16 +362,16 @@ function showView(view,options={}) {
 }
 
 function openSettingsPage() {
-  showView("settings");
+  showView("settings",{direction:"forward"});
 }
 
 function closeSettingsPage() {
-  showView(settingsReturnView === "settings" ? "today" : settingsReturnView);
+  showView(settingsReturnView === "settings" ? "today" : settingsReturnView,{direction:"back"});
   requestNameIfNeeded();
 }
 
 function closeNotificationsPage() {
-  showView(notificationsReturnView === "notifications" ? "today" : notificationsReturnView);
+  showView(notificationsReturnView === "notifications" ? "today" : notificationsReturnView,{direction:"back"});
   requestNameIfNeeded();
 }
 
@@ -301,13 +385,25 @@ function applyTheme() {
     quickToggle.setAttribute("aria-label",label);
     quickToggle.title = label;
   }
-  $$("[data-theme-mode]").forEach(button=>button.classList.toggle("selected",button.dataset.themeMode===state.theme));
-  $$("[data-palette]").forEach(button=>button.classList.toggle("selected",button.dataset.palette===state.palette));
+  $$("[data-theme-mode]").forEach(button=>{
+    const selected=button.dataset.themeMode===state.theme;
+    button.classList.toggle("selected",selected);
+    button.setAttribute("aria-pressed",String(selected));
+  });
+  $$("[data-palette]").forEach(button=>{
+    const selected=button.dataset.palette===state.palette;
+    button.classList.toggle("selected",selected);
+    button.setAttribute("aria-pressed",String(selected));
+  });
   $$("[data-level-font]").forEach(button=>{
     const selected=button.dataset.levelFont===state.levelFont;
     button.classList.toggle("selected",selected);
     button.setAttribute("aria-pressed",String(selected));
   });
+  const previewLevel=$("#appearancePreviewLevel");
+  const previewLabel=$("#appearancePreviewLabel");
+  if (previewLevel && state && CONFIG) previewLevel.textContent=String(levelFromXp(totalXp()));
+  if (previewLabel) previewLabel.textContent=`${PALETTE_LABELS[state.palette] || PALETTE_LABELS.arctic} · ${LEVEL_FONT_LABELS[state.levelFont] || LEVEL_FONT_LABELS.default}`;
   const browserColor=getComputedStyle(document.body).getPropertyValue("--bg").trim();
   const themeMeta=$("meta[name='theme-color']");
   if(themeMeta && browserColor) themeMeta.setAttribute("content",browserColor);
@@ -558,11 +654,11 @@ function renderHeader() {
   const nextQuest = plannedQuestsFor(today).find(q => !isCompleted(q.id));
   const currentRank = rankForLevel(p.lvl);
   document.body.dataset.rankTier = String(currentRank.level);
-  $("#levelNumber").textContent = p.lvl;
+  setMetricValue("#levelNumber",p.lvl);
   $("#greetingName").textContent = state.profileName || "Player";
   $("#profileNameInput").value = state.profileName;
   $("#characterLevelTitle").textContent = `Level ${p.lvl}`;
-  $("#xpText").textContent = p.maxed ? `${xp} TOTAL XP` : `${xp - p.start} / ${p.end - p.start} XP`;
+  setMetricValue("#xpText",p.maxed ? `${xp} TOTAL XP` : `${xp - p.start} / ${p.end - p.start} XP`);
   $("#nextLevelText").textContent = p.maxed ? "LEVEL 90 · ASCENDED" : `NEXT · LEVEL ${p.lvl + 1}`;
   $("#levelProgressFill").style.width=`${p.pct}%`;
   $("#levelProgressTrack").setAttribute("aria-valuenow",String(Math.round(p.pct)));
@@ -609,11 +705,11 @@ function renderToday() {
   const qs = plannedQuestsFor(today);
   const available = qs.filter(q=>!isCompleted(q.id,key));
   const completed = qs.filter(q=>isCompleted(q.id,key));
-  $("#todayXp").textContent = completedXpForDate(today);
-  $("#dailyScore").textContent = dailyScoreFor(today);
-  $("#momentumScore").textContent = `${momentum()}%`;
-  $("#availableQuestCount").textContent = available.length;
-  $("#completedQuestCount").textContent = completed.reduce((sum,q)=>sum+completionCount(q.id,key),0);
+  setMetricValue("#todayXp",completedXpForDate(today));
+  setMetricValue("#dailyScore",dailyScoreFor(today));
+  setMetricValue("#momentumScore",`${momentum()}%`);
+  setMetricValue("#availableQuestCount",available.length);
+  setMetricValue("#completedQuestCount",completed.reduce((sum,q)=>sum+completionCount(q.id,key),0));
 
   const availableList = $("#availableQuests");
   const completedList = $("#completedTodayQuests");
@@ -693,6 +789,7 @@ function renderQuestLibrary() {
     `<div class="empty-state">Nothing here yet.</div>`;
   const reorderButton = $("#reorderBtn");
   reorderButton.classList.toggle("active", reorderMode);
+  reorderButton.setAttribute("aria-pressed",String(reorderMode));
   reorderButton.querySelector("span").textContent = reorderMode ? "Done" : "Sort";
   reorderButton.setAttribute("aria-label",reorderMode ? "Finish sorting quests" : "Sort quests");
   reorderButton.title = reorderMode ? "Finish sorting" : "Sort quests";
@@ -766,9 +863,9 @@ function renderDayReview() {
   const editable = isEditableHistoryDate(dateKey);
   $("#reviewDayLabel").textContent = day >= 1 ? `JOURNEY DAY ${day}` : "BEFORE THIS JOURNEY";
   $("#reviewDateLabel").textContent = dateKey === todayKey ? "Today" : new Intl.DateTimeFormat(undefined,{weekday:"long",month:"long",day:"numeric"}).format(date);
-  $("#reviewScore").textContent = dailyScoreFor(date);
-  $("#reviewXp").textContent = completed.reduce((sum,q)=>sum+completionXp(q.id,dateKey),0);
-  $("#reviewClears").textContent = `${completed.length}/${quests.length}`;
+  setMetricValue("#reviewScore",dailyScoreFor(date));
+  setMetricValue("#reviewXp",completed.reduce((sum,q)=>sum+completionXp(q.id,dateKey),0));
+  setMetricValue("#reviewClears",`${completed.length}/${quests.length}`);
   $("#historyEditNotice").classList.toggle("hidden",!editable);
   $("#reviewQuestList").innerHTML = quests.length
     ? quests.map(q=>reviewQuestRow(q,date,dateKey,editable)).join("")
@@ -807,7 +904,9 @@ function commitQuestDragOrder(ids) {
   if (previous.every((id,index)=>id===next[index]?.id)) return false;
   state.quests = next;
   save();
-  renderAll();
+  renderHeader();
+  renderToday();
+  renderHistory();
   showToast("Quest order saved");
   return true;
 }
@@ -816,17 +915,47 @@ function questOrderIdsFromDom() {
   return $$(".quest-card[data-id]",$("#questLibrary")).map(card=>card.dataset.id);
 }
 
+function captureQuestLibraryCardRects() {
+  return new Map($$(".quest-card[data-id]",$("#questLibrary")).map(card=>[
+    card.dataset.id,
+    card.getBoundingClientRect()
+  ]));
+}
+
+function animateQuestLibraryLayout(previousRects,draggedId) {
+  if (prefersReducedMotion() || !previousRects?.size) return;
+  $$(".quest-card[data-id]",$("#questLibrary")).forEach(card=>{
+    if (card.dataset.id===draggedId || typeof card.animate !== "function") return;
+    const previous=previousRects.get(card.dataset.id);
+    if (!previous) return;
+    const current=card.getBoundingClientRect();
+    const dx=previous.left-current.left;
+    const dy=previous.top-current.top;
+    if (Math.abs(dx)<1 && Math.abs(dy)<1) return;
+    card.animate([
+      {transform:`translate(${dx}px,${dy}px)`},
+      {transform:"translate(0,0)"}
+    ],{duration:210,easing:"cubic-bezier(.2,.8,.2,1)"});
+  });
+}
+
 function finishQuestDrag(cancelled=false) {
   if (!questDragState) return;
   const drag = questDragState;
+  const title=drag.card.querySelector(".quest-title")?.textContent || "Quest";
+  const position=questOrderIdsFromDom().indexOf(drag.card.dataset.id)+1;
+  const total=questOrderIdsFromDom().length;
   questDragState = null;
-  drag.card.classList.remove("dragging");
+  drag.card.classList.remove("dragging","drop-marker");
   $("#questLibrary").classList.remove("is-dragging");
   if (cancelled) {
     renderQuestLibrary();
+    announceInteraction(`${title} move cancelled`);
     return;
   }
-  commitQuestDragOrder(questOrderIdsFromDom());
+  const changed=commitQuestDragOrder(questOrderIdsFromDom());
+  if (changed) interactionHaptic([10,28,14]);
+  announceInteraction(changed ? `${title} moved to position ${position} of ${total}` : `${title} remains at position ${position} of ${total}`);
 }
 
 function bindQuestDragAndDrop() {
@@ -835,10 +964,13 @@ function bindQuestDragAndDrop() {
     const handle=event.target.closest("[data-drag-handle]");
     const card=handle?.closest(".quest-card[data-id]");
     if(!reorderMode || !handle || !card || (event.button !== undefined && event.button !== 0)) return;
-    questDragState={pointerId:event.pointerId,handle,card,lastY:event.clientY};
+    const position=questOrderIdsFromDom().indexOf(card.dataset.id)+1;
+    questDragState={pointerId:event.pointerId,handle,card,lastY:event.clientY,position};
     handle.setPointerCapture?.(event.pointerId);
-    card.classList.add("dragging");
+    card.classList.add("dragging","drop-marker");
     list.classList.add("is-dragging");
+    interactionHaptic(12);
+    announceInteraction(`Picked up ${card.querySelector(".quest-title")?.textContent || "quest"}. Position ${position} of ${questOrderIdsFromDom().length}`);
     event.preventDefault();
   });
   list.addEventListener("pointermove",event=>{
@@ -847,7 +979,15 @@ function bindQuestDragAndDrop() {
     const hit=document.elementFromPoint(event.clientX,event.clientY)?.closest(".quest-card[data-id]");
     if(hit && hit!==questDragState.card && hit.parentElement===list){
       const rect=hit.getBoundingClientRect();
+      const previousRects=captureQuestLibraryCardRects();
       list.insertBefore(questDragState.card,event.clientY < rect.top + rect.height/2 ? hit : hit.nextSibling);
+      const position=questOrderIdsFromDom().indexOf(questDragState.card.dataset.id)+1;
+      if (position!==questDragState.position) {
+        questDragState.position=position;
+        animateQuestLibraryLayout(previousRects,questDragState.card.dataset.id);
+        interactionHaptic(7);
+        announceInteraction(`Position ${position} of ${questOrderIdsFromDom().length}`);
+      }
     }
     const edge=72;
     if(event.clientY<edge) window.scrollBy?.({top:-10,behavior:"auto"});
@@ -868,12 +1008,18 @@ function bindQuestDragAndDrop() {
     if(!reorderMode || !card || !["ArrowUp","ArrowDown"].includes(event.key)) return;
     const sibling=event.key==="ArrowUp" ? card.previousElementSibling : card.nextElementSibling;
     if(!sibling?.matches(".quest-card[data-id]")) return;
+    const previousRects=captureQuestLibraryCardRects();
     if(event.key==="ArrowUp") list.insertBefore(card,sibling);
     else list.insertBefore(sibling,card);
     event.preventDefault();
     const focusId=card.dataset.id;
+    const title=card.querySelector(".quest-title")?.textContent || "Quest";
+    const position=questOrderIdsFromDom().indexOf(focusId)+1;
+    const total=questOrderIdsFromDom().length;
+    animateQuestLibraryLayout(previousRects,focusId);
     commitQuestDragOrder(questOrderIdsFromDom());
     $(`.quest-card[data-id="${CSS.escape(focusId)}"] [data-drag-handle]`,list)?.focus();
+    announceInteraction(`${title} moved to position ${position} of ${total}`);
   });
 }
 
@@ -980,14 +1126,15 @@ function stoicCellState(ageYear,weekIndex,position,trackingStart,today=new Date(
   const index=ageYear*52+weekIndex;
   if (!position?.withinHorizon || index>position.index) return {className:"future",metrics:null};
   const bounds=stoicWeekBounds(state.stoicCalendar.birthDate,ageYear,weekIndex);
+  const reflected=Boolean(state.stoicCalendar.weeks[stoicWeekRecordKey(ageYear,weekIndex)]);
   if (bounds.end<trackingStart) {
-    const reflected=Boolean(state.stoicCalendar.weeks[stoicWeekRecordKey(ageYear,weekIndex)]);
     return {className:`${index===position.index ? "current " : ""}elapsed${reflected ? " reflected" : ""}`,metrics:null};
   }
   const metrics=stoicWeekMetrics(bounds.start,bounds.end,today);
   const grade=stoicWeekGrade(metrics);
   const classes=["tracked",`grade-${grade}`];
   if (metrics.questClears) classes.push("has-activity");
+  if (reflected) classes.push("reflected");
   if (index===position.index) classes.push("current");
   return {className:classes.join(" "),metrics};
 }
@@ -1064,7 +1211,10 @@ function renderStoicWeekDetail(ageYear,weekIndex) {
   }
   const metrics=stoicWeekMetrics(bounds.start,bounds.end,new Date());
   detail.innerHTML=`
-    <div class="stoic-week-detail-head"><span class="kicker">${escapeHtml(heading)}</span><strong>${escapeHtml(formatStoicDateRange(bounds.start,bounds.end))}</strong></div>
+    <div class="stoic-week-detail-head">
+      <div><span class="kicker">${escapeHtml(heading)}</span><strong>${escapeHtml(formatStoicDateRange(bounds.start,bounds.end))}</strong></div>
+      <span id="stoicSaveState" class="stoic-save-state" data-state="saved" role="status" aria-live="polite">Saved</span>
+    </div>
     <div class="stoic-week-stats">
       <div><strong>${metrics.averageScore}</strong><span>Average score</span></div>
       <div><strong>${metrics.strongDays}</strong><span>80+ days</span></div>
@@ -1093,6 +1243,7 @@ function renderStoicYearView() {
 }
 
 function selectStoicYear(ageYear,weekIndex=null) {
+  flushStoicWeekSave();
   const position=stoicPositionForDate(state.stoicCalendar.birthDate,state.stoicCalendar.horizonYears,new Date());
   selectedStoicYear=Math.max(0,Math.min(state.stoicCalendar.horizonYears-1,Number(ageYear)));
   selectedStoicWeek=weekIndex===null
@@ -1144,6 +1295,25 @@ function saveStoicSetup(event) {
   showToast("Stoic Calendar updated");
 }
 
+function setStoicSaveState(status) {
+  const indicator=$("#stoicSaveState");
+  if (!indicator) return;
+  indicator.dataset.state=status;
+  indicator.textContent=status === "saving" ? "Saving…" : "Saved";
+}
+
+function updateStoicReflectionMarker(recordKey) {
+  const match=/^(\d{1,3}):(\d{2})$/.exec(recordKey);
+  if (!match || Number(match[1])!==selectedStoicYear) return;
+  const fields=$$("[data-stoic-field]",$("#stoicWeekDetail"));
+  const reflected=fields.some(field=>field.value.trim());
+  const week=Number(match[2]);
+  const button=$(`[data-stoic-week="${week}"]`,$("#stoicYearWeekGrid"));
+  if (!button) return;
+  button.classList.toggle("reflected",reflected);
+  button.setAttribute("aria-label",`Week ${week+1}${reflected ? ", reflection added" : ""}`);
+}
+
 function saveStoicWeekField(recordKey,field,value) {
   if (!Object.hasOwn(STOIC_TEXT_LIMITS,field)) return;
   const record={
@@ -1155,7 +1325,25 @@ function saveStoicWeekField(recordKey,field,value) {
   if (record.intention || record.control || record.reaction || record.correction) state.stoicCalendar.weeks[recordKey]=record;
   else delete state.stoicCalendar.weeks[recordKey];
   save();
-  showToast("Stoic reflection saved");
+  updateStoicReflectionMarker(recordKey);
+  setStoicSaveState("saved");
+}
+
+function flushStoicWeekSave() {
+  if (!pendingStoicSave) return;
+  window.clearTimeout(stoicSaveTimer);
+  const pending=pendingStoicSave;
+  pendingStoicSave=null;
+  stoicSaveTimer=null;
+  saveStoicWeekField(pending.recordKey,pending.field,pending.value);
+}
+
+function scheduleStoicWeekSave(recordKey,field,value) {
+  pendingStoicSave={recordKey,field,value};
+  window.clearTimeout(stoicSaveTimer);
+  setStoicSaveState("saving");
+  updateStoicReflectionMarker(recordKey);
+  stoicSaveTimer=window.setTimeout(flushStoicWeekSave,450);
 }
 
 function renderCharacter() {
@@ -1174,11 +1362,11 @@ function renderCharacter() {
       <div class="character-progress"><i style="width:${p.pct}%"></i></div>
     </div>`;
   }).join("");
-  $("#totalXpStat").textContent = totalXp();
-  $("#completedQuestStat").textContent = Object.entries(state.completions).reduce((sum,[dateKey,day])=>{
+  setMetricValue("#totalXpStat",totalXp());
+  setMetricValue("#completedQuestStat",Object.entries(state.completions).reduce((sum,[dateKey,day])=>{
     return sum+Object.keys(day || {}).reduce((daySum,id)=>daySum+completionCount(id,dateKey),0);
-  },0);
-  $("#strongDayStat").textContent = strongDayCount();
+  },0));
+  setMetricValue("#strongDayStat",strongDayCount());
   renderStoicCalendar();
 }
 
@@ -1186,6 +1374,9 @@ function toggleQuestCompletionForDate(id,dateKey,completedAt=new Date().toISOStr
   const q = state.quests.find(x=>x.id===id);
   if (!q) return null;
   state.completions[dateKey] ||= {};
+  const previousRecord = state.completions[dateKey][id]
+    ? structuredClone(normalizeCompletionRecord(state.completions[dateKey][id],q,dateKey))
+    : null;
   const wasDone = !!state.completions[dateKey][id];
   if (wasDone) {
     delete state.completions[dateKey][id];
@@ -1197,7 +1388,7 @@ function toggleQuestCompletionForDate(id,dateKey,completedAt=new Date().toISOStr
     difficulty:q.difficulty,
     xpAwarded:xpForQuest(q)
   },q,dateKey);
-  return {q,wasDone};
+  return {q,wasDone,previousRecord};
 }
 
 function addQuestCompletionForDate(id,dateKey,completedAt=new Date().toISOString()) {
@@ -1221,37 +1412,144 @@ function removeQuestCompletionForDate(id,dateKey) {
   const q = state.quests.find(x=>x.id===id);
   const existing = completionRecord(id,dateKey);
   if (!q || !existing) return null;
+  const previousRecord = structuredClone(existing);
   if (existing.count > 1) {
     state.completions[dateKey][id] = normalizeCompletionRecord({...existing,count:existing.count-1},q,dateKey);
   } else {
     delete state.completions[dateKey][id];
     if (!Object.keys(state.completions[dateKey]).length) delete state.completions[dateKey];
   }
-  return {q,previousCount:existing.count,count:existing.count-1};
+  return {q,previousCount:existing.count,count:existing.count-1,previousRecord};
+}
+
+function captureTodayCardRects() {
+  return new Map($$(".today-tile[data-id]",$("#view-today")).map(card=>[
+    card.dataset.id,
+    card.getBoundingClientRect()
+  ]));
+}
+
+function animateTodayCardLayout(previousRects,focusQuestId,{repeat=false}={}) {
+  if (prefersReducedMotion() || !previousRects?.size) return;
+  $$(".today-tile[data-id]",$("#view-today")).forEach(card=>{
+    const previous=previousRects.get(card.dataset.id);
+    if (!previous || typeof card.animate !== "function") return;
+    const current=card.getBoundingClientRect();
+    const dx=previous.left-current.left;
+    const dy=previous.top-current.top;
+    if (Math.abs(dx)<1 && Math.abs(dy)<1) return;
+    card.animate([
+      {transform:`translate(${dx}px,${dy}px)`,opacity:.68},
+      {transform:"translate(0,0)",opacity:1}
+    ],{duration:520,easing:"cubic-bezier(.2,.8,.2,1)"});
+  });
+  const focusCard=$$(".today-tile[data-id]",$("#view-today")).find(card=>card.dataset.id===focusQuestId);
+  if (!focusCard) return;
+  const pulseTarget=repeat ? (focusCard.querySelector(".tile-completion-count") || focusCard.querySelector(".tile-repeat-action")) : focusCard;
+  pulseTarget?.animate?.(
+    repeat
+      ? [{transform:"scale(.78)",opacity:.55},{transform:"scale(1.18)",opacity:1},{transform:"scale(1)",opacity:1}]
+      : [{filter:"brightness(1.45)"},{filter:"brightness(1)"}],
+    {duration:repeat ? 360 : 520,easing:"cubic-bezier(.2,.8,.2,1)"}
+  );
+}
+
+function restoreCompletionSnapshot(id,dateKey,record) {
+  if (record) {
+    state.completions[dateKey] ||= {};
+    state.completions[dateKey][id]=structuredClone(record);
+  } else if (state.completions[dateKey]) {
+    delete state.completions[dateKey][id];
+    if (!Object.keys(state.completions[dateKey]).length) delete state.completions[dateKey];
+  }
+}
+
+function claimDailyClearMoment(dateKey) {
+  const planned=plannedQuestsFor(parseLocalDate(dateKey));
+  if (!planned.length || planned.some(quest=>!isCompleted(quest.id,dateKey))) return false;
+  try {
+    if (localStorage.getItem(FINAL_CLEAR_MOMENT_KEY)===dateKey) return false;
+    localStorage.setItem(FINAL_CLEAR_MOMENT_KEY,dateKey);
+  } catch {}
+  return true;
+}
+
+function showDailyClearMoment(xp,{delay=0}={}) {
+  const reveal=()=>{
+    if (prefersReducedMotion()) {
+      showToast(`Today's loadout cleared · +${xp} XP`);
+      announceInteraction("Today's loadout is complete.");
+      return;
+    }
+    const overlay=$("#dailyClearMoment");
+    if (!overlay) return;
+    $("#dailyClearMomentDetail").textContent=`Final quest · +${xp} XP`;
+    overlay.classList.remove("show");
+    void overlay.offsetWidth;
+    overlay.setAttribute("aria-hidden","false");
+    overlay.classList.add("show");
+    announceInteraction("Today's loadout is complete. Protect the momentum.");
+    window.clearTimeout(showDailyClearMoment.timer);
+    showDailyClearMoment.timer=window.setTimeout(()=>{
+      overlay.classList.remove("show");
+      overlay.setAttribute("aria-hidden","true");
+    },1900);
+  };
+  if (delay>0) window.setTimeout(reveal,delay);
+  else reveal();
 }
 
 function toggleComplete(id, button) {
+  if (completionMotionBusy) return;
   const key = localDateKey();
+  const previousRects = captureTodayCardRects();
   const oldLevel = levelFromXp(totalXp());
   const change = addQuestCompletionForDate(id,key);
   if (!change) return;
   const {q,count} = change;
-
+  const reducedMotion = prefersReducedMotion();
+  const firstClear = count === 1;
+  const finalClear = firstClear && claimDailyClearMoment(key);
+  const card=button?.closest?.(".today-tile");
+  completionMotionBusy=true;
+  if (button) button.disabled=true;
+  if (!reducedMotion) card?.classList.add(firstClear ? "quest-clear-confirm" : "quest-repeat-confirm");
   save();
   const newLevel = levelFromXp(totalXp());
   xpPop(button, xpForQuest(q));
-  if (navigator.vibrate) navigator.vibrate([18,30,18]);
-  if (newLevel > oldLevel) showLevelUp(newLevel);
-  else showToast(count > 1 ? `Cleared again · +${xpForQuest(q)} XP · ×${count} today` : `Quest cleared · +${xpForQuest(q)} XP`);
-  renderAll();
+  if (!reducedMotion) interactionHaptic(firstClear ? [18,30,18] : 18);
+  const completeTransition=()=>{
+    renderAll();
+    animateTodayCardLayout(previousRects,id,{repeat:!firstClear});
+    completionMotionBusy=false;
+    if (newLevel > oldLevel) showLevelUp(newLevel);
+    if (finalClear) showDailyClearMoment(xpForQuest(q),{delay:newLevel > oldLevel ? 1750 : 0});
+    else if (newLevel <= oldLevel) showToast(count > 1 ? `Cleared again · +${xpForQuest(q)} XP · ×${count} today` : `Quest cleared · +${xpForQuest(q)} XP`);
+  };
+  if (reducedMotion) completeTransition();
+  else window.setTimeout(completeTransition,firstClear ? 300 : 160);
 }
 
 function undoTodayCompletion(id) {
-  const change = removeQuestCompletionForDate(id,localDateKey());
+  const key=localDateKey();
+  const previousRects=captureTodayCardRects();
+  const change = removeQuestCompletionForDate(id,key);
   if (!change) return;
   save();
-  showToast(change.count > 0 ? `One clear removed · ×${change.count} today` : "Quest reopened");
   renderAll();
+  animateTodayCardLayout(previousRects,id,{repeat:change.count>0});
+  showToast(change.count > 0 ? `One clear removed · ×${change.count} today` : "Quest reopened",{
+    actionLabel:"Undo",
+    duration:6000,
+    onAction:()=>{
+      const restoreRects=captureTodayCardRects();
+      restoreCompletionSnapshot(id,key,change.previousRecord);
+      save();
+      renderAll();
+      animateTodayCardLayout(restoreRects,id,{repeat:change.previousCount>1});
+      showToast("Quest clear restored");
+    }
+  });
 }
 
 function toggleHistoryCompletion(id) {
@@ -1269,12 +1567,22 @@ function toggleHistoryCompletion(id) {
   if (!change) return;
   save();
   const newLevel = levelFromXp(totalXp());
-  if (!change.wasDone && newLevel > oldLevel) showLevelUp(newLevel);
-  else showToast(change.wasDone ? "Yesterday's correction removed" : `Yesterday corrected · +${xpForQuest(q)} XP`);
   renderAll();
+  if (!change.wasDone && newLevel > oldLevel) showLevelUp(newLevel);
+  else showToast(change.wasDone ? "Yesterday's correction removed" : `Yesterday corrected · +${xpForQuest(q)} XP`,{
+    actionLabel:"Undo",
+    duration:6000,
+    onAction:()=>{
+      restoreCompletionSnapshot(id,key,change.previousRecord);
+      save();
+      renderAll();
+      showToast(change.wasDone ? "Yesterday's completion restored" : "Yesterday's correction undone");
+    }
+  });
 }
 
 function xpPop(anchor, xp) {
+  if (prefersReducedMotion() || !anchor) return;
   const r = anchor.getBoundingClientRect();
   const orb = $("#levelOrb");
   const target = orb.getBoundingClientRect();
@@ -1292,16 +1600,98 @@ function xpPop(anchor, xp) {
   setTimeout(()=>{el.remove();orb.classList.remove("charging")},1050);
 }
 function showLevelUp(level) {
+  if (prefersReducedMotion()) {
+    showToast(`Level up · Level ${level}`);
+    return;
+  }
+  announceInteraction(`Level up. You reached level ${level}.`);
   $("#levelUpNumber").textContent = level;
   const o=$("#levelUpOverlay");
   o.classList.remove("show");
   void o.offsetWidth;
   o.classList.add("show");
 }
-function showToast(msg) {
-  const t=$("#toast"); t.textContent=msg; t.classList.add("show");
+function hideToast() {
+  const toast=$("#toast");
+  const action=$("#toastAction");
+  toast?.classList.remove("show","has-action");
+  if (action) {
+    action.hidden=true;
+    action.onclick=null;
+  }
+}
+
+function showToast(msg,options={}) {
+  const t=$("#toast");
+  const message=$("#toastMessage");
+  const action=$("#toastAction");
+  if (!t || !message) return;
+  message.textContent=msg;
+  const hasAction=Boolean(options.actionLabel && typeof options.onAction === "function" && action);
+  t.classList.toggle("has-action",hasAction);
+  if (action) {
+    action.hidden=!hasAction;
+    action.textContent=options.actionLabel || "Undo";
+    action.onclick=hasAction ? ()=>{
+      const callback=options.onAction;
+      clearTimeout(showToast.timer);
+      hideToast();
+      callback();
+    } : null;
+  }
+  t.classList.add("show");
   clearTimeout(showToast.timer);
-  showToast.timer=setTimeout(()=>t.classList.remove("show"),1600);
+  showToast.timer=setTimeout(hideToast,Number(options.duration) || (hasAction ? 5000 : 1600));
+}
+
+function resolveAuraConfirmation(confirmed) {
+  const resolver=confirmationResolve;
+  confirmationResolve=null;
+  const dialog=$("#confirmationDialog");
+  if (dialog?.open) dialog.close();
+  resolver?.(Boolean(confirmed));
+}
+
+function showAuraConfirmation(options={}) {
+  const dialog=$("#confirmationDialog");
+  if (!dialog) return Promise.resolve(false);
+  if (confirmationResolve) resolveAuraConfirmation(false);
+  $("#confirmationKicker").textContent=options.kicker || "CONFIRM ACTION";
+  $("#confirmationTitle").textContent=options.title || "Are you sure?";
+  $("#confirmationMessage").textContent=options.message || "This action cannot be undone.";
+  $("#confirmationCancelButton").textContent=options.cancelLabel || "Keep it";
+  const confirmButton=$("#confirmationConfirmButton");
+  confirmButton.textContent=options.confirmLabel || "Confirm";
+  confirmButton.classList.toggle("danger-btn",options.danger !== false);
+  dialog.oncancel=event=>{
+    event.preventDefault();
+    resolveAuraConfirmation(false);
+  };
+  dialog.onclose=()=>{
+    if (confirmationResolve) resolveAuraConfirmation(false);
+  };
+  $("#confirmationCancelButton").onclick=()=>resolveAuraConfirmation(false);
+  $("#confirmationForm").onsubmit=event=>{
+    event.preventDefault();
+    resolveAuraConfirmation(true);
+  };
+  dialog.showModal();
+  window.requestAnimationFrame?.(()=>$("#confirmationCancelButton")?.focus());
+  return new Promise(resolve=>{ confirmationResolve=resolve; });
+}
+
+window.showAuraConfirmation=showAuraConfirmation;
+
+async function collapseRemovedCard(element) {
+  if (!element || prefersReducedMotion() || typeof element.animate !== "function") return;
+  const height=element.getBoundingClientRect().height;
+  element.classList.add("is-removing");
+  const animation=element.animate([
+    {height:`${height}px`,opacity:1,transform:"scale(1)"},
+    {height:`${height}px`,opacity:.35,transform:"scale(.975)"},
+    {height:"0px",opacity:0,transform:"scale(.96)",paddingTop:"0px",paddingBottom:"0px",borderWidth:"0px"}
+  ],{duration:300,easing:"cubic-bezier(.4,0,.2,1)",fill:"forwards"});
+  await animation.finished.catch(()=>{});
 }
 
 function renderIconPicker(pickerId, searchValue, selectedIcon) {
@@ -1334,9 +1724,21 @@ function openQuestDialog(quest=null) {
   $("#questTitle").value=editing?.title || "";
   const selectedCategory=state.categories.some(c=>c.id===editing?.categoryId) ? editing.categoryId : state.categories[0].id;
   $("#questCategory").value=selectedCategory;
-  $$(".segment[data-type]").forEach(b=>b.classList.toggle("active",b.dataset.type===type));
-  $$(".segment[data-schedule]").forEach(b=>b.classList.toggle("active",b.dataset.schedule===schedule));
-  $$("#weekdayPicker button").forEach(b=>b.classList.toggle("selected",(editing?.schedule?.days || []).includes(Number(b.dataset.day))));
+  $$(".segment[data-type]").forEach(b=>{
+    const selected=b.dataset.type===type;
+    b.classList.toggle("active",selected);
+    b.setAttribute("aria-pressed",String(selected));
+  });
+  $$(".segment[data-schedule]").forEach(b=>{
+    const selected=b.dataset.schedule===schedule;
+    b.classList.toggle("active",selected);
+    b.setAttribute("aria-pressed",String(selected));
+  });
+  $$("#weekdayPicker button").forEach(b=>{
+    const selected=(editing?.schedule?.days || []).includes(Number(b.dataset.day));
+    b.classList.toggle("selected",selected);
+    b.setAttribute("aria-pressed",String(selected));
+  });
   $("#scheduleFields").classList.toggle("hidden",type==="oneoff");
   $("#weekdayPicker").classList.toggle("hidden",schedule!=="weekdays");
   renderDifficulty();
@@ -1347,10 +1749,26 @@ function renderDifficulty() {
   if(!p) return;
   const selected=$("#questDialog").dataset.difficulty || "medium";
   p.innerHTML=Object.entries(CONFIG.difficulty).map(([id,d])=>`
-    <button type="button" class="difficulty-btn ${id===selected?"selected":""}" data-difficulty="${id}">
+    <button type="button" class="difficulty-btn ${id===selected?"selected":""}" data-difficulty="${id}" aria-pressed="${id===selected}">
       <span class="difficulty-option-label">${difficultyDot(id)}<span>${escapeHtml(d.label)}</span></span><small>${d.xp} XP</small>
     </button>`).join("");
   $("#difficultyXpHint").textContent=`This quest will award ${difficulty(selected).xp} XP. XP is fixed by difficulty.`;
+}
+
+function revealSavedQuest(questId,{created=false}={}) {
+  const reveal=()=>{
+    const scope=activeView === "quests" ? $("#questLibrary") : activeView === "today" ? $("#view-today") : null;
+    const card=scope?.querySelector(`.quest-card[data-id="${CSS.escape(questId)}"]`);
+    if (!card) return;
+    card.scrollIntoView?.({behavior:prefersReducedMotion() ? "auto" : "smooth",block:"center"});
+    card.classList.remove("quest-saved-highlight");
+    void card.offsetWidth;
+    card.classList.add("quest-saved-highlight");
+    window.setTimeout(()=>card.classList.remove("quest-saved-highlight"),1500);
+    announceInteraction(`${created ? "New" : "Updated"} quest highlighted`);
+  };
+  if (window.requestAnimationFrame) window.requestAnimationFrame(reveal);
+  else window.setTimeout(reveal,0);
 }
 
 function saveQuest(e) {
@@ -1373,11 +1791,24 @@ function saveQuest(e) {
     type,
     schedule: mode==="weekdays" ? {mode,days} : {mode},
   };
+  let savedQuest=existing;
   if(existing){ Object.assign(existing,questData); delete existing.icon; }
-  else state.quests.push({id:uid(),createdOn:localDateKey(),createdAt:new Date().toISOString(),...questData,active:true});
+  else {
+    savedQuest={id:uid(),createdOn:localDateKey(),createdAt:new Date().toISOString(),...questData,active:true};
+    state.quests.push(savedQuest);
+  }
+  if (activeView === "quests" && questFilter !== "all" && questFilter !== savedQuest.type) {
+    questFilter="all";
+    $$(".filter-chip").forEach(button=>{
+      const selected=button.dataset.filter === "all";
+      button.classList.toggle("active",selected);
+      button.setAttribute("aria-pressed",String(selected));
+    });
+  }
   save();
   $("#questDialog").close();
   renderAll();
+  revealSavedQuest(savedQuest.id,{created:!existing});
   showToast(existing ? "Quest updated" : "Quest added to your log");
 }
 
@@ -1445,15 +1876,39 @@ function saveCategory(e) {
   showToast(existing ? "Category updated" : "Category added");
 }
 
-function deleteCategory(id) {
+async function deleteCategory(id) {
   const c=state.categories.find(item=>item.id===id);
   if(!c) return;
   const useCount=state.quests.filter(q=>q.categoryId===id).length;
   if(useCount){ showToast(`Reassign ${useCount} ${useCount===1?"quest":"quests"} first`); return; }
-  if(!confirm(`Delete the “${c.name}” category?`)) return;
+  const confirmed=await showAuraConfirmation({
+    kicker:"DELETE CATEGORY",
+    title:`Delete “${c.name}”?`,
+    message:"The category will be removed from your loadout.",
+    confirmLabel:"Delete category"
+  });
+  if(!confirmed) return;
+  const card=$(`[data-category-delete="${CSS.escape(id)}"]`)?.closest(".category-manager-item");
+  await collapseRemovedCard(card);
   state.categories=state.categories.filter(item=>item.id!==id);
   save(); renderAll(); renderCategoryManager(); resetCategoryForm();
   showToast("Category deleted");
+}
+
+async function deleteQuest(quest,card) {
+  if (!quest) return;
+  const confirmed=await showAuraConfirmation({
+    kicker:"DELETE QUEST",
+    title:`Delete “${quest.title}”?`,
+    message:"The quest will leave your Quest page. Its completion history and earned XP will remain intact.",
+    confirmLabel:"Delete quest"
+  });
+  if (!confirmed) return;
+  await collapseRemovedCard(card);
+  state.quests=state.quests.filter(item=>item.id!==quest.id);
+  save();
+  renderAll();
+  showToast("Quest deleted");
 }
 
 function bindEvents() {
@@ -1469,7 +1924,11 @@ function bindEvents() {
     reorderMode=!reorderMode;
     if(reorderMode){
       questFilter="all";
-      $$(".filter-chip").forEach(x=>x.classList.toggle("active",x.dataset.filter==="all"));
+      $$(".filter-chip").forEach(x=>{
+        const selected=x.dataset.filter==="all";
+        x.classList.toggle("active",selected);
+        x.setAttribute("aria-pressed",String(selected));
+      });
     }
     renderQuestLibrary();
   });
@@ -1492,25 +1951,39 @@ function bindEvents() {
   });
 
   $$(".segment[data-type]").forEach(b=>b.addEventListener("click",()=>{
-    $$(".segment[data-type]").forEach(x=>x.classList.remove("active"));
-    b.classList.add("active");
+    $$(".segment[data-type]").forEach(x=>{
+      const selected=x===b;
+      x.classList.toggle("active",selected);
+      x.setAttribute("aria-pressed",String(selected));
+    });
     $("#questDialog").dataset.type=b.dataset.type;
     $("#scheduleFields").classList.toggle("hidden",b.dataset.type==="oneoff");
     if(b.dataset.type==="recurring" && !["daily","weekdays"].includes($("#questDialog").dataset.schedule)){
       $("#questDialog").dataset.schedule="daily";
-      $$(".segment[data-schedule]").forEach(x=>x.classList.toggle("active",x.dataset.schedule==="daily"));
+      $$(".segment[data-schedule]").forEach(x=>{
+        const selected=x.dataset.schedule==="daily";
+        x.classList.toggle("active",selected);
+        x.setAttribute("aria-pressed",String(selected));
+      });
       $("#weekdayPicker").classList.add("hidden");
     }
   }));
   $$(".segment[data-schedule]").forEach(b=>b.addEventListener("click",()=>{
-    $$(".segment[data-schedule]").forEach(x=>x.classList.remove("active"));
-    b.classList.add("active");
+    $$(".segment[data-schedule]").forEach(x=>{
+      const selected=x===b;
+      x.classList.toggle("active",selected);
+      x.setAttribute("aria-pressed",String(selected));
+    });
     $("#questDialog").dataset.schedule=b.dataset.schedule;
     $("#weekdayPicker").classList.toggle("hidden",b.dataset.schedule!=="weekdays");
   }));
-  $$("#weekdayPicker button").forEach(b=>b.addEventListener("click",()=>b.classList.toggle("selected")));
+  $$("#weekdayPicker button").forEach(b=>b.addEventListener("click",()=>{
+    const selected=!b.classList.contains("selected");
+    b.classList.toggle("selected",selected);
+    b.setAttribute("aria-pressed",String(selected));
+  }));
 
-  document.addEventListener("click",e=>{
+  document.addEventListener("click",async e=>{
     const historyCompletion=e.target.closest("[data-history-complete]");
     if(historyCompletion){
       toggleHistoryCompletion(historyCompletion.dataset.historyComplete);
@@ -1539,9 +2012,8 @@ function bindEvents() {
     const d=e.target.closest("[data-delete]");
     if(d){
       const q=state.quests.find(x=>x.id===d.dataset.delete);
-      if(q && confirm(`Delete "${q.title}"? Its completion history and earned XP will be preserved.`)){
-        state.quests=state.quests.filter(x=>x.id!==q.id); save(); renderAll();
-      }
+      if(q) await deleteQuest(q,d.closest(".quest-card"));
+      return;
     }
     const categoryEdit=e.target.closest("[data-category-edit]");
     if(categoryEdit) editCategory(categoryEdit.dataset.categoryEdit);
@@ -1561,6 +2033,7 @@ function bindEvents() {
     }
     const stoicWeek=e.target.closest("[data-stoic-week]");
     if(stoicWeek){
+      flushStoicWeekSave();
       selectedStoicWeek=Number(stoicWeek.dataset.stoicWeek);
       renderStoicYearView();
     }
@@ -1577,16 +2050,21 @@ function bindEvents() {
   $("#stoicSetupForm").addEventListener("submit",saveStoicSetup);
   $("#stoicShowLifeBtn").addEventListener("click",openStoicLifeDialog);
   $("#closeStoicLifeDialog").addEventListener("click",()=>$("#stoicLifeDialog").close());
-  $("#stoicWeekDetail").addEventListener("change",e=>{
+  $("#stoicWeekDetail").addEventListener("input",e=>{
     const field=e.target.closest("[data-stoic-field]");
     const container=e.target.closest("[data-stoic-record]");
-    if(field && container) saveStoicWeekField(container.dataset.stoicRecord,field.dataset.stoicField,field.value);
+    if(field && container) scheduleStoicWeekSave(container.dataset.stoicRecord,field.dataset.stoicField,field.value);
   });
+  $("#stoicWeekDetail").addEventListener("change",flushStoicWeekSave);
 
   $$(".filter-chip").forEach(b=>b.addEventListener("click",()=>{
     if(reorderMode) return;
     questFilter=b.dataset.filter;
-    $$(".filter-chip").forEach(x=>x.classList.toggle("active",x===b));
+    $$(".filter-chip").forEach(x=>{
+      const selected=x===b;
+      x.classList.toggle("active",selected);
+      x.setAttribute("aria-pressed",String(selected));
+    });
     renderQuestLibrary();
   }));
 
@@ -1647,20 +2125,30 @@ function bindEvents() {
       const incoming=JSON.parse(await file.text());
       if(!incoming.quests || !incoming.categories) throw new Error();
       state=incoming; selectedHistoryDate=localDateKey(); historyMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1); migrateState(); save(); renderAll(); closeSettingsPage(); showToast("Backup restored");
-    }catch{ alert("That file does not look like a valid Level 90 backup."); }
+    }catch{ showToast("That file does not look like a valid Level90 backup"); }
     e.target.value="";
   });
 
-  $("#startChallengeBtn").addEventListener("click",()=>{
-    if(confirm("Start a fresh journey today? Your quest definitions are kept, but XP and completion history are cleared.")){
-      state.startedOn=localDateKey(); state.completions={}; selectedHistoryDate=localDateKey(); historyMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1); save(); renderAll(); closeSettingsPage(); showToast("Fresh journey started");
-    }
+  $("#startChallengeBtn").addEventListener("click",async()=>{
+    const confirmed=await showAuraConfirmation({
+      kicker:"FRESH JOURNEY",
+      title:"Start again from today?",
+      message:"Your quest definitions will stay, but all XP and completion history will be cleared.",
+      confirmLabel:"Start fresh"
+    });
+    if(!confirmed) return;
+    state.startedOn=localDateKey(); state.completions={}; selectedHistoryDate=localDateKey(); historyMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1); save(); renderAll(); closeSettingsPage(); showToast("Fresh journey started");
   });
 
-  $("#resetBtn").addEventListener("click",()=>{
-    if(confirm("Reset everything to the original Level 90 starter data?")){
-      state=freshState(); selectedHistoryDate=localDateKey(); historyMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1); save(); document.body.classList.remove("light"); renderAll(); closeSettingsPage(); showToast("App reset");
-    }
+  $("#resetBtn").addEventListener("click",async()=>{
+    const confirmed=await showAuraConfirmation({
+      kicker:"RESET LEVEL90",
+      title:"Reset everything?",
+      message:"Your journey, custom quests, categories, XP and completion history will return to the original starter data.",
+      confirmLabel:"Reset app"
+    });
+    if(!confirmed) return;
+    state=freshState(); selectedHistoryDate=localDateKey(); historyMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1); viewScrollPositions.clear(); save(); document.body.classList.remove("light"); renderAll(); closeSettingsPage(); showToast("App reset");
   });
 }
 

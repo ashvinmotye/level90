@@ -45,7 +45,7 @@ function baseContext() {
   const context = {
     console,structuredClone,document,localStorage:memoryStorage(),
     navigator:{onLine:true,vibrate(){},serviceWorker:null},
-    window:{location:{href:"https://level90.example/"},setTimeout(){ return 1; },clearTimeout(){},addEventListener(){},confirm(){ return true; }},
+    window:{location:{href:"https://level90.example/"},setTimeout(){ return 1; },clearTimeout(){},addEventListener(){},showAuraConfirmation:async()=>true},
     getComputedStyle(){ return {getPropertyValue(){ return ""; }}; },
     setTimeout(){ return 1; },clearTimeout(){},URL,Blob,Intl,Date,Math,JSON,Map,Set,Promise
   };
@@ -167,17 +167,29 @@ function runAppStateTests() {
       hasRepeatAction:repeatCard.includes("+1") && repeatCard.includes("again"),
       hasUndo:repeatCard.includes("data-undo-completion")
     };
-    removeQuestCompletionForDate("q_repeat","2026-08-22");
+    const firstUndo = removeQuestCompletionForDate("q_repeat","2026-08-22");
     const afterOneUndo = {count:completionCount("q_repeat","2026-08-22"),xp:completionXp("q_repeat","2026-08-22")};
     removeQuestCompletionForDate("q_repeat","2026-08-22");
     const afterTwoUndos = {count:completionCount("q_repeat","2026-08-22"),completed:isCompleted("q_repeat","2026-08-22")};
+    restoreCompletionSnapshot("q_repeat","2026-08-22",firstUndo.previousRecord);
+    const restoredFromUndo = {count:completionCount("q_repeat","2026-08-22"),xp:completionXp("q_repeat","2026-08-22")};
+    state.quests = [repeatQuest,otherQuest];
+    state.completions = {"2026-08-22":{q_repeat:normalizeCompletionRecord({count:1},repeatQuest,"2026-08-22")}};
+    localStorage.removeItem(FINAL_CLEAR_MOMENT_KEY);
+    const beforeFinalQuest = claimDailyClearMoment("2026-08-22");
+    addQuestCompletionForDate("q_other","2026-08-22","2026-08-22T12:00:00.000Z");
+    globalThis.dailyClearMomentResult = {
+      beforeFinalQuest,
+      firstClaim:claimDailyClearMoment("2026-08-22"),
+      repeatClaim:claimDailyClearMoment("2026-08-22")
+    };
     const oneOff = {...repeatQuest,id:"q_oneoff",title:"One off",type:"oneoff",schedule:{mode:"once"}};
     state.quests = [oneOff];
     state.completions = {};
     const visibleBefore = isQuestVisibleInLibrary(oneOff);
     addQuestCompletionForDate("q_oneoff","2026-08-22","2026-08-22T11:00:00.000Z");
     globalThis.repeatCompletionResult = {
-      beforeUndo,afterOneUndo,afterTwoUndos,visibleBefore,
+      beforeUndo,afterOneUndo,afterTwoUndos,restoredFromUndo,visibleBefore,
       visibleAfter:isQuestVisibleInLibrary(oneOff),
       stillOnToday:isScheduledOn(oneOff,parseLocalDate("2026-08-22")),
       goneTomorrow:!isScheduledOn(oneOff,parseLocalDate("2026-08-23"))
@@ -206,7 +218,7 @@ function runAppStateTests() {
   assert.deepEqual(JSON.parse(JSON.stringify(context.strongDayResult)),{
     historyScores:[100,100,25,100],characterCount:3
   });
-  assert.equal(context.renderedStrongDayStat,3);
+  assert.equal(context.renderedStrongDayStat,"3");
   assert.deepEqual(JSON.parse(JSON.stringify(context.oneOffScoreResult)),{
     openOneOffDoesNotLowerScore:100,
     completedOneOffDoesNotRaiseScore:0,
@@ -227,8 +239,11 @@ function runAppStateTests() {
   assert.deepEqual({...context.deletedHistoryResult},{totalXp:40,dayXp:40,title:"Archived quest"});
   assert.deepEqual(JSON.parse(JSON.stringify(context.repeatCompletionResult)),{
     beforeUndo:{count:2,completionXp:20,dayXp:20,totalXp:20,categoryXp:20,scoreXp:10,dailyScore:50,hasCountBadge:true,hasRepeatAction:true,hasUndo:true},
-    afterOneUndo:{count:1,xp:10},afterTwoUndos:{count:0,completed:false},
+    afterOneUndo:{count:1,xp:10},afterTwoUndos:{count:0,completed:false},restoredFromUndo:{count:2,xp:20},
     visibleBefore:true,visibleAfter:false,stillOnToday:true,goneTomorrow:true
+  });
+  assert.deepEqual(JSON.parse(JSON.stringify(context.dailyClearMomentResult)),{
+    beforeFinalQuest:false,firstClaim:true,repeatClaim:false
   });
 }
 
