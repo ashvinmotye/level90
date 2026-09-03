@@ -6,6 +6,10 @@ const path = require("node:path");
 const vm = require("node:vm");
 
 const root = path.resolve(__dirname,"..");
+const completionMigration = fs.readFileSync(path.join(root,"supabase","migrations","20260903_add_level90_completion_counts.sql"),"utf8");
+
+assert.match(completionMigration,/add column if not exists completion_count integer not null default 1/);
+assert.match(completionMigration,/check \(completion_count between 1 and 999\)/);
 
 function fakeElement() {
   return {
@@ -76,6 +80,7 @@ function runAppStateTests() {
       schemaVersion:state.schemaVersion,
       stoicCalendar:structuredClone(state.stoicCalendar),
       legacyXp:state.completions["2026-08-17"].q_daily.xpAwarded,
+      legacyCount:state.completions["2026-08-17"].q_daily.count,
       invalidDifficulty:state.completions["2026-08-19"].q_daily.difficulty,
       invalidDifficultyXp:state.completions["2026-08-19"].q_daily.xpAwarded,
       streak:questStreak(state.quests[0],parseLocalDate("2026-08-22")),
@@ -142,6 +147,40 @@ function runAppStateTests() {
       totalXp:totalXp(),dayXp:completedXpForDate(parseLocalDate("2026-08-22")),
       title:historicalQuestFromCompletion("q_deleted","2026-08-22").title
     };
+    const repeatQuest = {id:"q_repeat",title:"Repeat quest",categoryId:"body",difficulty:"easy",type:"recurring",schedule:{mode:"daily"},active:true,createdOn:"2026-08-22"};
+    const otherQuest = {...repeatQuest,id:"q_other",title:"Other quest"};
+    state.startedOn = "2026-08-22";
+    state.quests = [repeatQuest,otherQuest];
+    state.completions = {};
+    addQuestCompletionForDate("q_repeat","2026-08-22","2026-08-22T08:00:00.000Z");
+    addQuestCompletionForDate("q_repeat","2026-08-22","2026-08-22T10:00:00.000Z");
+    const repeatCard = questCard(repeatQuest,true,"2026-08-22");
+    const beforeUndo = {
+      count:completionCount("q_repeat","2026-08-22"),
+      completionXp:completionXp("q_repeat","2026-08-22"),
+      dayXp:completedXpForDate(parseLocalDate("2026-08-22")),
+      totalXp:totalXp(),categoryXp:categoryXp("body"),
+      scoreXp:completedScoreXpForDate(parseLocalDate("2026-08-22")),
+      dailyScore:dailyScoreFor(parseLocalDate("2026-08-22")),
+      hasCountBadge:repeatCard.includes("×2"),
+      hasRepeatAction:repeatCard.includes("+1") && repeatCard.includes("again"),
+      hasUndo:repeatCard.includes("data-undo-completion")
+    };
+    removeQuestCompletionForDate("q_repeat","2026-08-22");
+    const afterOneUndo = {count:completionCount("q_repeat","2026-08-22"),xp:completionXp("q_repeat","2026-08-22")};
+    removeQuestCompletionForDate("q_repeat","2026-08-22");
+    const afterTwoUndos = {count:completionCount("q_repeat","2026-08-22"),completed:isCompleted("q_repeat","2026-08-22")};
+    const oneOff = {...repeatQuest,id:"q_oneoff",title:"One off",type:"oneoff",schedule:{mode:"once"}};
+    state.quests = [oneOff];
+    state.completions = {};
+    const visibleBefore = isQuestVisibleInLibrary(oneOff);
+    addQuestCompletionForDate("q_oneoff","2026-08-22","2026-08-22T11:00:00.000Z");
+    globalThis.repeatCompletionResult = {
+      beforeUndo,afterOneUndo,afterTwoUndos,visibleBefore,
+      visibleAfter:isQuestVisibleInLibrary(oneOff),
+      stillOnToday:isScheduledOn(oneOff,parseLocalDate("2026-08-22")),
+      goneTomorrow:!isScheduledOn(oneOff,parseLocalDate("2026-08-23"))
+    };
   `,context);
 
   assert.deepEqual({...context.stateTestResult.streak},{current:5,best:5});
@@ -174,15 +213,21 @@ function runAppStateTests() {
     recurringPlannedXp:40,
     recurringCompletedXp:0
   });
-  assert.equal(context.stateTestResult.schemaVersion,4);
+  assert.equal(context.stateTestResult.schemaVersion,5);
   assert.deepEqual(JSON.parse(JSON.stringify(context.stateTestResult.stoicCalendar)),{birthDate:"",horizonYears:90,weeks:{}});
   assert.deepEqual(JSON.parse(JSON.stringify(context.stoicPositionResult)),{year:36,week:0,index:1872,totalWeeks:4680,withinHorizon:true});
   assert.deepEqual(JSON.parse(JSON.stringify(context.stoicBoundsResult)),{start:"2026-08-27",end:"2026-09-02",key:"36:00"});
   assert.deepEqual(JSON.parse(JSON.stringify(context.stoicMetricsResult)),{tracked:true,trackedDays:6,scoreDays:6,averageScore:54,strongDays:3,questClears:4});
   assert.equal(context.stateTestResult.legacyXp,40);
+  assert.equal(context.stateTestResult.legacyCount,1);
   assert.equal(context.stateTestResult.invalidDifficulty,"easy");
   assert.equal(context.stateTestResult.invalidDifficultyXp,10);
   assert.deepEqual({...context.deletedHistoryResult},{totalXp:40,dayXp:40,title:"Archived quest"});
+  assert.deepEqual(JSON.parse(JSON.stringify(context.repeatCompletionResult)),{
+    beforeUndo:{count:2,completionXp:20,dayXp:20,totalXp:20,categoryXp:20,scoreXp:10,dailyScore:50,hasCountBadge:true,hasRepeatAction:true,hasUndo:true},
+    afterOneUndo:{count:1,xp:10},afterTwoUndos:{count:0,completed:false},
+    visibleBefore:true,visibleAfter:false,stillOnToday:true,goneTomorrow:true
+  });
 }
 
 async function runCloudTests() {
@@ -197,7 +242,7 @@ async function runCloudTests() {
     normalizeCompletionRecord:(value,quest)=>({
       completedAt:value.completedAt,questTitle:value.questTitle || quest?.title || "Deleted quest",
       categoryId:value.categoryId || quest?.categoryId || "",difficulty:value.difficulty || quest?.difficulty || "easy",
-      xpAwarded:Number(value.xpAwarded) || 0
+      xpAwarded:Number(value.xpAwarded) || 0,count:Math.max(1,Number(value.count) || 1)
     }),
     migrateState(){},save(){},renderAll(){},showToast(){},requestNameIfNeeded(){}
   });
@@ -215,15 +260,16 @@ async function runCloudTests() {
 
   const questA = {id:"q_a",title:"Quest A",categoryId:"body",difficulty:"easy",type:"recurring",schedule:{mode:"daily"},active:true,createdOn:"2026-08-17",createdAt:"2026-08-17T00:00:00.000Z"};
   const questB = {...questA,id:"q_b",title:"Quest B"};
-  const base = {schemaVersion:3,startedOn:"2026-08-17",profileName:"Ashvin",theme:"dark",palette:"arctic",categories:[],quests:[questA,questB],completions:{}};
+  const base = {schemaVersion:5,startedOn:"2026-08-17",profileName:"Ashvin",theme:"dark",palette:"arctic",categories:[],quests:[questA,questB],completions:{}};
   const completed = structuredClone(base);
-  completed.completions = {"2026-08-22":{q_a:{completedAt:"2026-08-22T08:00:00.000Z",questTitle:"Quest A",categoryId:"body",difficulty:"easy",xpAwarded:10}}};
+  completed.completions = {"2026-08-22":{q_a:{completedAt:"2026-08-22T08:00:00.000Z",questTitle:"Quest A",categoryId:"body",difficulty:"easy",xpAwarded:10,count:2}}};
   context.state = completed;
 
   context.cloudApi.queueLevel90StateChanges(base,completed);
   let completionOps = context.cloudApi.level90LoadSyncQueue().filter(item=>item.entity === "completion");
   assert.equal(completionOps.length,1);
   assert.equal(completionOps[0].deletedAt,null);
+  assert.equal(completionOps[0].record.completion.count,2);
 
   const stoicChanged = {...structuredClone(base),schemaVersion:4,stoicCalendar:{birthDate:"1990-08-27",horizonYears:90,weeks:{"36:00":{intention:"Act on what is mine.",control:"",reaction:"",correction:"",updatedAt:"2026-08-27T08:00:00.000Z"}}}};
   context.cloudApi.queueLevel90StateChanges(base,stoicChanged);
@@ -254,6 +300,7 @@ async function runCloudTests() {
   await context.cloudApi.level90ProcessSyncQueue();
   assert.equal(context.cloudApi.level90LoadSyncQueue().length,0);
   assert.ok(writes.some(write=>write.table === "level90_completions" && write.options.onConflict === "user_id,id"));
+  assert.ok(writes.some(write=>write.table === "level90_completions" && write.row.completion_count === 2));
   assert.ok(writes.filter(write=>write.table === "level90_quests").every(write=>write.options.onConflict === "user_id,id"));
 
   context.state = reordered;
@@ -306,7 +353,7 @@ async function runCloudTests() {
     ],
     completions:[
       {id:"2026-08-22:q_a",quest_id:"q_a",completion_date:"2026-08-22",completed_at:"2026-08-22T10:00:00.000Z",quest_title:"Remote Quest A",category_id:"body",difficulty:"hard",xp_awarded:40,deleted_at:null},
-      {id:"2026-08-22:q_remote",quest_id:"q_remote",completion_date:"2026-08-22",completed_at:"2026-08-22T10:00:00.000Z",quest_title:"Remote Quest",category_id:"remote",difficulty:"easy",xp_awarded:10,deleted_at:null}
+      {id:"2026-08-22:q_remote",quest_id:"q_remote",completion_date:"2026-08-22",completed_at:"2026-08-22T10:00:00.000Z",quest_title:"Remote Quest",category_id:"remote",difficulty:"easy",xp_awarded:10,completion_count:3,deleted_at:null}
     ]
   };
   context.cloudApi.level90ApplyCloudSnapshot(snapshot,{protectLocal:true});
@@ -315,6 +362,7 @@ async function runCloudTests() {
   assert.equal(context.state.completions["2026-08-22"].q_a.xpAwarded,10);
   assert.ok(context.state.quests.some(quest=>quest.id === "q_remote"));
   assert.equal(context.state.completions["2026-08-22"].q_remote.xpAwarded,10);
+  assert.equal(context.state.completions["2026-08-22"].q_remote.count,3);
 
   context.cloudApi.level90ApplyCloudSnapshot({
     profile:[],categories:snapshot.categories,
@@ -340,7 +388,7 @@ async function runCloudTests() {
   };
   context.cloudApi.queueLevel90StateChanges(base,context.state);
   const phoneSnapshot = {
-    level90_profiles:[{user_id:"user-a",started_on:"2026-08-01",profile_name:"Phone",theme:"dark",palette:"arctic",schema_version:4,stoic_calendar:{birthDate:"1990-08-27",horizonYears:90,weeks:{}}}],
+    level90_profiles:[{user_id:"user-a",started_on:"2026-08-01",profile_name:"Phone",theme:"dark",palette:"arctic",schema_version:5,stoic_calendar:{birthDate:"1990-08-27",horizonYears:90,weeks:{}}}],
     level90_categories:snapshot.categories,
     level90_quests:[snapshot.quests[1]],
     level90_completions:[snapshot.completions[1]]

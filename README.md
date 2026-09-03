@@ -2,6 +2,19 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 42 repeat quest clears
+
+- Allows every Today quest, including a one-off mission, to be cleared more than once on the same day.
+- Adds the quest's XP for every clear while daily score, streak and lifetime consistency still count the quest only once per day.
+- Moves a first clear into Completed Today, where **+1 again** records another clear and the compact minus button removes one clear.
+- Shows a `×2`, `×3`, and so on badge on the Today card only after the quest has been cleared more than once.
+- Counts repeat clears in Today XP, total XP, category XP, History XP and Character's completed-quest total.
+- Removes a completed one-off mission from the Quests library immediately while retaining its Today card for that day, its earned XP and its History record.
+
+### Version 42 Supabase update
+
+Run `supabase/migrations/20260903_add_level90_completion_counts.sql` once, then redeploy the included `level90-notifications` Edge Function so its level calculations include repeat-clear XP. Existing completion rows automatically remain one clear.
+
 ## Version 41 mobile Quests and Stoic reminder
 
 - Makes the three Quests toolbar actions icon-only below 520px while keeping accessible labels and desktop text.

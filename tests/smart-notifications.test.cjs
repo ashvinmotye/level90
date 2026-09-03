@@ -46,10 +46,10 @@ function dailyQuest(overrides={}) {
   };
 }
 
-function completion(date,hour=17,questId="q_read") {
+function completion(date,hour=17,questId="q_read",count=1) {
   return {
     quest_id:questId,completion_date:date,
-    completed_at:`${date}T${String(hour).padStart(2,"0")}:00:00.000Z`,xp_awarded:20
+    completed_at:`${date}T${String(hour).padStart(2,"0")}:00:00.000Z`,xp_awarded:20,completion_count:count
   };
 }
 
@@ -135,6 +135,12 @@ async function run() {
   assert.equal(stats.strongestStreak,4);
   assert.match(api.morningBrief(stats).title,/Morning briefing/);
   assert.match(api.eveningRecap(stats).body,/1\/1 quests complete/);
+
+  const repeatStats = api.notificationSummaryStats(
+    preference(),[quest],[completion("2026-08-23",17,"q_read",3)],new Date("2026-08-23T21:00:00.000Z")
+  );
+  assert.equal(repeatStats.xpToNext,20,"three 20-XP clears should contribute 60 XP to notification level progress");
+  assert.equal(repeatStats.scoreToday,100,"repeat clears must still count only once toward the daily score");
 
   const oneOff = dailyQuest({id:"q_once",title:"One-off",difficulty:"epic",quest_type:"oneoff"});
   const scoreWithOneOff = api.notificationSummaryStats(

@@ -362,8 +362,17 @@ body.light .theme-icon-moon { display:block; }
 }
 .streak-icon { flex:0 0 auto; width:1.05em; height:1.05em; filter:drop-shadow(0 0 5px rgb(var(--gold-rgb) / .25)); }
 .today-tile .tile-xp { position:absolute; bottom:16px; left:unset; right:16px; color:var(--text); font-size:14px; font-weight:750; z-index:2; }
-.today-tile .tile-hit { position:absolute; inset:0; z-index:3; border:0; background:transparent; cursor:pointer; border-radius:inherit; display:flex; align-items:center; justify-content:center; padding:10px; color:var(--accent-2); font-size:4rem; font-weight:950; }
+.today-tile .tile-hit { position:absolute; inset:0; z-index:3; border:0; background:transparent; cursor:pointer; border-radius:inherit; display:flex; align-items:center; justify-content:center; padding:10px; color:var(--accent-2); }
 .quest-card.today-tile.completed { opacity:.76; background:rgb(var(--accent-2-rgb) / .09); border-color:rgb(var(--accent-2-rgb) / .22); }
+.quest-card.today-tile.completed::after { content:"✓"; position:absolute; z-index:1; left:50%; top:50%; color:rgb(var(--accent-2-rgb) / .10); font-size:5rem; font-weight:950; transform:translate(-50%,-51%); pointer-events:none; }
+.today-tile.completed .quest-title { padding-right:64px; }
+.tile-repeat-action { display:grid; place-items:center; min-width:48px; min-height:43px; padding:5px 10px; border:1px solid rgb(var(--accent-2-rgb) / .24); border-radius:14px; background:rgb(var(--accent-2-rgb) / .12); box-shadow:0 8px 20px rgba(0,0,0,.12); }
+.tile-repeat-action strong,.tile-repeat-action small { display:block; line-height:1; }
+.tile-repeat-action strong { color:var(--accent-2); font-size:17px; font-weight:950; }
+.tile-repeat-action small { margin-top:3px; color:var(--muted); font-size:7px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+.tile-completion-tools { position:absolute; z-index:4; top:10px; right:10px; display:flex; align-items:center; gap:4px; }
+.tile-completion-count { display:grid; place-items:center; min-width:27px; height:27px; padding:0 7px; border:1px solid rgb(var(--accent-rgb) / .24); border-radius:999px; background:var(--panel-strong); color:var(--accent-soft); font-size:10px; font-weight:950; box-shadow:0 5px 14px rgba(0,0,0,.14); pointer-events:none; }
+.tile-undo { display:grid; place-items:center; width:27px; height:27px; padding:0; border:1px solid var(--line); border-radius:10px; background:var(--panel-strong); color:var(--muted); cursor:pointer; font-size:16px; font-weight:850; box-shadow:0 5px 14px rgba(0,0,0,.14); }
 
 .hero-card {
   position: relative;
@@ -1021,6 +1030,12 @@ body.light .bottom-nav { background:rgba(255,255,255,.84); }
   .today-tile .tile-category { font-size:7px; }
   .today-tile .tile-streak { left:11px; bottom:11px; min-height:20px; padding:4px 6px; font-size:9px; }
   .today-tile .tile-xp { bottom:11px; left:unset; right:11px; font-size:11px; }
+  .today-tile.completed .quest-title { padding-right:52px; }
+  .tile-repeat-action { min-width:42px; min-height:38px; padding:4px 8px; border-radius:12px; }
+  .tile-repeat-action strong { font-size:15px; }
+  .tile-completion-tools { top:7px; right:7px; gap:3px; }
+  .tile-completion-count { min-width:23px; height:23px; padding:0 5px; font-size:8px; }
+  .tile-undo { width:23px; height:23px; border-radius:8px; font-size:14px; }
   .hero-card { padding:18px; }
   .journey-meta { font-size:7px; }
   .level-stage { grid-template-columns:128px 1fr; gap:13px; }

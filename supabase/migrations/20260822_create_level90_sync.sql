@@ -82,6 +82,8 @@ create table if not exists public.level90_completions (
     check (difficulty in ('tiny', 'easy', 'medium', 'hard', 'major', 'epic')),
   xp_awarded integer not null
     check (xp_awarded >= 0),
+  completion_count integer not null default 1
+    check (completion_count between 1 and 999),
   client_updated_at timestamptz not null,
   deleted_at timestamptz,
   created_at timestamptz not null default now(),

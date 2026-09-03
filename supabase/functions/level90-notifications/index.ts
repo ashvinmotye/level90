@@ -47,6 +47,7 @@ type CompletionRecord = {
   completion_date:string;
   completed_at:string;
   xp_awarded?:number;
+  completion_count?:number;
 };
 type StoicWeekRecord = {
   intention?:string;
@@ -391,7 +392,9 @@ function notificationSummaryStats(preference:SmartPreference,quests:QuestRecord[
     return plannedXp ? Math.min(100,Math.round(earnedXp/plannedXp*100)) : 0;
   };
   const todayQuests = planned(localDate);
-  const totalXp = completions.reduce((sum,completion)=>sum+Number(completion.xp_awarded ?? 0),0);
+  const totalXp = completions.reduce((sum,completion)=>{
+    return sum+Number(completion.xp_awarded ?? 0)*Math.max(1,Number(completion.completion_count) || 1);
+  },0);
   const level = levelFromXp(totalXp);
   let strongestStreak = 0;
   let atRiskCount = 0;
@@ -496,7 +499,7 @@ async function evaluateSmartUser(admin:DatabaseClient,preference:SmartPreference
   if (questError) throw questError;
   const {data:completions,error:completionError} = await admin
     .from("level90_completions")
-    .select("quest_id,completion_date,completed_at,xp_awarded")
+    .select("quest_id,completion_date,completed_at,xp_awarded,completion_count")
     .eq("user_id",preference.user_id).is("deleted_at",null);
   if (completionError) throw completionError;
   let stoicCalendar:StoicCalendar | null = null;

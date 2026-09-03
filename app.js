@@ -178,7 +178,7 @@ function startLevelNumberGlow() {
 }
 function freshState() {
   return {
-    schemaVersion: 4,
+    schemaVersion: 5,
     startedOn: localDateKey(),
     quests: structuredClone(CONFIG.quests),
     categories: structuredClone(CONFIG.categories),
@@ -194,7 +194,7 @@ function migrateState() {
   state.categories ||= structuredClone(CONFIG.categories);
   state.completions ||= {};
   state.startedOn ||= localDateKey();
-  state.schemaVersion = 4;
+  state.schemaVersion = 5;
   state.theme ||= "dark";
   if (!PALETTES.includes(state.palette)) state.palette = "arctic";
   state.profileName = typeof state.profileName === "string" ? state.profileName.trim() : "";
@@ -322,12 +322,14 @@ function normalizeCompletionRecord(value,quest,dateKey) {
   const requestedDifficulty = typeof source.difficulty === "string" ? source.difficulty : (quest?.difficulty || "easy");
   const difficultyId = Object.hasOwn(CONFIG.difficulty,requestedDifficulty) ? requestedDifficulty : "easy";
   const awarded = Number(source.xpAwarded);
+  const requestedCount = Number(source.count ?? source.completionCount ?? 1);
   return {
     completedAt,
     questTitle: typeof source.questTitle === "string" ? source.questTitle : (quest?.title || "Deleted quest"),
     categoryId: typeof source.categoryId === "string" ? source.categoryId : (quest?.categoryId || ""),
     difficulty: difficultyId,
-    xpAwarded: Number.isFinite(awarded) && awarded >= 0 ? Math.round(awarded) : difficulty(difficultyId).xp
+    xpAwarded: Number.isFinite(awarded) && awarded >= 0 ? Math.round(awarded) : difficulty(difficultyId).xp,
+    count:Number.isFinite(requestedCount) ? Math.max(1,Math.min(999,Math.round(requestedCount))) : 1
   };
 }
 
@@ -339,7 +341,12 @@ function completionRecord(id,dateKey=localDateKey()) {
 }
 
 function completionXp(id,dateKey=localDateKey()) {
-  return completionRecord(id,dateKey)?.xpAwarded || 0;
+  const record = completionRecord(id,dateKey);
+  return record ? record.xpAwarded*record.count : 0;
+}
+
+function completionCount(id,dateKey=localDateKey()) {
+  return completionRecord(id,dateKey)?.count || 0;
 }
 
 function isScheduledOn(q, date) {
@@ -450,7 +457,8 @@ function completedScoreXpForDate(date) {
   const key = localDateKey(date);
   const eligibleIds = new Set(scoreQuestsFor(date).map(quest=>quest.id));
   return Object.entries(state.completions?.[key] || {}).reduce((sum,[id,value]) => {
-    return sum + (value && eligibleIds.has(id) ? completionXp(id,key) : 0);
+    const record = value && eligibleIds.has(id) ? completionRecord(id,key) : null;
+    return sum + (record?.xpAwarded || 0);
   },0);
 }
 function plannedXpForDate(date) {
@@ -505,7 +513,7 @@ function categoryXp(catId) {
   Object.entries(state.completions).forEach(([dateKey,day]) => {
     Object.entries(day).forEach(([id,done]) => {
       const record = done ? completionRecord(id,dateKey) : null;
-      if (record?.categoryId === catId) total += record.xpAwarded;
+      if (record?.categoryId === catId) total += completionXp(id,dateKey);
     });
   });
   return total;
@@ -596,7 +604,7 @@ function renderToday() {
   $("#dailyScore").textContent = dailyScoreFor(today);
   $("#momentumScore").textContent = `${momentum()}%`;
   $("#availableQuestCount").textContent = available.length;
-  $("#completedQuestCount").textContent = completed.length;
+  $("#completedQuestCount").textContent = completed.reduce((sum,q)=>sum+completionCount(q.id,key),0);
 
   const availableList = $("#availableQuests");
   const completedList = $("#completedTodayQuests");
@@ -616,6 +624,7 @@ function questCard(q, todayMode=false, dateKey=localDateKey()) {
   const cat = category(q.categoryId);
   const d = difficulty(q.difficulty);
   const done = isCompleted(q.id,dateKey);
+  const completedCount = done ? completionCount(q.id,dateKey) : 0;
   const streak = q.type === "recurring" ? questStreak(q,parseLocalDate(dateKey)) : null;
   const streakBadge = todayMode && streak ? `<span class="tile-streak" title="Current streak: ${streak.current} · Best streak: ${streak.best}" aria-label="Current streak ${streak.current}; best streak ${streak.best}">${auraIcon("fire","streak-icon")} ${streak.current}</span>` : "";
   const consistency = !todayMode ? questConsistency(q,parseLocalDate(dateKey)) : null;
@@ -636,7 +645,8 @@ function questCard(q, todayMode=false, dateKey=localDateKey()) {
         ${streakBadge}
         <div class="tile-xp">${d.xp} XP</div>
       </div>
-      <button class="tile-hit" data-complete="${q.id}" aria-label="${done ? "Reopen" : "Complete"} ${escapeHtml(q.title)}">${done ? "✓" : ""}</button>
+      <button class="tile-hit" data-complete="${q.id}" aria-label="${done ? `Complete ${escapeHtml(q.title)} again` : `Complete ${escapeHtml(q.title)}`}">${done ? `<span class="tile-repeat-action"><strong>+1</strong><small>again</small></span>` : ""}</button>
+      ${done ? `<div class="tile-completion-tools">${completedCount > 1 ? `<span class="tile-completion-count" aria-label="Completed ${completedCount} times today">×${completedCount}</span>` : ""}<button type="button" class="tile-undo" data-undo-completion="${q.id}" aria-label="Remove one completion from ${escapeHtml(q.title)}" title="Undo one completion">−</button></div>` : ""}
     </article>`;
   return `
   <article class="quest-card ${reorderMode ? "reorder-item" : ""} ${done ? "completed" : ""}" data-id="${q.id}">
@@ -663,8 +673,13 @@ function weekdayText(days) {
   return days.map(d=>names[d]).join(", ");
 }
 
+function isQuestVisibleInLibrary(quest) {
+  return !(quest.type === "oneoff" && isQuestEverCompleted(quest.id));
+}
+
 function renderQuestLibrary() {
-  const qs = state.quests.filter(q => questFilter === "all" || q.type === questFilter);
+  const qs = state.quests.filter(isQuestVisibleInLibrary)
+    .filter(q => questFilter === "all" || q.type === questFilter);
   $("#questLibrary").innerHTML = qs.length ? qs.map(q=>questCard(q,false)).join("") :
     `<div class="empty-state">Nothing here yet.</div>`;
   const reorderButton = $("#reorderBtn");
@@ -773,12 +788,15 @@ function reviewQuestRow(q,date,dateKey,editableDate) {
 }
 
 function commitQuestDragOrder(ids) {
-  if (!Array.isArray(ids) || ids.length !== state.quests.length) return false;
+  if (!Array.isArray(ids) || !ids.length) return false;
   const byId = new Map(state.quests.map(quest=>[quest.id,quest]));
-  if (new Set(ids).size !== state.quests.length || ids.some(id=>!byId.has(id))) return false;
+  const visibleIds = state.quests.filter(isQuestVisibleInLibrary).map(quest=>quest.id);
+  if (ids.length !== visibleIds.length || new Set(ids).size !== visibleIds.length || ids.some(id=>!byId.has(id))) return false;
   const previous = state.quests.map(quest=>quest.id);
-  if (previous.every((id,index)=>id===ids[index])) return false;
-  state.quests = ids.map(id=>byId.get(id));
+  const hidden = state.quests.filter(quest=>!ids.includes(quest.id));
+  const next = [...ids.map(id=>byId.get(id)),...hidden];
+  if (previous.every((id,index)=>id===next[index]?.id)) return false;
+  state.quests = next;
   save();
   renderAll();
   showToast("Quest order saved");
@@ -926,7 +944,7 @@ function stoicWeekMetrics(start,end,asOf=new Date()) {
     const dateKey=localDateKey(date);
     const score=dailyScoreFor(date);
     const hasScore=plannedXpForDate(date)>0;
-    const clears=Object.values(state.completions?.[dateKey] || {}).filter(Boolean).length;
+    const clears=Object.keys(state.completions?.[dateKey] || {}).reduce((sum,id)=>sum+completionCount(id,dateKey),0);
     trackedDays+=1;
     questClears+=clears;
     if (hasScore) {
@@ -1148,7 +1166,9 @@ function renderCharacter() {
     </div>`;
   }).join("");
   $("#totalXpStat").textContent = totalXp();
-  $("#completedQuestStat").textContent = Object.values(state.completions).reduce((s,d)=>s+Object.values(d).filter(Boolean).length,0);
+  $("#completedQuestStat").textContent = Object.entries(state.completions).reduce((sum,[dateKey,day])=>{
+    return sum+Object.keys(day || {}).reduce((daySum,id)=>daySum+completionCount(id,dateKey),0);
+  },0);
   $("#strongDayStat").textContent = strongDayCount();
   renderStoicCalendar();
 }
@@ -1171,24 +1191,57 @@ function toggleQuestCompletionForDate(id,dateKey,completedAt=new Date().toISOStr
   return {q,wasDone};
 }
 
+function addQuestCompletionForDate(id,dateKey,completedAt=new Date().toISOString()) {
+  const q = state.quests.find(x=>x.id===id);
+  if (!q) return null;
+  const existing = completionRecord(id,dateKey);
+  state.completions[dateKey] ||= {};
+  state.completions[dateKey][id] = normalizeCompletionRecord({
+    ...(existing || {}),
+    completedAt,
+    questTitle:existing?.questTitle || q.title,
+    categoryId:existing?.categoryId || q.categoryId,
+    difficulty:existing?.difficulty || q.difficulty,
+    xpAwarded:existing?.xpAwarded ?? xpForQuest(q),
+    count:(existing?.count || 0)+1
+  },q,dateKey);
+  return {q,previousCount:existing?.count || 0,count:(existing?.count || 0)+1};
+}
+
+function removeQuestCompletionForDate(id,dateKey) {
+  const q = state.quests.find(x=>x.id===id);
+  const existing = completionRecord(id,dateKey);
+  if (!q || !existing) return null;
+  if (existing.count > 1) {
+    state.completions[dateKey][id] = normalizeCompletionRecord({...existing,count:existing.count-1},q,dateKey);
+  } else {
+    delete state.completions[dateKey][id];
+    if (!Object.keys(state.completions[dateKey]).length) delete state.completions[dateKey];
+  }
+  return {q,previousCount:existing.count,count:existing.count-1};
+}
+
 function toggleComplete(id, button) {
   const key = localDateKey();
   const oldLevel = levelFromXp(totalXp());
-  const change = toggleQuestCompletionForDate(id,key);
+  const change = addQuestCompletionForDate(id,key);
   if (!change) return;
-  const {q,wasDone} = change;
+  const {q,count} = change;
 
   save();
   const newLevel = levelFromXp(totalXp());
+  xpPop(button, xpForQuest(q));
+  if (navigator.vibrate) navigator.vibrate([18,30,18]);
+  if (newLevel > oldLevel) showLevelUp(newLevel);
+  else showToast(count > 1 ? `Cleared again · +${xpForQuest(q)} XP · ×${count} today` : `Quest cleared · +${xpForQuest(q)} XP`);
+  renderAll();
+}
 
-  if (!wasDone) {
-    xpPop(button, xpForQuest(q));
-    if (navigator.vibrate) navigator.vibrate([18,30,18]);
-    if (newLevel > oldLevel) showLevelUp(newLevel);
-    else showToast(`Quest cleared · +${xpForQuest(q)} XP`);
-  } else {
-    showToast("Quest reopened");
-  }
+function undoTodayCompletion(id) {
+  const change = removeQuestCompletionForDate(id,localDateKey());
+  if (!change) return;
+  save();
+  showToast(change.count > 0 ? `One clear removed · ×${change.count} today` : "Quest reopened");
   renderAll();
 }
 
@@ -1454,8 +1507,16 @@ function bindEvents() {
       toggleHistoryCompletion(historyCompletion.dataset.historyComplete);
       return;
     }
+    const undoCompletion=e.target.closest("[data-undo-completion]");
+    if(undoCompletion){
+      undoTodayCompletion(undoCompletion.dataset.undoCompletion);
+      return;
+    }
     const c=e.target.closest("[data-complete]");
-    if(c) toggleComplete(c.dataset.complete,c);
+    if(c){
+      toggleComplete(c.dataset.complete,c);
+      return;
+    }
     const t=e.target.closest("[data-toggle]");
     if(t){
       const q=state.quests.find(x=>x.id===t.dataset.toggle);
