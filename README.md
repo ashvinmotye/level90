@@ -2,6 +2,16 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 49 Direct Actions and Interface Consistency
+
+- Restores the checked medallion as a direct undo/decrement control on completed Today quests.
+- Keeps visible `−` and `+1` controls on every completed card so repeat counts can be adjusted without hidden gestures.
+- Preserves the repeat-count badge on the medallion and the user-corrected centred checkmark geometry from Version 48.
+- Gives individual notification Clear and Clear all actions stronger contrast, depth and destructive-action styling.
+- Replaces content-sized Quest filter pills with one equal-width three-option segmented control.
+- Preserves all existing undo toasts, XP calculations, quest choreography, accessibility and reduced-motion behaviour.
+- Requires only the updated PWA files; there is no Supabase migration or Edge Function deployment for this version.
+
 ## Version 48 Ascension Quest Cards
 
 - Replaces Today’s tile grid with sleek full-width quest cards derived from the Ascension Lines visual system.

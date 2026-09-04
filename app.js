@@ -851,22 +851,23 @@ function questCard(q, todayMode=false, dateKey=localDateKey()) {
     `Repeats ${weekdayText(q.schedule?.days || [])}`;
   if(todayMode) return `
     <article class="quest-card today-tile ridge-${ridgeIndex} ${done ? "completed" : ""}" data-id="${q.id}" data-ridge="${ridgeIndex}">
-      <button class="tile-hit" data-complete="${q.id}" aria-label="${done ? `Complete ${escapeHtml(q.title)} again` : `Complete ${escapeHtml(q.title)}`}">
+      <button class="tile-hit" ${done ? `data-undo-completion="${q.id}"` : `data-complete="${q.id}"`} aria-label="${done ? `Remove one completion from ${escapeHtml(q.title)}` : `Complete ${escapeHtml(q.title)}`}">
         <span class="today-completion-medallion ${done ? "is-complete" : ""}" aria-hidden="true">
           <span class="today-completion-mark"></span>
           ${completedCount > 1 ? `<span class="tile-completion-count">×${completedCount}</span>` : ""}
         </span>
       </button>
-      ${done ? `<button type="button" class="tile-copy tile-copy-toggle" data-toggle-today-tools="${q.id}" aria-expanded="false" aria-controls="today-card-tools-${q.id}" aria-label="Show actions for ${escapeHtml(q.title)}">` : `<div class="tile-copy">`}
+      <div class="tile-copy">
         <div class="quest-title">${escapeHtml(q.title)}</div>
         <div class="tile-category">${escapeHtml(cat.name)} <span aria-hidden="true">·</span> Ridge ${ridgeIndex}${streakBadge}</div>
-      ${done ? `</button>` : `</div>`}
-      <div class="tile-xp">+${d.xp} XP</div>
-      ${done ? `<div class="tile-completion-tools" id="today-card-tools-${q.id}" hidden>
-        <span class="tile-completion-summary">${completedCount === 1 ? "Cleared once today" : `${completedCount} clears today`}</span>
-        <button type="button" class="tile-repeat-secondary" data-complete="${q.id}" aria-label="Complete ${escapeHtml(q.title)} again">+1 again</button>
-        <button type="button" class="tile-undo" data-undo-completion="${q.id}" aria-label="Remove one completion from ${escapeHtml(q.title)}" title="Undo one completion"><span>Remove one</span></button>
-      </div>` : ""}
+      </div>
+      <div class="tile-reward">
+        <div class="tile-xp">+${d.xp} XP</div>
+        ${done ? `<div class="tile-count-actions" aria-label="Completed ${completedCount} ${completedCount === 1 ? "time" : "times"} today">
+          <button type="button" class="tile-decrement-action" data-undo-completion="${q.id}" aria-label="Remove one completion from ${escapeHtml(q.title)}" title="Remove one completion"><span aria-hidden="true"></span></button>
+          <button type="button" class="tile-repeat-action" data-complete="${q.id}" aria-label="Complete ${escapeHtml(q.title)} again" title="Complete again">+1</button>
+        </div>` : ""}
+      </div>
     </article>`;
   return `
   <article class="quest-card ridge-${ridgeIndex} ${reorderMode ? "reorder-item" : ""} ${done ? "completed" : ""}" data-id="${q.id}" data-ridge="${ridgeIndex}">
@@ -1560,31 +1561,13 @@ function animateTodayCardLayout(previousRects,focusQuestId,{repeat=false}={}) {
   });
   const focusCard=$$(".today-tile[data-id]",$("#view-today")).find(card=>card.dataset.id===focusQuestId);
   if (!focusCard) return;
-  const pulseTarget=repeat ? (focusCard.querySelector(".tile-completion-count") || focusCard.querySelector(".today-completion-medallion")) : focusCard;
+  const pulseTarget=repeat ? (focusCard.querySelector(".tile-completion-count") || focusCard.querySelector(".tile-repeat-action") || focusCard.querySelector(".today-completion-medallion")) : focusCard;
   pulseTarget?.animate?.(
     repeat
       ? [{transform:"scale(.78)",opacity:.55},{transform:"scale(1.18)",opacity:1},{transform:"scale(1)",opacity:1}]
       : [{filter:"brightness(1.45)"},{filter:"brightness(1)"}],
     {duration:repeat ? 360 : 520,easing:"cubic-bezier(.2,.8,.2,1)"}
   );
-}
-
-function toggleTodayCardTools(button) {
-  const card=button?.closest?.(".today-tile.completed");
-  const tools=card?.querySelector?.(".tile-completion-tools");
-  if (!card || !tools) return;
-  const shouldOpen=tools.hidden;
-  $$(".today-tile.completed .tile-completion-tools:not([hidden])",$("#view-today")).forEach(openTools=>{
-    if (openTools===tools) return;
-    openTools.hidden=true;
-    const openCard=openTools.closest(".today-tile");
-    openCard?.classList.remove("tools-open");
-    openCard?.querySelector("[data-toggle-today-tools]")?.setAttribute("aria-expanded","false");
-  });
-  tools.hidden=!shouldOpen;
-  card.classList.toggle("tools-open",shouldOpen);
-  button.setAttribute("aria-expanded",String(shouldOpen));
-  if (shouldOpen) announceInteraction(`${card.querySelector(".quest-title")?.textContent || "Quest"} actions shown.`);
 }
 
 function restoreCompletionSnapshot(id,dateKey,record) {
@@ -2138,11 +2121,6 @@ function bindEvents() {
     const historyCompletion=e.target.closest("[data-history-complete]");
     if(historyCompletion){
       toggleHistoryCompletion(historyCompletion.dataset.historyComplete);
-      return;
-    }
-    const todayToolsToggle=e.target.closest("[data-toggle-today-tools]");
-    if(todayToolsToggle){
-      toggleTodayCardTools(todayToolsToggle);
       return;
     }
     const undoCompletion=e.target.closest("[data-undo-completion]");
