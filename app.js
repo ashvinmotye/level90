@@ -9,6 +9,7 @@ let questDragState = null;
 let selectedHistoryDate = null;
 let historyMonth = null;
 let levelGlowAnimation = null;
+let ascentEnergyAnimation = null;
 let completionMotionBusy = false;
 let lastSavedStateJson = "";
 let activeView = "today";
@@ -32,6 +33,28 @@ const STOIC_DEFAULT_HORIZON = 90;
 const STOIC_MIN_HORIZON = 50;
 const STOIC_MAX_HORIZON = 120;
 const STOIC_TEXT_LIMITS = {intention:220,control:360,reaction:360,correction:360};
+const ASCENT_RIDGES = [
+  {
+    path:"M48 543C119 494 174 512 220 455C262 403 266 333 298 280C328 230 368 215 397 165",
+    waypoints:[[48,543],[220,455],[298,280],[397,165]]
+  },
+  {
+    path:"M62 548C139 523 183 542 207 478C231 414 189 370 256 326C319 284 286 226 358 191C387 177 404 161 421 140",
+    waypoints:[[62,548],[207,478],[256,326],[421,140]]
+  },
+  {
+    path:"M39 551C85 508 154 526 170 459C185 397 142 350 220 310C288 275 255 220 337 187C377 171 392 142 405 122",
+    waypoints:[[39,551],[170,459],[220,310],[405,122]]
+  },
+  {
+    path:"M76 552C151 493 116 458 204 433C287 409 244 331 310 288C367 250 337 201 410 153",
+    waypoints:[[76,552],[204,433],[310,288],[410,153]]
+  },
+  {
+    path:"M45 550C111 532 179 493 188 437C199 367 274 388 279 314C284 249 354 250 369 193C379 160 404 149 430 132",
+    waypoints:[[45,550],[188,437],[279,314],[430,132]]
+  }
+];
 const ICON_LIBRARY = [
   ["✨","sparkle magic default"],["⚡","energy discipline focus"],["✅","check done complete"],
   ["💪","strength body workout"],["🏋️‍♀️","weights gym strength workout"],["🏃","run cardio fitness"],
@@ -744,6 +767,48 @@ function renderAll() {
   renderDifficulty();
   requestNameIfNeeded();
 }
+
+function ascentRidgeForLevel(level) {
+  const safeLevel=Math.max(1,Math.round(Number(level) || 1));
+  return ASCENT_RIDGES[(safeLevel-1)%ASCENT_RIDGES.length];
+}
+
+function renderAscentRidge(level,progress,{maxed=false}={}) {
+  const ridge=ascentRidgeForLevel(level);
+  const base=$("#ascentRouteBase");
+  const route=$("#ascentRouteProgress");
+  const history=$("#ascentHistoryRidges");
+  const world=$("#ascentWorld");
+  const routeProgress=maxed ? 100 : Math.max(8,Math.min(100,Math.round(progress)));
+  const routeChanged=route?.getAttribute("d")!==ridge.path;
+  if (base) base.setAttribute("d",ridge.path);
+  if (route) {
+    if (routeChanged) route.classList.add("route-resetting");
+    route.setAttribute("d",ridge.path);
+    route.style.strokeDasharray=`${routeProgress} 100`;
+    if (routeChanged) requestAnimationFrame(()=>route.classList.remove("route-resetting"));
+  }
+  if (history) {
+    const completedDepth=Math.min(3,Math.max(0,level-1));
+    history.innerHTML=Array.from({length:completedDepth},(_,index)=>{
+      const previous=ascentRidgeForLevel(level-index-1);
+      return `<path class="ascent-history-ridge" data-depth="${index+1}" d="${previous.path}" />`;
+    }).join("");
+  }
+  const thresholds=[0,33,66,99];
+  $$(".ascent-waypoint",$("#ascentRouteMap")).forEach((waypoint,index)=>{
+    const [x,y]=ridge.waypoints[index] || ridge.waypoints[ridge.waypoints.length-1];
+    waypoint.setAttribute("cx",String(x));
+    waypoint.setAttribute("cy",String(y));
+    waypoint.dataset.reached=String(routeProgress>=thresholds[index]);
+  });
+  if (world) {
+    world.style.setProperty("--ascent-progress",`${routeProgress}%`);
+    world.dataset.ascentState=maxed ? "ascended" : progress>=75 ? "near-ridge" : "climbing";
+    world.dataset.ridgeVariant=String((Math.max(1,level)-1)%ASCENT_RIDGES.length+1);
+  }
+}
+
 function renderHeader() {
   const xp = totalXp();
   const p = levelProgress(xp);
@@ -760,13 +825,7 @@ function renderHeader() {
   $("#nextLevelText").textContent = p.maxed ? "LEVEL 90 · ASCENDED" : `NEXT · LEVEL ${p.lvl + 1}`;
   $("#levelProgressFill").style.width=`${p.pct}%`;
   $("#levelProgressTrack").setAttribute("aria-valuenow",String(Math.round(p.pct)));
-  const route = $("#ascentRouteProgress");
-  if (route) route.style.strokeDasharray = `${Math.max(8,Math.round(p.pct))} 100`;
-  const ascentWorld = $("#ascentWorld");
-  if (ascentWorld) {
-    ascentWorld.style.setProperty("--ascent-progress",`${Math.max(8,Math.round(p.pct))}%`);
-    ascentWorld.dataset.ascentState = p.maxed ? "ascended" : p.pct >= 75 ? "near-ridge" : "climbing";
-  }
+  renderAscentRidge(p.lvl,p.pct,{maxed:p.maxed});
   $("#altitudeLabel").textContent = p.maxed ? "SUMMIT HELD" : p.pct >= 75 ? "RIDGE WITHIN REACH" : "CURRENT ALTITUDE";
   $("#journeyDayLabel").textContent = `JOURNEY DAY ${day}`;
   $("#levelPrompt").textContent = p.maxed ? "LEVEL 90 REACHED · KEEP BUILDING YOUR CHARACTER" : nextQuest
@@ -1635,12 +1694,19 @@ function toggleComplete(id, button) {
   xpPop(button, xpForQuest(q));
   if (!reducedMotion) interactionHaptic(firstClear ? [18,30,18] : 18);
   const completeTransition=()=>{
-    renderAll();
-    animateTodayCardLayout(previousRects,id,{repeat:!firstClear});
-    completionMotionBusy=false;
-    if (newLevel > oldLevel) showLevelUp(newLevel);
-    if (finalClear) showDailyClearMoment(xpForQuest(q),{delay:newLevel > oldLevel ? 1750 : 0});
-    else if (newLevel <= oldLevel) showToast(count > 1 ? `Cleared again · +${xpForQuest(q)} XP · ×${count} today` : `Quest cleared · +${xpForQuest(q)} XP`);
+    const renderCompletedState=()=>{
+      renderAll();
+      animateTodayCardLayout(previousRects,id,{repeat:!firstClear});
+      completionMotionBusy=false;
+      if (newLevel > oldLevel) showLevelUp(newLevel);
+      if (finalClear) showDailyClearMoment(xpForQuest(q),{delay:newLevel > oldLevel ? 1750 : 0});
+      else if (newLevel <= oldLevel) showToast(count > 1 ? `Cleared again · +${xpForQuest(q)} XP · ×${count} today` : `Quest cleared · +${xpForQuest(q)} XP`);
+    };
+    if (newLevel > oldLevel && !reducedMotion) {
+      animateRouteToSummit().then(renderCompletedState);
+      return;
+    }
+    renderCompletedState();
   };
   if (reducedMotion) completeTransition();
   else window.setTimeout(completeTransition,firstClear ? 300 : 160);
@@ -1719,12 +1785,52 @@ function xpPop(anchor, xp) {
 
 function animateAscentEnergy() {
   const world=$("#ascentWorld");
-  if (!world) return;
+  const stage=$("#ascentStage");
+  const route=$("#ascentRouteProgress");
+  const energy=$("#ascentEnergy");
+  const map=$("#ascentRouteMap");
+  if (!world || !stage || !route || !energy || !map || prefersReducedMotion() || typeof energy.animate!=="function") return;
+  const matrix=route.getScreenCTM?.();
+  const length=route.getTotalLength?.();
+  if (!matrix || !Number.isFinite(length) || length<=0) return;
+  const stageRect=stage.getBoundingClientRect();
+  const point=map.createSVGPoint();
+  const steps=14;
+  const frames=Array.from({length:steps+1},(_,index)=>{
+    const fraction=index/steps;
+    const routePoint=route.getPointAtLength(length*fraction);
+    point.x=routePoint.x;
+    point.y=routePoint.y;
+    const screenPoint=point.matrixTransform(matrix);
+    const scale=fraction<.12 ? .55+fraction*3.75 : 1-fraction*.32;
+    return {
+      offset:fraction,
+      opacity:fraction<.04 || fraction>.94 ? 0 : 1,
+      transform:`translate(${screenPoint.x-stageRect.left-6}px,${screenPoint.y-stageRect.top-6}px) scale(${scale})`
+    };
+  });
+  ascentEnergyAnimation?.cancel?.();
   world.classList.remove("energy-climbing");
   void world.offsetWidth;
   world.classList.add("energy-climbing");
-  window.clearTimeout(animateAscentEnergy.timer);
-  animateAscentEnergy.timer=window.setTimeout(()=>world.classList.remove("energy-climbing"),1100);
+  ascentEnergyAnimation=energy.animate(frames,{duration:1020,easing:"cubic-bezier(.3,.75,.2,1)"});
+  ascentEnergyAnimation.onfinish=()=>{
+    ascentEnergyAnimation=null;
+    world.classList.remove("energy-climbing");
+  };
+}
+
+function animateRouteToSummit() {
+  const world=$("#ascentWorld");
+  const route=$("#ascentRouteProgress");
+  if (!world || !route || prefersReducedMotion()) return Promise.resolve();
+  world.classList.add("summit-arrival");
+  route.classList.remove("route-resetting");
+  route.style.strokeDasharray="100 100";
+  return new Promise(resolve=>window.setTimeout(()=>{
+    world.classList.remove("summit-arrival");
+    resolve();
+  },780));
 }
 function showLevelUp(level) {
   if (prefersReducedMotion()) {

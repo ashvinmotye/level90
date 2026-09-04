@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Moirai+One&amp;family=Rubik+Lines&amp;family=Zen+Tokyo+Zoo&amp;display=swap" />
-  <link rel="stylesheet" href="./styles.css?v=49" />
+  <link rel="stylesheet" href="./styles.css?v=50" />
 </head>
 <body>
   <svg class="aura-icon-sprite" aria-hidden="true" focusable="false">
@@ -172,43 +172,49 @@
             <path class="terrain-contour terrain-contour-3" d="M-49 491C23 420 83 459 121 365C158 274 98 198 185 115C261 43 330 62 421-20" />
             <path class="terrain-contour terrain-contour-4" d="M34 651C142 579 251 612 315 510C377 411 315 344 399 273C464 218 518 231 577 183" />
             <path class="terrain-contour terrain-contour-5" d="M-28 386C32 332 64 354 88 286C117 203 70 153 142 81C195 28 237 23 291-18" />
-            <path class="ascent-route-base" d="M48 543C119 494 174 512 220 455C262 403 266 333 298 280C328 230 368 215 397 165" />
-            <path id="ascentRouteProgress" class="ascent-route-progress" pathLength="100" d="M48 543C119 494 174 512 220 455C262 403 266 333 298 280C328 230 368 215 397 165" />
-            <circle class="ascent-waypoint ascent-waypoint-1" cx="48" cy="543" r="7" />
-            <circle class="ascent-waypoint ascent-waypoint-2" cx="220" cy="455" r="7" />
-            <circle class="ascent-waypoint ascent-waypoint-3" cx="298" cy="280" r="7" />
-            <circle class="ascent-waypoint ascent-waypoint-4" cx="397" cy="165" r="7" />
           </svg>
-          <div id="ascentEnergy" class="ascent-energy" aria-hidden="true"></div>
           <div class="journey-meta minimal-meta">
             <span id="journeyDayLabel">JOURNEY DAY 1</span>
             <span id="dateLabel">Ready to begin.</span>
           </div>
 
-          <span id="altitudeLabel" class="altitude-label">CURRENT ALTITUDE</span>
-          <div id="levelOrb" class="level-orb">
-            <div class="level-halos" aria-hidden="true"><i></i><i></i><i></i></div>
-            <div class="level-orb-inner">
-              <span>LEVEL</span>
-              <strong id="levelNumber">1</strong>
-            </div>
-          </div>
+          <div id="ascentStage" class="ascent-stage">
+            <svg id="ascentRouteMap" class="ascent-route-map" viewBox="0 0 520 620" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+              <g id="ascentHistoryRidges" class="ascent-history-ridges"></g>
+              <path id="ascentRouteBase" class="ascent-route-base" d="M48 543C119 494 174 512 220 455C262 403 266 333 298 280C328 230 368 215 397 165" />
+              <path id="ascentRouteProgress" class="ascent-route-progress" pathLength="100" d="M48 543C119 494 174 512 220 455C262 403 266 333 298 280C328 230 368 215 397 165" />
+              <circle class="ascent-waypoint ascent-waypoint-1" cx="48" cy="543" r="7" />
+              <circle class="ascent-waypoint ascent-waypoint-2" cx="220" cy="455" r="7" />
+              <circle class="ascent-waypoint ascent-waypoint-3" cx="298" cy="280" r="7" />
+              <circle class="ascent-waypoint ascent-waypoint-4" cx="397" cy="165" r="7" />
+            </svg>
+            <div id="ascentEnergy" class="ascent-energy" aria-hidden="true"></div>
 
-          <div class="next-level-copy">
-            <div class="level-progress-labels">
-              <strong id="nextLevelText">NEXT · LEVEL 2</strong>
-              <small id="xpText">0 / 80 XP</small>
+            <span id="altitudeLabel" class="altitude-label">CURRENT ALTITUDE</span>
+            <div id="levelOrb" class="level-orb">
+              <div class="level-halos" aria-hidden="true"><i></i><i></i><i></i></div>
+              <div class="level-orb-inner">
+                <span>LEVEL</span>
+                <strong id="levelNumber">1</strong>
+              </div>
             </div>
-            <div id="levelProgressTrack" class="level-progress-track" role="progressbar" aria-label="Current level progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-              <i id="levelProgressFill"></i>
-            </div>
-          </div>
-          <div id="levelPrompt" class="next-move-copy">Clear a quest to begin your climb.</div>
 
-          <div class="home-stats">
-            <span><strong id="dailyScore">0</strong> score</span>
-            <span><strong id="todayXp">0</strong> XP today</span>
-            <span><strong id="momentumScore">0%</strong> momentum</span>
+            <div class="next-level-copy">
+              <div class="level-progress-labels">
+                <strong id="nextLevelText">NEXT · LEVEL 2</strong>
+                <small id="xpText">0 / 80 XP</small>
+              </div>
+              <div id="levelProgressTrack" class="level-progress-track" role="progressbar" aria-label="Current level progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <i id="levelProgressFill"></i>
+              </div>
+            </div>
+            <div id="levelPrompt" class="next-move-copy">Clear a quest to begin your climb.</div>
+
+            <div class="home-stats">
+              <span><strong id="dailyScore">0</strong> score</span>
+              <span><strong id="todayXp">0</strong> XP today</span>
+              <span><strong id="momentumScore">0%</strong> momentum</span>
+            </div>
           </div>
         </div>
 
@@ -743,8 +749,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3" crossorigin="anonymous" defer></script>
-  <script src="./cloud.js?v=49" defer></script>
-  <script src="./notifications.js?v=49" defer></script>
-  <script src="./app.js?v=49" defer></script>
+  <script src="./cloud.js?v=50" defer></script>
+  <script src="./notifications.js?v=50" defer></script>
+  <script src="./app.js?v=50" defer></script>
 </body>
 </html>

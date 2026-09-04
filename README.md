@@ -2,6 +2,17 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 50 Responsive Ridges
+
+- Places the route, waypoints, orb, level progress and Today statistics inside one fixed-proportion ascent stage.
+- Keeps a given XP percentage at the same visual location relative to the orb and waypoints across phone, tablet and desktop sizes.
+- Separates decorative terrain from the canonical route map so background cropping can no longer distort progression geometry.
+- Adds five deterministic upward ridge shapes; each new level selects the next route while recent completed ridges remain faintly visible behind it.
+- Completes the active ridge to the summit before the next level route appears, avoiding an abrupt near-summit-to-8% jump.
+- Makes the XP energy particle follow the active SVG route at the current rendered scale on every screen size.
+- Keeps Level 90 fully illuminated with the existing **SUMMIT HELD** state.
+- Requires only the updated PWA files; there is no Supabase migration or Edge Function deployment for this version.
+
 ## Version 49 Direct Actions and Interface Consistency
 
 - Restores the checked medallion as a direct undo/decrement control on completed Today quests.
