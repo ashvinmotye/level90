@@ -2,6 +2,13 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 52 Runtime Repair
+
+- Removes the final obsolete `ASCENT_RIDGES` reference from Today rendering after Version 51 replaced the preset array with the per-level ridge generator.
+- Adds a regression guard that fails if any `ASCENT_RIDGES` identifier remains in the application.
+- Bumps all PWA asset versions and the service-worker cache so installed apps receive the repair immediately.
+- Requires no Supabase migration or Edge Function deployment.
+
 ## Version 51 Minimal Level90
 
 - Rebuilds Today around the supplied minimal navy direction: `LEVEL UP`, the full date, journey day, one active ridge, the current level and the three retained daily metrics.

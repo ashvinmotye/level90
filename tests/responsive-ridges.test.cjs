@@ -26,7 +26,7 @@ assert.match(css,/\.level-display\.level-orb \{[\s\S]*?position:absolute[\s\S]*?
 assert.match(css,/\.ascent-route-progress\.route-resetting \{\s*transition:none;/);
 assert.match(css,/\.ascent-route-progress \{[\s\S]*?stroke:var\(--text\)[\s\S]*?stroke-dasharray:0 100/);
 
-assert.doesNotMatch(app,/const ASCENT_RIDGES = \[/,"the current ridge must not repeat from a short preset list");
+assert.doesNotMatch(app,/ASCENT_RIDGES/,"no reference to the retired ridge preset array may remain");
 assert.match(app,/function ascentRidgeForLevel\(/);
 assert.match(app,/function renderAscentRidge\(/);
 assert.doesNotMatch(app,/history\.innerHTML=Array\.from/);
@@ -43,7 +43,36 @@ const generated = Array.from({length:90},(_,index)=>ascentRidgeForLevel(index+1)
 assert.equal(new Set(generated.map(ridge=>ridge.path)).size,90,"every level from 1–90 must have a distinct ridge shape");
 assert.ok(generated.every(ridge=>ridge.waypoints.length===2),"every ridge must expose exactly two endpoint points");
 
-assert.match(serviceWorker,/level90-v51/);
+const renderFunctionSource = app.match(/function renderAscentRidge\(level,progress,\{maxed=false\}=\{\}\) \{[\s\S]*?\n\}/)?.[0];
+assert.ok(renderFunctionSource,"ridge renderer should be extractable");
+const attributes = new Map();
+const makeNode = () => ({
+  classList:{add(){},remove(){}},
+  dataset:{},
+  style:{strokeDasharray:"",setProperty(){}},
+  getAttribute(name){ return attributes.get(name) || ""; },
+  setAttribute(name,value){ attributes.set(name,String(value)); }
+});
+const nodes = new Map([
+  ["#ascentRouteBase",makeNode()],
+  ["#ascentRouteProgress",makeNode()],
+  ["#ascentWorld",makeNode()],
+  ["#ascentStage",makeNode()],
+  ["#ascentRouteMap",makeNode()]
+]);
+const waypoints=[makeNode(),makeNode()];
+const renderAscentRidge = Function("$","$$","requestAnimationFrame","ascentRidgeForLevel",`return (${renderFunctionSource})`)(
+  selector=>nodes.get(selector) || null,
+  selector=>selector === ".ascent-waypoint" ? waypoints : [],
+  callback=>callback(),
+  ascentRidgeForLevel
+);
+assert.doesNotThrow(()=>renderAscentRidge(14,68),"the ridge renderer must execute without retired globals");
+assert.equal(nodes.get("#ascentRouteProgress").style.strokeDasharray,"68 100");
+assert.equal(nodes.get("#ascentStage").getAttribute("aria-valuenow"),"68");
+
+assert.match(serviceWorker,/level90-v52/);
+assert.match(readme,/## Version 52 Runtime Repair/);
 assert.match(readme,/## Version 51 Minimal Level90/);
 
-console.log("Level90 Version 51 minimal ridge tests passed");
+console.log("Level90 Version 52 ridge runtime tests passed");

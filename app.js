@@ -753,7 +753,6 @@ function renderAscentRidge(level,progress,{maxed=false}={}) {
   if (world) {
     world.style.setProperty("--ascent-progress",`${routeProgress}%`);
     world.dataset.ascentState=maxed ? "ascended" : progress>=75 ? "near-ridge" : "climbing";
-    world.dataset.ridgeVariant=String((Math.max(1,level)-1)%ASCENT_RIDGES.length+1);
   }
 }
 
