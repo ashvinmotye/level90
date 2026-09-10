@@ -2,6 +2,14 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 53 Desktop Layout Repair
+
+- Corrects a CSS-specificity conflict that allowed the retired centred-orb rule to override the new desktop level-number composition.
+- Locks the large level number to the right of the ridge stage on desktop, tablet and mobile while preserving the responsive type scale.
+- Adds regression coverage for the desktop width, full-width Today composition, action sizing and winning level-position selector.
+- Bumps every PWA asset and cache reference so installed apps receive the desktop repair.
+- Requires no Supabase migration or Edge Function deployment.
+
 ## Version 52 Runtime Repair
 
 - Removes the final obsolete `ASCENT_RIDGES` reference from Today rendering after Version 51 replaced the preset array with the per-level ridge generator.

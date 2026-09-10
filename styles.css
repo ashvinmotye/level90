@@ -1682,7 +1682,7 @@ body[data-level-font] #levelNumber {
   filter:none;
 }
 
-.level-display.level-orb {
+.ascent-world .ascent-stage .level-display.level-orb {
   position:absolute;
   z-index:1;
   top:auto;
@@ -1706,7 +1706,7 @@ body[data-level-font] #levelNumber {
   isolation:auto;
 }
 
-.level-display.level-orb::before {
+.ascent-world .ascent-stage .level-display.level-orb::before {
   display:none;
 }
 
@@ -1726,7 +1726,7 @@ body[data-level-font] #levelNumber {
   transform:none;
 }
 
-.level-display.level-orb.charging {
+.ascent-world .ascent-stage .level-display.level-orb.charging {
   animation:none;
 }
 

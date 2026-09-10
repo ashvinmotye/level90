@@ -22,7 +22,7 @@ assert.doesNotMatch(html,/class="ascent-terrain"/);
 assert.match(css,/\/\* Version 51 · Minimal Level90 \*\//);
 assert.match(css,/\.ascent-stage \{[\s\S]*?aspect-ratio:1000 \/ 520/);
 assert.match(css,/\.ascent-route-map \{[\s\S]*?position:absolute[\s\S]*?inset:0[\s\S]*?width:100%;[\s\S]*?height:100%/);
-assert.match(css,/\.level-display\.level-orb \{[\s\S]*?position:absolute[\s\S]*?right:0[\s\S]*?bottom:1%/);
+assert.match(css,/\.ascent-world \.ascent-stage \.level-display\.level-orb \{[\s\S]*?position:absolute[\s\S]*?right:0[\s\S]*?bottom:1%/);
 assert.match(css,/\.ascent-route-progress\.route-resetting \{\s*transition:none;/);
 assert.match(css,/\.ascent-route-progress \{[\s\S]*?stroke:var\(--text\)[\s\S]*?stroke-dasharray:0 100/);
 
@@ -71,8 +71,9 @@ assert.doesNotThrow(()=>renderAscentRidge(14,68),"the ridge renderer must execut
 assert.equal(nodes.get("#ascentRouteProgress").style.strokeDasharray,"68 100");
 assert.equal(nodes.get("#ascentStage").getAttribute("aria-valuenow"),"68");
 
-assert.match(serviceWorker,/level90-v52/);
+assert.match(serviceWorker,/level90-v53/);
+assert.match(readme,/## Version 53 Desktop Layout Repair/);
 assert.match(readme,/## Version 52 Runtime Repair/);
 assert.match(readme,/## Version 51 Minimal Level90/);
 
-console.log("Level90 Version 52 ridge runtime tests passed");
+console.log("Level90 Version 53 ridge runtime tests passed");
