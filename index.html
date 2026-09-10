@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#193546" />
+  <meta name="theme-color" content="#203444" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Level 90" />
@@ -13,8 +13,8 @@
   <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon-v39.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Moirai+One&amp;family=Rubik+Lines&amp;family=Zen+Tokyo+Zoo&amp;display=swap" />
-  <link rel="stylesheet" href="./styles.css?v=50" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;800;900&amp;family=Rubik+Doodle+Shadow&amp;display=swap" />
+  <link rel="stylesheet" href="./styles.css?v=51" />
 </head>
 <body>
   <svg class="aura-icon-sprite" aria-hidden="true" focusable="false">
@@ -143,7 +143,7 @@
   <div id="appShell" class="app-shell" hidden>
     <header class="topbar">
       <button id="profileGreetingBtn" class="profile-greeting" aria-label="Open settings">
-        <strong>Level up, <span id="greetingName" class="greeting-name">Player</span>!</strong><span class="greeting-wave" aria-hidden="true"><svg class="aura-icon"><use href="#icon-wave"></use></svg></span>
+        <strong>LEVEL UP</strong>
       </button>
       <div class="topbar-actions">
         <button id="notificationCenterButton" class="icon-btn notification-center-btn is-disabled" type="button" aria-label="Notifications are off. Open settings" title="Notifications">
@@ -166,55 +166,27 @@
       <section id="view-today" class="view active" tabindex="-1" aria-label="Today">
         <div class="today-layout">
         <div class="mock-home ascent-world" id="ascentWorld">
-          <svg class="ascent-terrain" viewBox="0 0 520 620" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-            <path class="terrain-contour terrain-contour-1" d="M-58 559C38 467 120 516 174 398C224 290 147 222 254 131C349 50 438 83 583-22" />
-            <path class="terrain-contour terrain-contour-2" d="M-72 607C48 506 145 565 210 437C263 332 190 267 293 178C383 100 466 132 601 32" />
-            <path class="terrain-contour terrain-contour-3" d="M-49 491C23 420 83 459 121 365C158 274 98 198 185 115C261 43 330 62 421-20" />
-            <path class="terrain-contour terrain-contour-4" d="M34 651C142 579 251 612 315 510C377 411 315 344 399 273C464 218 518 231 577 183" />
-            <path class="terrain-contour terrain-contour-5" d="M-28 386C32 332 64 354 88 286C117 203 70 153 142 81C195 28 237 23 291-18" />
-          </svg>
           <div class="journey-meta minimal-meta">
-            <span id="journeyDayLabel">JOURNEY DAY 1</span>
             <span id="dateLabel">Ready to begin.</span>
+            <span id="journeyDayLabel">Day 1</span>
           </div>
 
-          <div id="ascentStage" class="ascent-stage">
-            <svg id="ascentRouteMap" class="ascent-route-map" viewBox="0 0 520 620" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-              <g id="ascentHistoryRidges" class="ascent-history-ridges"></g>
-              <path id="ascentRouteBase" class="ascent-route-base" d="M48 543C119 494 174 512 220 455C262 403 266 333 298 280C328 230 368 215 397 165" />
-              <path id="ascentRouteProgress" class="ascent-route-progress" pathLength="100" d="M48 543C119 494 174 512 220 455C262 403 266 333 298 280C328 230 368 215 397 165" />
-              <circle class="ascent-waypoint ascent-waypoint-1" cx="48" cy="543" r="7" />
-              <circle class="ascent-waypoint ascent-waypoint-2" cx="220" cy="455" r="7" />
-              <circle class="ascent-waypoint ascent-waypoint-3" cx="298" cy="280" r="7" />
-              <circle class="ascent-waypoint ascent-waypoint-4" cx="397" cy="165" r="7" />
+          <div id="ascentStage" class="ascent-stage" role="progressbar" aria-label="Progress through the current level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <svg id="ascentRouteMap" class="ascent-route-map" viewBox="0 0 1000 520" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+              <path id="ascentRouteBase" class="ascent-route-base" d="M31 457C118 383 248 245 377 82" />
+              <path id="ascentRouteProgress" class="ascent-route-progress" pathLength="100" d="M31 457C118 383 248 245 377 82" />
+              <circle class="ascent-waypoint ascent-waypoint-start" cx="31" cy="457" r="9" />
+              <circle class="ascent-waypoint ascent-waypoint-end" cx="377" cy="82" r="9" />
             </svg>
-            <div id="ascentEnergy" class="ascent-energy" aria-hidden="true"></div>
-
-            <span id="altitudeLabel" class="altitude-label">CURRENT ALTITUDE</span>
-            <div id="levelOrb" class="level-orb">
-              <div class="level-halos" aria-hidden="true"><i></i><i></i><i></i></div>
-              <div class="level-orb-inner">
-                <span>LEVEL</span>
-                <strong id="levelNumber">1</strong>
-              </div>
+            <div id="levelOrb" class="level-orb level-display">
+              <strong id="levelNumber">1</strong>
             </div>
+          </div>
 
-            <div class="next-level-copy">
-              <div class="level-progress-labels">
-                <strong id="nextLevelText">NEXT · LEVEL 2</strong>
-                <small id="xpText">0 / 80 XP</small>
-              </div>
-              <div id="levelProgressTrack" class="level-progress-track" role="progressbar" aria-label="Current level progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-                <i id="levelProgressFill"></i>
-              </div>
-            </div>
-            <div id="levelPrompt" class="next-move-copy">Clear a quest to begin your climb.</div>
-
-            <div class="home-stats">
-              <span><strong id="dailyScore">0</strong> score</span>
-              <span><strong id="todayXp">0</strong> XP today</span>
-              <span><strong id="momentumScore">0%</strong> momentum</span>
-            </div>
+          <div class="home-stats">
+            <span><strong id="dailyScore">0</strong> score</span>
+            <span><strong id="todayXp">0</strong> XP today</span>
+            <span><strong id="momentumScore">0%</strong> momentum</span>
           </div>
         </div>
 
@@ -504,45 +476,13 @@
           <section class="panel settings-page-card appearance-settings-section">
             <div class="settings-section-head">
               <span class="kicker">APPEARANCE</span>
-              <p>Choose the atmosphere for your ascent.</p>
-            </div>
-            <div id="appearanceOrbPreview" class="appearance-orb-preview" aria-live="polite">
-              <div class="appearance-preview-copy"><span class="kicker">LIVE ORB</span><small id="appearancePreviewLabel">Arctic Depths · Default</small></div>
-              <div class="appearance-preview-orb" aria-hidden="true"><i></i><strong id="appearancePreviewLevel">1</strong></div>
+              <p>Choose light or dark mode.</p>
             </div>
             <label class="profile-name-field">Display name<input id="profileNameInput" maxlength="30" /></label>
             <div id="themeModePicker" class="theme-mode-picker">
               <button type="button" data-theme-mode="dark"><svg class="aura-icon theme-choice-icon" aria-hidden="true"><use href="#icon-moon"></use></svg><span>Dark</span></button>
               <button type="button" data-theme-mode="light"><svg class="aura-icon theme-choice-icon" aria-hidden="true"><use href="#icon-sun"></use></svg><span>Light</span></button>
             </div>
-            <div id="palettePicker" class="palette-picker">
-              <button type="button" class="palette-option palette-arctic" data-palette="arctic">
-                <span class="palette-swatches"><i></i><i></i><i></i><i></i></span>
-                <strong>Arctic Depths</strong><small>Cyan · blue · deep ocean</small>
-              </button>
-              <button type="button" class="palette-option palette-jade" data-palette="jade">
-                <span class="palette-swatches"><i></i><i></i><i></i><i></i></span>
-                <strong>Jade Horizon</strong><small>Fresh · calm · grounded</small>
-              </button>
-              <button type="button" class="palette-option palette-aurora" data-palette="aurora">
-                <span class="palette-swatches"><i></i><i></i><i></i><i></i></span>
-                <strong>Aurora Blossom</strong><small>Deep blue · luminous pink</small>
-              </button>
-              <button type="button" class="palette-option palette-rose" data-palette="rose">
-                <span class="palette-swatches"><i></i><i></i><i></i><i></i></span>
-                <strong>Rosé Sunrise</strong><small>Warm red · soft pink glow</small>
-              </button>
-            </div>
-            <fieldset class="level-font-fieldset">
-              <legend>Level number font</legend>
-              <p>Only changes the level number inside Today’s orb.</p>
-              <div id="levelFontPicker" class="level-font-picker">
-                <button type="button" class="level-font-option level-font-default" data-level-font="default"><span aria-hidden="true">90</span><strong>Default</strong></button>
-                <button type="button" class="level-font-option level-font-moirai-one" data-level-font="moirai-one"><span aria-hidden="true">90</span><strong>Moirai One</strong></button>
-                <button type="button" class="level-font-option level-font-rubik-lines" data-level-font="rubik-lines"><span aria-hidden="true">90</span><strong>Rubik Lines</strong></button>
-                <button type="button" class="level-font-option level-font-zen-tokyo-zoo" data-level-font="zen-tokyo-zoo"><span aria-hidden="true">90</span><strong>Zen Tokyo Zoo</strong></button>
-              </div>
-            </fieldset>
           </section>
 
           <section class="panel settings-page-card data-settings-section settings-stack">
@@ -749,8 +689,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3" crossorigin="anonymous" defer></script>
-  <script src="./cloud.js?v=50" defer></script>
-  <script src="./notifications.js?v=50" defer></script>
-  <script src="./app.js?v=50" defer></script>
+  <script src="./cloud.js?v=51" defer></script>
+  <script src="./notifications.js?v=51" defer></script>
+  <script src="./app.js?v=51" defer></script>
 </body>
 </html>

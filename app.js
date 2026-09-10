@@ -8,7 +8,6 @@ let reorderMode = false;
 let questDragState = null;
 let selectedHistoryDate = null;
 let historyMonth = null;
-let levelGlowAnimation = null;
 let ascentEnergyAnimation = null;
 let completionMotionBusy = false;
 let lastSavedStateJson = "";
@@ -33,28 +32,6 @@ const STOIC_DEFAULT_HORIZON = 90;
 const STOIC_MIN_HORIZON = 50;
 const STOIC_MAX_HORIZON = 120;
 const STOIC_TEXT_LIMITS = {intention:220,control:360,reaction:360,correction:360};
-const ASCENT_RIDGES = [
-  {
-    path:"M48 543C119 494 174 512 220 455C262 403 266 333 298 280C328 230 368 215 397 165",
-    waypoints:[[48,543],[220,455],[298,280],[397,165]]
-  },
-  {
-    path:"M62 548C139 523 183 542 207 478C231 414 189 370 256 326C319 284 286 226 358 191C387 177 404 161 421 140",
-    waypoints:[[62,548],[207,478],[256,326],[421,140]]
-  },
-  {
-    path:"M39 551C85 508 154 526 170 459C185 397 142 350 220 310C288 275 255 220 337 187C377 171 392 142 405 122",
-    waypoints:[[39,551],[170,459],[220,310],[405,122]]
-  },
-  {
-    path:"M76 552C151 493 116 458 204 433C287 409 244 331 310 288C367 250 337 201 410 153",
-    waypoints:[[76,552],[204,433],[310,288],[410,153]]
-  },
-  {
-    path:"M45 550C111 532 179 493 188 437C199 367 274 388 279 314C284 249 354 250 369 193C379 160 404 149 430 132",
-    waypoints:[[45,550],[188,437],[279,314],[430,132]]
-  }
-];
 const ICON_LIBRARY = [
   ["✨","sparkle magic default"],["⚡","energy discipline focus"],["✅","check done complete"],
   ["💪","strength body workout"],["🏋️‍♀️","weights gym strength workout"],["🏃","run cardio fitness"],
@@ -172,44 +149,7 @@ async function bootstrap() {
 }
 
 function startLevelNumberGlow() {
-  const number = $("#levelNumber");
-  if (!number) return;
-  const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
-  if (typeof number.animate !== "function") {
-    if (!motion.matches) number.classList.add("css-glow-drift");
-    return;
-  }
-
-  let current = [-24,28,116,76];
-  const position = ([x1,y1,x2,y2]) => `${x1}% ${y1}%,${x2}% ${y2}%,center`;
-  const random = (min,max) => Math.round(min + Math.random() * (max-min));
-
-  const stop = () => {
-    levelGlowAnimation?.cancel();
-    levelGlowAnimation = null;
-  };
-  const drift = () => {
-    if (motion.matches || levelGlowAnimation) return;
-    const next = [random(-28,118),random(-22,118),random(-24,120),random(-20,116)];
-    levelGlowAnimation = number.animate(
-      [{backgroundPosition:position(current)},{backgroundPosition:position(next)}],
-      {duration:random(2800,5600),easing:"cubic-bezier(.42,0,.24,1)",fill:"forwards"}
-    );
-    levelGlowAnimation.onfinish = () => {
-      number.style.backgroundPosition = position(next);
-      current = next;
-      levelGlowAnimation.cancel();
-      levelGlowAnimation = null;
-      drift();
-    };
-  };
-  const syncMotion = () => {
-    if (motion.matches) stop();
-    else drift();
-  };
-  if (motion.addEventListener) motion.addEventListener("change",syncMotion);
-  else motion.addListener(syncMotion);
-  syncMotion();
+  // The fixed Rubik Doodle Shadow treatment is intentionally still.
 }
 function freshState() {
   return {
@@ -770,16 +710,29 @@ function renderAll() {
 
 function ascentRidgeForLevel(level) {
   const safeLevel=Math.max(1,Math.round(Number(level) || 1));
-  return ASCENT_RIDGES[(safeLevel-1)%ASCENT_RIDGES.length];
+  const startX=24+(safeLevel*5)%20;
+  const startY=446+(safeLevel*7)%28;
+  const middleX=150+(safeLevel*37)%78;
+  const middleY=288+(safeLevel*23)%96;
+  const controlOneX=66+(safeLevel*29)%92;
+  const controlOneY=350+(safeLevel*31)%82;
+  const controlTwoX=252+(safeLevel*41)%104;
+  const controlTwoY=158+(safeLevel*17)%112;
+  const endX=350+(safeLevel*13)%68;
+  const endY=54+(safeLevel*19)%62;
+  return {
+    path:`M${startX} ${startY}C${controlOneX} ${controlOneY} ${middleX-34} ${middleY+22} ${middleX} ${middleY}S${controlTwoX} ${controlTwoY} ${endX} ${endY}`,
+    waypoints:[[startX,startY],[endX,endY]]
+  };
 }
 
 function renderAscentRidge(level,progress,{maxed=false}={}) {
   const ridge=ascentRidgeForLevel(level);
   const base=$("#ascentRouteBase");
   const route=$("#ascentRouteProgress");
-  const history=$("#ascentHistoryRidges");
   const world=$("#ascentWorld");
-  const routeProgress=maxed ? 100 : Math.max(8,Math.min(100,Math.round(progress)));
+  const stage=$("#ascentStage");
+  const routeProgress=maxed ? 100 : Math.max(0,Math.min(100,Math.round(progress)));
   const routeChanged=route?.getAttribute("d")!==ridge.path;
   if (base) base.setAttribute("d",ridge.path);
   if (route) {
@@ -788,20 +741,15 @@ function renderAscentRidge(level,progress,{maxed=false}={}) {
     route.style.strokeDasharray=`${routeProgress} 100`;
     if (routeChanged) requestAnimationFrame(()=>route.classList.remove("route-resetting"));
   }
-  if (history) {
-    const completedDepth=Math.min(3,Math.max(0,level-1));
-    history.innerHTML=Array.from({length:completedDepth},(_,index)=>{
-      const previous=ascentRidgeForLevel(level-index-1);
-      return `<path class="ascent-history-ridge" data-depth="${index+1}" d="${previous.path}" />`;
-    }).join("");
-  }
-  const thresholds=[0,33,66,99];
   $$(".ascent-waypoint",$("#ascentRouteMap")).forEach((waypoint,index)=>{
     const [x,y]=ridge.waypoints[index] || ridge.waypoints[ridge.waypoints.length-1];
     waypoint.setAttribute("cx",String(x));
     waypoint.setAttribute("cy",String(y));
-    waypoint.dataset.reached=String(routeProgress>=thresholds[index]);
   });
+  if (stage) {
+    stage.setAttribute("aria-valuenow",String(routeProgress));
+    stage.setAttribute("aria-valuetext",`${routeProgress}% through Level ${level}`);
+  }
   if (world) {
     world.style.setProperty("--ascent-progress",`${routeProgress}%`);
     world.dataset.ascentState=maxed ? "ascended" : progress>=75 ? "near-ridge" : "climbing";
@@ -814,24 +762,14 @@ function renderHeader() {
   const p = levelProgress(xp);
   const today = new Date();
   const day = journeyDay(today);
-  const nextQuest = plannedQuestsFor(today).find(q => !isCompleted(q.id));
   const currentRank = rankForLevel(p.lvl);
   document.body.dataset.rankTier = String(currentRank.level);
   setMetricValue("#levelNumber",p.lvl);
-  $("#greetingName").textContent = state.profileName || "Player";
   $("#profileNameInput").value = state.profileName;
   $("#characterLevelTitle").textContent = `Level ${p.lvl}`;
-  setMetricValue("#xpText",p.maxed ? `${xp} TOTAL XP` : `${xp - p.start} / ${p.end - p.start} XP`);
-  $("#nextLevelText").textContent = p.maxed ? "LEVEL 90 · ASCENDED" : `NEXT · LEVEL ${p.lvl + 1}`;
-  $("#levelProgressFill").style.width=`${p.pct}%`;
-  $("#levelProgressTrack").setAttribute("aria-valuenow",String(Math.round(p.pct)));
   renderAscentRidge(p.lvl,p.pct,{maxed:p.maxed});
-  $("#altitudeLabel").textContent = p.maxed ? "SUMMIT HELD" : p.pct >= 75 ? "RIDGE WITHIN REACH" : "CURRENT ALTITUDE";
-  $("#journeyDayLabel").textContent = `JOURNEY DAY ${day}`;
-  $("#levelPrompt").textContent = p.maxed ? "LEVEL 90 REACHED · KEEP BUILDING YOUR CHARACTER" : nextQuest
-    ? `NEXT MOVE · ${nextQuest.title.toUpperCase()} · +${xpForQuest(nextQuest)} XP`
-    : "TODAY'S QUESTS CLEARED · PROTECT THE MOMENTUM";
-  $("#dateLabel").textContent = new Intl.DateTimeFormat(undefined,{weekday:"long",month:"short",day:"numeric"}).format(new Date());
+  $("#journeyDayLabel").textContent = `Day ${day}`;
+  $("#dateLabel").textContent = new Intl.DateTimeFormat(undefined,{weekday:"long",day:"numeric",month:"long"}).format(today);
   applyTheme();
   renderLevelRoad(p.lvl);
 }
@@ -2317,13 +2255,13 @@ function bindEvents() {
     const option=e.target.closest("[data-theme-mode]"); if(!option)return;
     state.theme=option.dataset.themeMode; applyTheme(); save();
   });
-  $("#palettePicker").addEventListener("click",e=>{
+  $("#palettePicker")?.addEventListener("click",e=>{
     const option=e.target.closest("[data-palette]"); if(!option)return;
     state.palette=option.dataset.palette; applyTheme(); save();
     showToast(`${option.querySelector("strong").textContent} activated`);
   });
 
-  $("#levelFontPicker").addEventListener("click",e=>{
+  $("#levelFontPicker")?.addEventListener("click",e=>{
     const option=e.target.closest("[data-level-font]"); if(!option)return;
     state.levelFont=option.dataset.levelFont; applyTheme(); save();
     showToast(`${option.querySelector("strong").textContent} level font activated`);
@@ -2335,7 +2273,6 @@ function bindEvents() {
   $("#closeNotifications").addEventListener("click",closeNotificationsPage);
   $("#profileNameInput").addEventListener("input",e=>{
     state.profileName=e.target.value.trimStart();
-    $("#greetingName").textContent=state.profileName || "Player";
     save();
   });
   $("#nameDialog").addEventListener("cancel",e=>e.preventDefault());
@@ -2344,7 +2281,6 @@ function bindEvents() {
     const name=$("#nameInput").value.trim();
     if(!name) return;
     state.profileName=name;
-    $("#greetingName").textContent=name;
     $("#profileNameInput").value=name;
     save();
     $("#nameDialog").close();

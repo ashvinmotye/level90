@@ -17,11 +17,11 @@ assert.match(html,/id="showcaseBanner"[^>]*hidden/);
 assert.match(html,/class="today-layout"/);
 assert.match(html,/id="ascentWorld"/);
 assert.match(html,/id="ascentRouteProgress"[^>]*pathLength="100"/);
-assert.match(html,/id="ascentEnergy"/);
+assert.doesNotMatch(html,/id="ascentEnergy"/);
 assert.match(html,/>Life Terrain</);
 assert.match(html,/>NEW RIDGE REVEALED</);
-assert.match(html,/styles\.css\?v=50/);
-assert.match(html,/app\.js\?v=50/);
+assert.match(html,/styles\.css\?v=51/);
+assert.match(html,/app\.js\?v=51/);
 
 assert.match(css,/\/\* Version 47 · Ascension Lines \*\//);
 assert.match(css,/\.ascent-world/);
@@ -42,7 +42,7 @@ assert.match(app,/route\.style\.strokeDasharray/);
 assert.match(app,/data-ridge="\$\{ridgeIndex\}"/);
 assert.match(cloud,/function level90RevealShowcase\(/);
 assert.match(cloud,/!window\.level90ShowcaseActive/);
-assert.match(serviceWorker,/level90-v50/);
+assert.match(serviceWorker,/level90-v51/);
 assert.match(readme,/## Version 47 Ascension Lines/);
 
 console.log("Level90 Version 47 Ascension Lines tests passed");

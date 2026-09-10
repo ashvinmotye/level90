@@ -1428,3 +1428,986 @@ button:focus-visible,.tile-hit:focus-visible,.toast-action:focus-visible,.notifi
     transition-duration:.001ms !important;
   }
 }
+
+/* Version 51 · Minimal Level90 */
+:root,
+body[data-palette="arctic"],
+body[data-palette="jade"],
+body[data-palette="aurora"],
+body[data-palette="rose"] {
+  --bg:#203444;
+  --bg-2:#203444;
+  --panel:transparent;
+  --panel-strong:transparent;
+  --text:#ffffff;
+  --muted:rgb(255 255 255 / .68);
+  --line:rgb(255 255 255 / .48);
+  --accent:#ffffff;
+  --accent-2:#d9d9d9;
+  --gold:#ffffff;
+  --accent-rgb:255 255 255;
+  --accent-2-rgb:217 217 217;
+  --gold-rgb:255 255 255;
+  --accent-soft:#ffffff;
+  --accent-deep:#203444;
+  --primary-2:#d9d9d9;
+  --nav-bg:#203444;
+  --minimal-action:#d9d9d9;
+  --minimal-action-text:#203444;
+  --surface-input:rgb(255 255 255 / .055);
+  --danger:#ff9a9a;
+  --shadow:none;
+  color-scheme:dark;
+}
+
+body.light,
+body.light[data-palette="arctic"],
+body.light[data-palette="jade"],
+body.light[data-palette="aurora"],
+body.light[data-palette="rose"] {
+  --bg:#f2f2f0;
+  --bg-2:#f2f2f0;
+  --panel:transparent;
+  --panel-strong:transparent;
+  --text:#203444;
+  --muted:rgb(32 52 68 / .68);
+  --line:rgb(32 52 68 / .42);
+  --accent:#203444;
+  --accent-2:#203444;
+  --gold:#203444;
+  --accent-rgb:32 52 68;
+  --accent-2-rgb:32 52 68;
+  --gold-rgb:32 52 68;
+  --accent-soft:#203444;
+  --accent-deep:#203444;
+  --primary-2:#203444;
+  --nav-bg:#f2f2f0;
+  --minimal-action:#203444;
+  --minimal-action-text:#ffffff;
+  --surface-input:rgb(32 52 68 / .045);
+  --danger:#962c42;
+  --shadow:none;
+  color-scheme:light;
+}
+
+html,
+body {
+  background:var(--bg);
+}
+
+body {
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:1rem;
+  font-weight:400;
+  letter-spacing:.012em;
+  background:var(--bg);
+  transition:background-color .18s ease,color .18s ease;
+}
+
+body::before,
+body::after {
+  display:none;
+}
+
+.app-shell {
+  width:min(100%,1040px);
+  max-width:1040px;
+  padding:env(safe-area-inset-top) 68px calc(112px + env(safe-area-inset-bottom));
+}
+
+.topbar {
+  min-height:164px;
+  height:auto;
+  padding:24px 0 30px;
+}
+
+.profile-greeting {
+  min-height:64px;
+  padding:0;
+}
+
+.profile-greeting strong,
+#levelUpNumber,
+body[data-level-font] #levelNumber {
+  font-family:"Rubik Doodle Shadow",Inter,sans-serif !important;
+  font-weight:400 !important;
+  -webkit-text-fill-color:currentColor !important;
+}
+
+.profile-greeting strong {
+  overflow:visible;
+  color:var(--text);
+  font-size:clamp(2.7rem,6.4vw,4.6rem);
+  line-height:.92;
+  letter-spacing:.01em;
+  text-overflow:clip;
+}
+
+.topbar-actions {
+  gap:clamp(10px,2.25vw,24px);
+}
+
+.topbar .icon-btn {
+  width:clamp(48px,7.2vw,76px);
+  height:clamp(48px,7.2vw,76px);
+  border:0;
+  border-radius:0;
+  background:var(--minimal-action);
+  box-shadow:none;
+  color:var(--minimal-action-text);
+  backdrop-filter:none;
+}
+
+.topbar .notification-center-btn.is-disabled,
+.topbar .theme-toggle-btn {
+  color:var(--minimal-action-text);
+}
+
+.topbar .notification-center-btn.is-disabled .notification-bell::after {
+  box-shadow:0 0 0 2px var(--minimal-action);
+}
+
+.topbar .notification-bell .aura-icon,
+.topbar .theme-icon {
+  width:clamp(20px,2.5vw,27px);
+  height:clamp(20px,2.5vw,27px);
+  filter:none;
+}
+
+.topbar #menuBtn {
+  font-size:clamp(1.2rem,2.6vw,1.8rem);
+  letter-spacing:.06em;
+}
+
+.notification-unread-badge,
+.nav-count {
+  border-radius:0;
+  box-shadow:none;
+}
+
+.view.active.view-enter-forward,
+.view.active.view-enter-back {
+  animation:minimalViewIn .18s ease both;
+}
+
+@keyframes minimalViewIn {
+  from { opacity:0; }
+  to { opacity:1; }
+}
+
+/* Level dashboard */
+.today-layout {
+  display:block;
+}
+
+.mock-home,
+.ascent-world {
+  position:relative;
+  min-height:0;
+  margin:0;
+  padding:0;
+  overflow:visible;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  text-align:left;
+}
+
+.journey-meta.minimal-meta {
+  display:grid;
+  gap:7px;
+  max-width:none;
+  margin:0;
+  color:var(--text);
+  text-align:left;
+}
+
+.journey-meta.minimal-meta span {
+  color:var(--text);
+  font-size:clamp(1.05rem,2.5vw,1.5rem);
+  font-weight:300;
+  line-height:1.25;
+  letter-spacing:.015em;
+}
+
+.ascent-stage {
+  position:relative;
+  width:100%;
+  aspect-ratio:1000 / 520;
+  margin:2px 0 0;
+  overflow:visible;
+  container-type:normal;
+}
+
+.ascent-route-map {
+  position:absolute;
+  z-index:2;
+  inset:0;
+  width:100%;
+  height:100%;
+  overflow:visible;
+  pointer-events:none;
+}
+
+.ascent-route-base,
+.ascent-route-progress {
+  fill:none;
+  vector-effect:non-scaling-stroke;
+  stroke-linecap:round;
+}
+
+.ascent-route-base {
+  stroke:rgb(var(--accent-rgb) / .22);
+  stroke-width:6;
+}
+
+.ascent-route-progress {
+  stroke:var(--text);
+  stroke-width:6;
+  stroke-dasharray:0 100;
+  filter:none;
+  transition:stroke-dasharray .55s ease;
+}
+
+.ascent-route-progress.route-resetting {
+  transition:none;
+}
+
+.ascent-waypoint,
+.ascent-waypoint[data-reached="true"] {
+  fill:var(--text);
+  stroke:var(--text);
+  stroke-width:2;
+  filter:none;
+}
+
+.level-display.level-orb {
+  position:absolute;
+  z-index:1;
+  top:auto;
+  right:0;
+  bottom:1%;
+  left:auto;
+  width:67%;
+  height:94%;
+  aspect-ratio:auto;
+  display:flex;
+  align-items:flex-end;
+  justify-content:flex-end;
+  margin:0;
+  padding:0;
+  overflow:visible;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  transform:none;
+  isolation:auto;
+}
+
+.level-display.level-orb::before {
+  display:none;
+}
+
+body[data-level-font] #levelNumber {
+  display:block;
+  min-width:0;
+  margin:0;
+  padding:0;
+  color:var(--text);
+  font-size:clamp(9rem,37vw,24rem);
+  line-height:.72;
+  letter-spacing:-.045em;
+  text-align:right;
+  background:none;
+  filter:none;
+  animation:none;
+  transform:none;
+}
+
+.level-display.level-orb.charging {
+  animation:none;
+}
+
+.home-stats {
+  display:grid;
+  justify-content:start;
+  gap:12px;
+  margin:-3px 0 0;
+  padding:0 0 48px;
+  border-top:0;
+  border-bottom:1px solid var(--line);
+  color:var(--text);
+  font-size:clamp(1rem,2.3vw,1.3rem);
+  letter-spacing:.10em;
+}
+
+.home-stats span {
+  display:flex;
+  align-items:baseline;
+  gap:15px;
+}
+
+.home-stats strong {
+  min-width:76px;
+  color:var(--text);
+  font-size:clamp(1.25rem,2.8vw,1.65rem);
+  font-weight:900;
+  letter-spacing:.04em;
+}
+
+.ascent-world.summit-arrival .ascent-route-progress,
+.ascent-world.ridge-revealed .ascent-route-progress {
+  stroke:var(--text);
+  filter:none;
+}
+
+.ascent-world.ridge-revealed .ascent-route-base {
+  animation:none;
+}
+
+.today-missions {
+  margin-top:42px;
+  padding:0;
+}
+
+.today-missions > .section-heading {
+  margin-top:0;
+}
+
+/* Shared minimal surfaces */
+.panel,
+.quest-card,
+.quest-card.today-tile,
+.history-calendar,
+.day-review,
+.next-rank-card,
+.character-road-card,
+.achievement-card,
+.stoic-calendar-card,
+.notification-inbox-panel,
+.settings-page-card,
+.account-summary-row,
+.cloud-sync-row,
+.notification-state-row,
+.smart-notification-panel,
+.notification-lane,
+.notification-inbox-item,
+.category-manager-item,
+.empty-state,
+.showcase-banner {
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  backdrop-filter:none;
+}
+
+.panel,
+.history-calendar,
+.day-review,
+.next-rank-card,
+.character-road-card,
+.achievement-card,
+.stoic-calendar-card,
+.notification-inbox-panel,
+.settings-page-card {
+  padding:32px 0;
+  border-top:1px solid var(--line);
+}
+
+.quest-card,
+.quest-card.today-tile,
+.notification-inbox-item,
+.category-manager-item {
+  padding:20px 0;
+  border-top:1px solid var(--line);
+}
+
+.quest-card,
+.quest-card.today-tile {
+  border-left:0;
+}
+
+.quest-card::before,
+.today-tile::before,
+.terrain-panel::before,
+.life-terrain-panel::before,
+.next-rank-card::after,
+.terrain-page-heading::after,
+.auth-contours,
+.level-up-contours,
+.daily-clear-card::before {
+  display:none;
+}
+
+.page-heading {
+  max-width:740px;
+  margin:0 0 34px;
+  padding:20px 0 28px;
+  border-bottom:1px solid var(--line);
+}
+
+.page-heading .kicker,
+.section-heading .kicker,
+.settings-section-head .kicker,
+.kicker,
+.eyebrow {
+  color:var(--text);
+  font-size:.82rem;
+  font-weight:800;
+  line-height:1.25;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+}
+
+.page-heading h2,
+.page-heading h3,
+.section-heading h3,
+.settings-page-title h2 {
+  color:var(--text);
+  font-weight:400;
+  letter-spacing:-.025em;
+}
+
+.page-heading h2,
+.settings-page-title h2 {
+  margin-top:12px;
+  font-size:clamp(1.9rem,5vw,3rem);
+}
+
+.page-heading p,
+.settings-section-head p,
+.next-rank-card p,
+.stoic-calendar-head p {
+  color:var(--muted);
+  font-size:1rem;
+  line-height:1.6;
+}
+
+.section-heading {
+  align-items:end;
+  margin:0 0 22px;
+}
+
+.section-heading h3 {
+  margin-top:9px;
+  font-size:clamp(1.35rem,3.5vw,2rem);
+}
+
+.section-count,
+.xp-chip,
+.tile-xp,
+.account-status,
+.review-xp {
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  color:var(--text);
+}
+
+.primary-btn,
+.secondary-btn,
+.pill-btn,
+.mini-btn,
+.settings-btn,
+.file-label,
+.filter-chip,
+.segment,
+.difficulty-btn,
+.weekday-picker button,
+.toast-action,
+.cloud-action-btn,
+.notification-clear-btn {
+  min-height:44px;
+  border-radius:0;
+  box-shadow:none;
+  font-size:.82rem;
+  font-weight:800;
+  letter-spacing:.08em;
+}
+
+.primary-btn,
+.pill-btn {
+  border:1px solid var(--minimal-action);
+  background:var(--minimal-action);
+  color:var(--minimal-action-text);
+}
+
+.secondary-btn,
+.mini-btn,
+.settings-btn,
+.file-label,
+.filter-chip,
+.segment,
+.difficulty-btn,
+.weekday-picker button {
+  border:1px solid var(--line);
+  background:transparent;
+  color:var(--text);
+}
+
+.filter-row,
+.auth-mode-switch,
+.segment-row,
+.theme-mode-picker {
+  padding:0;
+  border:1px solid var(--line);
+  border-radius:0;
+  background:transparent;
+}
+
+.filter-chip.active,
+.auth-mode-button.is-active,
+.segment.active,
+.theme-mode-picker button.selected,
+.difficulty-btn.selected,
+.weekday-picker button.selected {
+  border-color:var(--minimal-action);
+  border-radius:0;
+  background:var(--minimal-action);
+  box-shadow:none;
+  color:var(--minimal-action-text);
+}
+
+.icon-btn,
+.settings-back-btn,
+.calendar-head .icon-btn,
+.day-review-nav .icon-btn {
+  border:1px solid var(--line);
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  color:var(--text);
+  backdrop-filter:none;
+}
+
+input,
+select,
+textarea,
+.notification-device-field input,
+.settings-page-card .profile-name-field input,
+.smart-time-control,
+.smart-preference-grid select {
+  border:1px solid var(--line);
+  border-radius:0;
+  background:var(--surface-input);
+  box-shadow:none;
+  color:var(--text);
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+.notification-device-field input:focus,
+.settings-page-card .profile-name-field input:focus {
+  border-color:var(--text);
+  box-shadow:0 0 0 2px rgb(var(--accent-rgb) / .10);
+}
+
+.quest-title,
+.today-tile .quest-title,
+.character-top strong,
+.notification-inbox-copy strong,
+.review-item strong {
+  color:var(--text);
+  font-size:1rem;
+  line-height:1.4;
+}
+
+.tile-category,
+.quest-meta,
+.quest-progress-stats,
+.notification-inbox-copy span,
+.notification-inbox-copy small,
+.review-item span,
+.review-item small,
+.account-summary-row small,
+.cloud-sync-row small,
+.cloud-sync-row span {
+  color:var(--muted);
+  font-size:.82rem;
+  line-height:1.5;
+}
+
+.today-completion-medallion,
+.tile-hit,
+.today-completion-medallion.is-complete,
+.daily-clear-check,
+.category-manager-icon,
+.notification-inbox-icon,
+.notification-state-icon,
+.character-ridge-node,
+.road-level span,
+.stoic-zoom-week,
+.calendar-day {
+  border-radius:0;
+  box-shadow:none;
+}
+
+.today-completion-medallion,
+.tile-hit {
+  border:1px solid var(--line);
+  background:transparent;
+}
+
+.today-completion-medallion.is-complete,
+.calendar-day.selected,
+.road-level.current span {
+  border-color:var(--minimal-action);
+  background:var(--minimal-action);
+  color:var(--minimal-action-text);
+}
+
+.quest-progress-stats > span,
+.achievement-grid div,
+.review-score-row > div,
+.character-row {
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+}
+
+.character-row {
+  padding:18px 0;
+  border-top:1px solid var(--line);
+}
+
+.character-progress,
+.level-road::before,
+.stoic-progress-track {
+  border-radius:0;
+  background:rgb(var(--accent-rgb) / .16);
+  box-shadow:none;
+}
+
+.character-progress > i,
+.stoic-progress-track > i {
+  border-radius:0;
+  background:var(--text);
+  box-shadow:none;
+}
+
+.character-progress > i::after {
+  display:none;
+}
+
+.history-calendar-grid,
+.calendar-weekdays {
+  gap:6px;
+}
+
+.calendar-day {
+  border:1px solid transparent;
+  background:transparent;
+  color:var(--text);
+}
+
+.calendar-day:hover,
+.calendar-day:focus-visible {
+  border-color:var(--line);
+}
+
+.settings-page-grid {
+  gap:0 34px;
+}
+
+.settings-page-card {
+  margin:0;
+}
+
+.settings-page-head {
+  align-items:start;
+  margin-top:18px;
+}
+
+.settings-page-title {
+  padding-top:0;
+}
+
+.theme-mode-picker {
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:0;
+  margin:18px 0 0;
+}
+
+.theme-mode-picker button {
+  min-height:50px;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  color:var(--text);
+  font-size:.9rem;
+}
+
+.theme-mode-picker button + button {
+  border-left:1px solid var(--line);
+}
+
+.settings-btn,
+.file-label {
+  padding:14px 0;
+  border-width:0 0 1px;
+}
+
+.notification-lane-head > span,
+.notification-lane-head > input::after,
+.notification-lane-head > input::before,
+.smart-master-toggle input::before,
+.smart-master-toggle input::after {
+  border-radius:0;
+  box-shadow:none;
+}
+
+.bottom-nav {
+  bottom:0;
+  width:min(100%,1040px);
+  padding:8px max(14px,env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));
+  border:0;
+  border-top:1px solid var(--line);
+  border-radius:0;
+  background:var(--bg);
+  box-shadow:none;
+  backdrop-filter:none;
+}
+
+.nav-btn {
+  min-height:58px;
+  border-radius:0;
+  color:var(--muted);
+}
+
+.nav-btn.active {
+  background:var(--minimal-action);
+  box-shadow:none;
+  color:var(--minimal-action-text);
+}
+
+.nav-btn.active .nav-icon {
+  color:currentColor;
+  transform:none;
+}
+
+.nav-btn small {
+  font-size:.72rem;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
+.auth-screen {
+  place-items:start stretch;
+  padding-top:20px;
+}
+
+.auth-card {
+  width:100%;
+  max-width:520px;
+  padding:36px 0;
+  border:0;
+  border-top:1px solid var(--line);
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  backdrop-filter:none;
+  text-align:left;
+}
+
+.auth-card h1,
+.auth-card > p {
+  margin-left:0;
+  text-align:left;
+}
+
+.auth-mark {
+  display:none;
+}
+
+.auth-mode-switch {
+  gap:0;
+}
+
+.auth-mode-button {
+  border-radius:0;
+}
+
+dialog,
+.modal,
+.confirmation-dialog,
+.level-up-card,
+.daily-clear-card,
+.toast {
+  border:1px solid var(--line);
+  border-radius:0;
+  background:var(--bg);
+  box-shadow:none;
+  color:var(--text);
+  backdrop-filter:none;
+}
+
+dialog::backdrop,
+.modal::backdrop,
+.confirmation-dialog::backdrop {
+  background:rgb(0 0 0 / .72);
+  backdrop-filter:none;
+}
+
+.level-up-card {
+  width:min(82vw,360px);
+  height:auto;
+  min-height:300px;
+  padding:42px;
+}
+
+#levelUpNumber {
+  color:var(--text);
+  font-size:9rem;
+  line-height:.82;
+  background:none;
+  filter:none;
+}
+
+.toast {
+  border-color:var(--minimal-action);
+  background:var(--minimal-action);
+  color:var(--minimal-action-text);
+}
+
+.empty-state {
+  padding:24px 0;
+  border-top:1px solid var(--line);
+  color:var(--muted);
+  font-size:1rem;
+  text-align:left;
+}
+
+@media (min-width:900px) {
+  .today-layout {
+    display:block;
+  }
+
+  .ascent-world {
+    position:relative;
+    top:auto;
+    padding:0;
+  }
+
+  .today-missions {
+    padding-top:0;
+  }
+}
+
+@media (max-width:700px) {
+  .app-shell {
+    padding-right:24px;
+    padding-left:24px;
+  }
+
+  .topbar {
+    min-height:112px;
+    padding:17px 0 22px;
+  }
+
+  .profile-greeting {
+    max-width:calc(100% - 164px);
+  }
+
+  .profile-greeting strong {
+    font-size:clamp(2.2rem,10vw,3.1rem);
+  }
+
+  .topbar-actions {
+    gap:7px;
+  }
+
+  .topbar .icon-btn {
+    width:44px;
+    height:44px;
+  }
+
+  .journey-meta.minimal-meta span {
+    font-size:1rem;
+  }
+
+  .ascent-stage {
+    margin-top:10px;
+  }
+
+  body[data-level-font] #levelNumber {
+    font-size:clamp(8.3rem,39vw,11rem);
+  }
+
+  .home-stats {
+    gap:9px;
+    padding-bottom:36px;
+    font-size:.93rem;
+  }
+
+  .home-stats strong {
+    min-width:66px;
+    font-size:1.18rem;
+  }
+
+  .today-missions {
+    margin-top:34px;
+  }
+
+  .panel,
+  .history-calendar,
+  .day-review,
+  .next-rank-card,
+  .character-road-card,
+  .achievement-card,
+  .stoic-calendar-card,
+  .notification-inbox-panel,
+  .settings-page-card {
+    padding:28px 0;
+  }
+
+  .settings-page-grid {
+    grid-template-columns:1fr;
+  }
+}
+
+@media (max-width:430px) {
+  .app-shell {
+    padding-right:18px;
+    padding-left:18px;
+  }
+
+  .profile-greeting {
+    max-width:calc(100% - 150px);
+  }
+
+  .profile-greeting strong {
+    font-size:2.05rem;
+  }
+
+  .topbar .icon-btn {
+    width:42px;
+    height:42px;
+  }
+
+  .ascent-stage {
+    aspect-ratio:1000 / 570;
+  }
+
+  body[data-level-font] #levelNumber {
+    font-size:clamp(7.4rem,38vw,9rem);
+  }
+
+  .quest-card.today-tile {
+    border-radius:0;
+  }
+
+  .quest-library-actions {
+    grid-template-columns:repeat(3,44px);
+  }
+
+  .settings-page-card,
+  .notification-inbox-panel {
+    border-radius:0;
+  }
+}

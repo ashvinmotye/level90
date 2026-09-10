@@ -2,6 +2,18 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 51 Minimal Level90
+
+- Rebuilds Today around the supplied minimal navy direction: `LEVEL UP`, the full date, journey day, one active ridge, the current level and the three retained daily metrics.
+- Uses Rubik Doodle Shadow for both the `LEVEL UP` heading and the large level number.
+- Makes the ridge itself the level-progress meter. Its foreground path fills from 0–100% over a quiet full-route guide.
+- Shows exactly two endpoint dots and no previous ridge behind the active route.
+- Generates a distinct deterministic ridge curve for every level from 1 through 90, so the shape visibly changes on every level-up.
+- Removes palette and level-font selection from Settings. Appearance now contains only the display name and Dark/Light controls.
+- Carries the flat navy/light system across quests, history, character, notifications, settings, dialogs, forms, buttons and navigation using square controls, dividers and transparent surfaces.
+- Preserves existing Level90 data, Supabase synchronization, notifications, quest behavior, history and Stoic Calendar functionality.
+- Requires only the updated PWA files; there is no Supabase migration or Edge Function deployment for this version.
+
 ## Version 50 Responsive Ridges
 
 - Places the route, waypoints, orb, level progress and Today statistics inside one fixed-proportion ascent stage.
