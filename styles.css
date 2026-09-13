@@ -2412,7 +2412,7 @@ dialog::backdrop,
   }
 }
 
-/* Version 54 · Compact dashboard and readable notification history */
+/* Version 55 · Date-row alignment repair */
 .today-overview {
   margin:0;
   padding:0 0 26px;
@@ -2423,10 +2423,17 @@ dialog::backdrop,
 .journey-meta.minimal-meta {
   display:flex;
   align-items:baseline;
+  justify-content:space-between;
   gap:.5rem;
   max-width:none;
   margin:0;
   white-space:nowrap;
+}
+
+.journey-meta.minimal-meta .journey-day-group {
+  display:inline-flex;
+  align-items:baseline;
+  gap:.5rem;
 }
 
 .journey-meta.minimal-meta span {

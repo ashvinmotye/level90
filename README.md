@@ -2,6 +2,12 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 55 Date Row Alignment Repair
+
+- Keeps the date on the left and the grouped separator plus journey day on the right using `justify-content: space-between`.
+- Preserves the single-line layout on desktop and mobile.
+- Bumps the PWA asset and cache versions so installed copies receive the alignment fix.
+
 ## Version 54 Compact Dashboard and Notification Read States
 
 - Removes the Today ridge and oversized level-number section.
