@@ -33,8 +33,8 @@ assert.doesNotMatch(app,/data-toggle-today-tools/);
 assert.doesNotMatch(app,/function toggleTodayCardTools\(/);
 assert.match(app,/Ridge \$\{ridgeIndex\}/);
 
-assert.match(html,/styles\.css\?v=55/);
-assert.match(serviceWorker,/level90-v55/);
+assert.match(html,/styles\.css\?v=56/);
+assert.match(serviceWorker,/level90-v56/);
 assert.match(readme,/## Version 49 Direct Actions and Interface Consistency/);
 
 console.log("Level90 Version 49 UI action tests passed");

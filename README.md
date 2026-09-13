@@ -2,6 +2,12 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 56 Sequential Date Row Alignment
+
+- Keeps Sunday 13 September · Day 34 together as one sequential, left-aligned line.
+- Uses justify-content: flex-start while retaining clear spacing around the separator.
+- Bumps the PWA asset and cache versions so installed copies receive the correction.
+
 ## Version 55 Date Row Alignment Repair
 
 - Keeps the date on the left and the grouped separator plus journey day on the right using `justify-content: space-between`.

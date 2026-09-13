@@ -2412,7 +2412,7 @@ dialog::backdrop,
   }
 }
 
-/* Version 55 · Date-row alignment repair */
+/* Version 56 · Sequential date-row alignment */
 .today-overview {
   margin:0;
   padding:0 0 26px;
@@ -2423,7 +2423,7 @@ dialog::backdrop,
 .journey-meta.minimal-meta {
   display:flex;
   align-items:baseline;
-  justify-content:space-between;
+  justify-content:flex-start;
   gap:.5rem;
   max-width:none;
   margin:0;
