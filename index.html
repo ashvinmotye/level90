@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;800;900&amp;family=Rubik+Doodle+Shadow&amp;display=swap" />
-  <link rel="stylesheet" href="./styles.css?v=53" />
+  <link rel="stylesheet" href="./styles.css?v=54" />
 </head>
 <body>
   <svg class="aura-icon-sprite" aria-hidden="true" focusable="false">
@@ -142,8 +142,8 @@
 
   <div id="appShell" class="app-shell" hidden>
     <header class="topbar">
-      <button id="profileGreetingBtn" class="profile-greeting" aria-label="Open settings">
-        <strong>LEVEL UP</strong>
+      <button id="profileGreetingBtn" class="profile-greeting" type="button" aria-label="Go to Today">
+        <strong id="headerLevelLabel">Level 1</strong>
       </button>
       <div class="topbar-actions">
         <button id="notificationCenterButton" class="icon-btn notification-center-btn is-disabled" type="button" aria-label="Notifications are off. Open settings" title="Notifications">
@@ -165,27 +165,16 @@
     <main>
       <section id="view-today" class="view active" tabindex="-1" aria-label="Today">
         <div class="today-layout">
-        <div class="mock-home ascent-world" id="ascentWorld">
+        <div class="mock-home today-overview">
           <div class="journey-meta minimal-meta">
             <span id="dateLabel">Ready to begin.</span>
+            <span class="meta-separator" aria-hidden="true">·</span>
             <span id="journeyDayLabel">Day 1</span>
-          </div>
-
-          <div id="ascentStage" class="ascent-stage" role="progressbar" aria-label="Progress through the current level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-            <svg id="ascentRouteMap" class="ascent-route-map" viewBox="0 0 1000 520" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-              <path id="ascentRouteBase" class="ascent-route-base" d="M31 457C118 383 248 245 377 82" />
-              <path id="ascentRouteProgress" class="ascent-route-progress" pathLength="100" d="M31 457C118 383 248 245 377 82" />
-              <circle class="ascent-waypoint ascent-waypoint-start" cx="31" cy="457" r="9" />
-              <circle class="ascent-waypoint ascent-waypoint-end" cx="377" cy="82" r="9" />
-            </svg>
-            <div id="levelOrb" class="level-orb level-display">
-              <strong id="levelNumber">1</strong>
-            </div>
           </div>
 
           <div class="home-stats">
             <span><strong id="dailyScore">0</strong> score</span>
-            <span><strong id="todayXp">0</strong> XP today</span>
+            <span><strong id="todayXp">0</strong> XP score today</span>
             <span><strong id="momentumScore">0%</strong> momentum</span>
           </div>
         </div>
@@ -335,14 +324,14 @@
           <div class="page-heading settings-page-title">
             <span class="kicker">INBOX</span>
             <h2>Notifications</h2>
-            <p>Notifications stay unread until you clear them.</p>
+            <p>Today's alerts stay available after you mark them as read.</p>
           </div>
         </div>
 
         <section class="panel notification-inbox-panel">
           <div class="notification-inbox-toolbar">
-            <div><span class="kicker">UNREAD</span><strong id="notificationInboxCount">Checking…</strong></div>
-            <button id="clearAllNotificationsButton" class="secondary-btn" type="button" disabled>Clear all</button>
+            <div><span class="kicker">TODAY</span><strong id="notificationInboxCount">Checking…</strong></div>
+            <button id="markAllNotificationsReadButton" class="secondary-btn" type="button" disabled>Mark all as read</button>
           </div>
           <div id="notificationInboxList" class="notification-inbox-list" role="list" aria-live="polite">
             <div class="notification-inbox-empty"><strong>Checking your inbox…</strong><span>New Level90 alerts will appear here.</span></div>
@@ -676,9 +665,9 @@
   <div id="levelUpOverlay" class="level-up-overlay" aria-hidden="true">
     <div class="level-up-card">
       <div class="level-up-contours" aria-hidden="true"><i></i><i></i><i></i></div>
-      <span>NEW RIDGE REVEALED</span>
+      <span>LEVEL REACHED</span>
       <strong id="levelUpNumber">2</strong>
-      <small>Your terrain has changed.</small>
+      <small>Your progress has advanced.</small>
     </div>
   </div>
   <div id="dailyClearMoment" class="daily-clear-moment" aria-hidden="true">
@@ -689,8 +678,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3" crossorigin="anonymous" defer></script>
-  <script src="./cloud.js?v=53" defer></script>
-  <script src="./notifications.js?v=53" defer></script>
-  <script src="./app.js?v=53" defer></script>
+  <script src="./cloud.js?v=54" defer></script>
+  <script src="./notifications.js?v=54" defer></script>
+  <script src="./app.js?v=54" defer></script>
 </body>
 </html>

@@ -17,7 +17,7 @@ assert.match(html,/id="toastAction"[^>]*hidden/);
 assert.match(html,/id="interactionAnnouncer"[^>]*role="status"/);
 assert.match(html,/id="view-today"[^>]*tabindex="-1"/);
 assert.match(html,/data-view="today" aria-current="page"/);
-assert.match(html,/styles\.css\?v=53/);
+assert.match(html,/styles\.css\?v=54/);
 assert.match(html,/id="confirmationDialog"[^>]*aria-labelledby="confirmationTitle"/);
 assert.doesNotMatch(html,/id="appearanceOrbPreview"/,"the retired appearance preview should not be rendered");
 assert.match(html,/id="dailyClearMoment"/);
@@ -48,15 +48,15 @@ assert.match(app,/function revealSavedQuest\(/);
 assert.doesNotMatch(app,/\bconfirm\s*\(/);
 assert.doesNotMatch(app,/Stoic reflection saved/);
 
-assert.match(notifications,/showToast\("Notification cleared\.",\{[\s\S]*?actionLabel:"Undo"/);
-assert.match(notifications,/showToast\("All notifications cleared\.",\{[\s\S]*?actionLabel:"Undo"/);
-assert.match(notifications,/async function level90AnimateNotificationCardsOut\(/);
-assert.match(notifications,/notification-inbox-empty\$\{revealEmpty/);
+assert.match(notifications,/showToast\("Notification marked as read\.",\{[\s\S]*?actionLabel:"Undo"/);
+assert.match(notifications,/showToast\("All of today's notifications marked as read\.",\{[\s\S]*?actionLabel:"Undo"/);
+assert.match(notifications,/async function level90AnimateNotificationCardsRead\(/);
+assert.match(notifications,/function level90TodayNotificationItems\(/);
 assert.match(notifications,/badge\.classList\.remove\?\.\("is-counting"\)/);
 
 assert.match(css,/\.tile-decrement-action,\.tile-repeat-action \{[\s\S]*?width:44px; height:44px/);
 assert.match(css,/\.tile-decrement-action span \{[^}]*width:13px; height:2px/);
-assert.match(css,/\.notification-clear-btn \{[\s\S]*?min-width:72px; min-height:44px/);
+assert.match(css,/\.notification-read-btn \{[\s\S]*?min-width:72px; min-height:44px/);
 assert.match(css,/@media \(max-width: 520px\)[\s\S]*\.stoic-year-week-grid \{ grid-template-columns:repeat\(7/);
 assert.match(css,/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*\*,\*::before,\*::after/);
 assert.match(css,/\.quest-list \.quest-card\.dragging\.drop-marker::before/);
@@ -68,7 +68,7 @@ assert.match(css,/\.quest-card\.quest-saved-highlight/);
 assert.match(css,/\.toast \{[\s\S]*?min-height:38px/);
 assert.match(css,/\.toast-action \{[^}]*min-height:32px/);
 assert.match(css,/\.toast-action::after \{[^}]*inset:-6px/);
-assert.match(serviceWorker,/level90-v53/);
+assert.match(serviceWorker,/level90-v54/);
 assert.match(backlog,/## Delivered in Version 45 — P1/);
 assert.match(backlog,/## Delivered in Version 46 — P2/);
 

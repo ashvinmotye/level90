@@ -44,7 +44,7 @@ const level90NotificationDom = {
   inboxCount:document.querySelector("#notificationInboxCount"),
   inboxList:document.querySelector("#notificationInboxList"),
   inboxMessage:document.querySelector("#notificationInboxMessage"),
-  clearAllButton:document.querySelector("#clearAllNotificationsButton")
+  markAllReadButton:document.querySelector("#markAllNotificationsReadButton")
 };
 
 let level90NotificationPublicKey = null;
@@ -107,7 +107,7 @@ function level90SetAppNotificationBadge(count,enabled) {
 }
 
 function level90UpdateHeaderNotificationButton(enabled=level90CachedNotificationConnection()) {
-  const unreadCount = level90NotificationInboxItems.length;
+  const unreadCount = level90NotificationUnreadCount();
   const button = level90NotificationDom.centerButton;
   const badge = level90NotificationDom.unreadBadge;
   if (button) {
@@ -153,25 +153,26 @@ function level90NotificationTimestamp(item) {
 function level90LoadNotificationInboxState() {
   const value = level90ReadJsonStorage(level90NotificationInboxStateKey());
   if (!value || typeof value !== "object") return null;
-  const clearedThrough = Number(value.clearedThrough || 0);
-  const clearedIds = Array.isArray(value.clearedIds)
-    ? value.clearedIds.filter(id=>typeof id === "string").slice(-500)
+  const readThrough = Number(value.readThrough ?? value.clearedThrough ?? 0);
+  const sourceIds = Array.isArray(value.readIds) ? value.readIds : value.clearedIds;
+  const readIds = Array.isArray(sourceIds)
+    ? sourceIds.filter(id=>typeof id === "string").slice(-500)
     : [];
-  return {version:1,clearedThrough:Number.isFinite(clearedThrough) ? clearedThrough : 0,clearedIds};
+  return {version:2,readThrough:Number.isFinite(readThrough) ? readThrough : 0,readIds};
 }
 
 function level90SaveNotificationInboxState(value) {
   level90WriteJsonStorage(level90NotificationInboxStateKey(),{
-    version:1,
-    clearedThrough:Number(value?.clearedThrough || 0),
-    clearedIds:Array.isArray(value?.clearedIds) ? value.clearedIds.slice(-500) : []
+    version:2,
+    readThrough:Number(value?.readThrough || 0),
+    readIds:Array.isArray(value?.readIds) ? value.readIds.slice(-500) : []
   });
 }
 
 function level90InitializeNotificationInboxState() {
   const existing = level90LoadNotificationInboxState();
   if (existing) return existing;
-  const initial = {version:1,clearedThrough:Date.now(),clearedIds:[]};
+  const initial = {version:2,readThrough:0,readIds:[]};
   level90SaveNotificationInboxState(initial);
   return initial;
 }
@@ -185,11 +186,26 @@ function level90SaveCachedNotificationInbox(items) {
   level90WriteJsonStorage(level90NotificationInboxCacheKey(),Array.isArray(items) ? items.slice(0,500) : []);
 }
 
-function level90UnreadNotificationItems(items,state=level90InitializeNotificationInboxState()) {
-  const clearedIds = new Set(state.clearedIds || []);
+function level90NotificationLocalDateKey(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) return "";
+  const year=date.getFullYear();
+  const month=String(date.getMonth()+1).padStart(2,"0");
+  const day=String(date.getDate()).padStart(2,"0");
+  return `${year}-${month}-${day}`;
+}
+
+function level90TodayNotificationItems(items,state=level90InitializeNotificationInboxState(),today=new Date()) {
+  const todayKey=level90NotificationLocalDateKey(today);
+  const readIds = new Set(state.readIds || []);
   return (items || [])
-    .filter(item=>item?.id && level90NotificationTimestamp(item) > state.clearedThrough && !clearedIds.has(item.id))
+    .filter(item=>item?.id && level90NotificationLocalDateKey(level90NotificationTimestamp(item)) === todayKey)
+    .map(item=>({...item,is_read:level90NotificationTimestamp(item) <= state.readThrough || readIds.has(item.id)}))
     .sort((a,b)=>level90NotificationTimestamp(b)-level90NotificationTimestamp(a));
+}
+
+function level90NotificationUnreadCount() {
+  return level90NotificationInboxItems.reduce((count,item)=>count+(item.is_read ? 0 : 1),0);
 }
 
 function level90EscapeNotificationHtml(value) {
@@ -213,39 +229,45 @@ function level90NotificationMotionReduced() {
   return typeof prefersReducedMotion === "function" && prefersReducedMotion();
 }
 
-async function level90AnimateNotificationCardsOut(notificationIds) {
+async function level90AnimateNotificationCardsRead(notificationIds) {
   if (level90NotificationMotionReduced() || !level90NotificationDom.inboxList?.querySelectorAll) return;
   const ids=new Set(notificationIds || []);
   const cards=[...level90NotificationDom.inboxList.querySelectorAll(".notification-inbox-item")]
     .filter(card=>ids.has(card.dataset.notificationId));
   await Promise.all(cards.map((card,index)=>{
     if (typeof card.animate !== "function") return Promise.resolve();
-    card.classList.add("is-clearing");
+    card.classList.add("is-marking-read");
     const animation=card.animate([
-      {opacity:1,transform:"translateX(0)",maxHeight:`${card.getBoundingClientRect().height}px`},
-      {opacity:0,transform:"translateX(28px)",maxHeight:"0px",paddingTop:"0px",paddingBottom:"0px",borderWidth:"0px"}
-    ],{duration:240,delay:Math.min(index,5)*24,easing:"cubic-bezier(.4,0,.2,1)",fill:"forwards"});
+      {opacity:1,background:"rgb(var(--accent-rgb) / .12)"},
+      {opacity:.62,background:"transparent"}
+    ],{duration:220,delay:Math.min(index,5)*24,easing:"ease",fill:"none"});
     return animation.finished.catch(()=>{});
   }));
 }
 
-function level90RenderNotificationInbox({revealEmpty=false,animateItems=false}={}) {
-  const count = level90NotificationInboxItems.length;
+function level90RenderNotificationInbox({animateItems=false}={}) {
+  const count=level90NotificationInboxItems.length;
+  const unreadCount=level90NotificationUnreadCount();
   if (level90NotificationDom.inboxCount) {
     level90NotificationDom.inboxCount.textContent = count === 0
-      ? "No unread notifications"
-      : `${count} unread ${count === 1 ? "notification" : "notifications"}`;
+      ? "No notifications today"
+      : unreadCount === 0
+        ? `${count} today · All read`
+        : `${count} today · ${unreadCount} unread`;
   }
-  if (level90NotificationDom.clearAllButton) level90NotificationDom.clearAllButton.disabled = count === 0 || level90NotificationInboxBusy;
+  if (level90NotificationDom.markAllReadButton) level90NotificationDom.markAllReadButton.disabled = unreadCount === 0 || level90NotificationInboxBusy;
   if (!level90NotificationDom.inboxList) return;
   if (!count) {
-    level90NotificationDom.inboxList.innerHTML = `<div class="notification-inbox-empty${revealEmpty ? " is-revealing" : ""}"><svg class="aura-icon" aria-hidden="true"><use href="#icon-notification"></use></svg><strong>You are all caught up</strong><span>New Level90 alerts will stay here until you clear them.</span></div>`;
+    level90NotificationDom.inboxList.innerHTML = `<div class="notification-inbox-empty"><svg class="aura-icon" aria-hidden="true"><use href="#icon-notification"></use></svg><strong>No notifications today</strong><span>Today's Level90 alerts will appear here.</span></div>`;
     return;
   }
   level90NotificationDom.inboxList.innerHTML = level90NotificationInboxItems.map(item=>{
     const lane = level90NotificationLaneDetails(item.rule_key);
     const when = new Intl.DateTimeFormat(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}).format(new Date(item.sent_at || item.created_at));
-    return `<article class="notification-inbox-item${animateItems ? " is-entering" : ""}" data-notification-id="${level90EscapeNotificationHtml(item.id)}" data-lane="${level90EscapeNotificationHtml(item.rule_key || "level90")}" role="listitem"><span class="notification-inbox-icon" aria-hidden="true"><svg class="aura-icon"><use href="#icon-${lane.icon}"></use></svg></span><div class="notification-inbox-copy"><strong>${level90RenderNotificationText(item.title)}</strong><span>${level90RenderNotificationText(item.body)}</span><small>${level90EscapeNotificationHtml(lane.label)} · ${level90EscapeNotificationHtml(when)}</small></div><button class="notification-clear-btn" type="button" data-clear-notification="${level90EscapeNotificationHtml(item.id)}" aria-label="Clear ${level90EscapeNotificationHtml(item.title)}">Clear</button></article>`;
+    const readAction=item.is_read
+      ? `<span class="notification-read-status">Read</span>`
+      : `<button class="notification-read-btn" type="button" data-mark-notification-read="${level90EscapeNotificationHtml(item.id)}" aria-label="Mark ${level90EscapeNotificationHtml(item.title)} as read">Mark as read</button>`;
+    return `<article class="notification-inbox-item${item.is_read ? " is-read" : ""}${animateItems ? " is-entering" : ""}" data-notification-id="${level90EscapeNotificationHtml(item.id)}" data-lane="${level90EscapeNotificationHtml(item.rule_key || "level90")}" role="listitem"><span class="notification-inbox-icon" aria-hidden="true"><svg class="aura-icon"><use href="#icon-${lane.icon}"></use></svg></span><div class="notification-inbox-copy"><strong>${level90RenderNotificationText(item.title)}</strong><span>${level90RenderNotificationText(item.body)}</span><small>${level90EscapeNotificationHtml(lane.label)} · ${level90EscapeNotificationHtml(when)}</small></div>${readAction}</article>`;
   }).join("");
 }
 
@@ -284,7 +306,7 @@ async function refreshLevel90NotificationInbox({silent=false}={}) {
     fetchError = error;
   } finally {
     const inboxState = level90InitializeNotificationInboxState();
-    level90NotificationInboxItems = level90UnreadNotificationItems(allItems,inboxState);
+    level90NotificationInboxItems = level90TodayNotificationItems(allItems,inboxState);
     level90NotificationInboxBusy = false;
     level90RenderNotificationInbox();
     level90UpdateHeaderNotificationButton(level90CachedNotificationConnection());
@@ -294,61 +316,55 @@ async function refreshLevel90NotificationInbox({silent=false}={}) {
   else level90SetNotificationInboxMessage();
 }
 
-async function level90ClearNotification(notificationId) {
+async function level90MarkNotificationRead(notificationId) {
   if (!notificationId || level90NotificationInboxMotionBusy) return;
+  const item=level90NotificationInboxItems.find(candidate=>candidate.id === notificationId);
+  if (!item || item.is_read) return;
   level90NotificationInboxMotionBusy=true;
-  await level90AnimateNotificationCardsOut([notificationId]);
+  await level90AnimateNotificationCardsRead([notificationId]);
   const inboxState = level90InitializeNotificationInboxState();
-  const previousState = {version:1,clearedThrough:inboxState.clearedThrough,clearedIds:[...inboxState.clearedIds]};
-  const removedItem = level90NotificationInboxItems.find(item=>item.id === notificationId) || null;
-  if (!inboxState.clearedIds.includes(notificationId)) inboxState.clearedIds.push(notificationId);
+  const previousState = {version:2,readThrough:inboxState.readThrough,readIds:[...inboxState.readIds]};
+  if (!inboxState.readIds.includes(notificationId)) inboxState.readIds.push(notificationId);
   level90SaveNotificationInboxState(inboxState);
-  level90NotificationInboxItems = level90NotificationInboxItems.filter(item=>item.id !== notificationId);
-  level90RenderNotificationInbox({revealEmpty:level90NotificationInboxItems.length===0});
+  item.is_read=true;
+  level90RenderNotificationInbox();
   level90UpdateHeaderNotificationButton(level90CachedNotificationConnection());
   level90NotificationInboxMotionBusy=false;
-  if (typeof showToast === "function") showToast("Notification cleared.",{
+  if (typeof showToast === "function") showToast("Notification marked as read.",{
     actionLabel:"Undo",
     duration:6000,
     onAction:()=>{
       level90SaveNotificationInboxState(previousState);
-      if (removedItem && !level90NotificationInboxItems.some(item=>item.id === removedItem.id)) {
-        level90NotificationInboxItems.push(removedItem);
-        level90NotificationInboxItems.sort((a,b)=>level90NotificationTimestamp(b)-level90NotificationTimestamp(a));
-      }
+      item.is_read=false;
       level90RenderNotificationInbox({animateItems:true});
       level90UpdateHeaderNotificationButton(level90CachedNotificationConnection());
-      showToast("Notification restored.");
+      showToast("Notification marked as unread.");
     }
   });
 }
 
-async function level90ClearAllNotifications() {
-  if (!level90NotificationInboxItems.length || level90NotificationInboxMotionBusy) return;
+async function level90MarkAllNotificationsRead() {
+  const unreadItems=level90NotificationInboxItems.filter(item=>!item.is_read);
+  if (!unreadItems.length || level90NotificationInboxMotionBusy) return;
   level90NotificationInboxMotionBusy=true;
-  await level90AnimateNotificationCardsOut(level90NotificationInboxItems.map(item=>item.id));
+  await level90AnimateNotificationCardsRead(unreadItems.map(item=>item.id));
   const inboxState = level90InitializeNotificationInboxState();
-  const previousState = {version:1,clearedThrough:inboxState.clearedThrough,clearedIds:[...inboxState.clearedIds]};
-  const clearedItems = [...level90NotificationInboxItems];
-  const latestReceivedAt = Math.max(Date.now(),...level90NotificationInboxItems.map(level90NotificationTimestamp));
-  inboxState.clearedThrough = Math.max(inboxState.clearedThrough,latestReceivedAt);
-  inboxState.clearedIds = [];
+  const previousState = {version:2,readThrough:inboxState.readThrough,readIds:[...inboxState.readIds]};
+  inboxState.readIds=[...new Set([...inboxState.readIds,...unreadItems.map(item=>item.id)])].slice(-500);
   level90SaveNotificationInboxState(inboxState);
-  level90NotificationInboxItems = [];
-  level90RenderNotificationInbox({revealEmpty:true});
+  unreadItems.forEach(item=>{ item.is_read=true; });
+  level90RenderNotificationInbox();
   level90UpdateHeaderNotificationButton(level90CachedNotificationConnection());
   level90NotificationInboxMotionBusy=false;
-  if (typeof showToast === "function") showToast("All notifications cleared.",{
+  if (typeof showToast === "function") showToast("All of today's notifications marked as read.",{
     actionLabel:"Undo",
     duration:6000,
     onAction:()=>{
       level90SaveNotificationInboxState(previousState);
-      const restored = new Map(level90NotificationInboxItems.map(item=>[item.id,item]));
-      clearedItems.forEach(item=>restored.set(item.id,item));
-      level90NotificationInboxItems=[...restored.values()].sort((a,b)=>level90NotificationTimestamp(b)-level90NotificationTimestamp(a));
+      unreadItems.forEach(item=>{ item.is_read=false; });
       level90RenderNotificationInbox({animateItems:true});
       level90UpdateHeaderNotificationButton(level90CachedNotificationConnection());
-      showToast("Notifications restored.");
+      showToast("Notifications marked as unread.");
     }
   });
 }
@@ -953,10 +969,10 @@ function level90BindNotificationSettings() {
   level90NotificationDom.deviceName.addEventListener("change",level90UpdateNotificationDeviceName);
   level90NotificationDom.smartSaveButton?.addEventListener("click",level90SaveSmartNotificationSettings);
   level90NotificationDom.centerButton?.addEventListener("click",level90OpenNotificationCenter);
-  level90NotificationDom.clearAllButton?.addEventListener("click",level90ClearAllNotifications);
+  level90NotificationDom.markAllReadButton?.addEventListener("click",level90MarkAllNotificationsRead);
   level90NotificationDom.inboxList?.addEventListener("click",event=>{
-    const button = event.target.closest?.("[data-clear-notification]");
-    if (button) level90ClearNotification(button.dataset.clearNotification);
+    const button = event.target.closest?.("[data-mark-notification-read]");
+    if (button) level90MarkNotificationRead(button.dataset.markNotificationRead);
   });
   [
     [level90NotificationDom.morningBriefTime,level90NotificationDom.morningBriefTimeDisplay],

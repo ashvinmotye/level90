@@ -2,6 +2,17 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 54 Compact Dashboard and Notification Read States
+
+- Removes the Today ridge and oversized level-number section.
+- Moves the live level label into the header and makes it return to Today rather than opening Settings.
+- Keeps the full date and journey day on one line, followed by score, XP score today and momentum on the next line.
+- Adds horizontal breathing room to Completed Today cards.
+- Changes notification actions from clearing to persistent read states, while limiting the inbox to notifications received today.
+- Reduces desktop typography, header actions, spacing and overall content width to a more conventional scale.
+- Bumps every PWA asset and cache reference so installed apps receive the update.
+- Requires no Supabase migration or Edge Function deployment.
+
 ## Version 53 Desktop Layout Repair
 
 - Corrects a CSS-specificity conflict that allowed the retired centred-orb rule to override the new desktop level-number composition.

@@ -15,7 +15,8 @@ const app = fs.readFileSync(path.join(root,"app.js"),"utf8");
 assert.match(html,/id="notificationCenterButton"/);
 assert.match(html,/id="notificationUnreadBadge"[^>]*hidden/);
 assert.match(html,/id="view-notifications"/);
-assert.match(html,/id="clearAllNotificationsButton"/);
+assert.match(html,/id="markAllNotificationsReadButton"/);
+assert.match(html,/>Mark all as read</);
 assert.match(css,/\.notification-center-btn\.is-disabled \.notification-bell::after/);
 assert.match(app,/"notifications","settings"/);
 assert.match(app,/LEVEL90_NOTIFICATION_RECEIVED/);
@@ -180,9 +181,10 @@ function notificationContext({ios=false,standalone=true,smartRuleVersion=0,histo
     saveSmart:level90SaveSmartNotificationSettings,
     refreshInbox:refreshLevel90NotificationInbox,
     openInbox:level90OpenNotificationCenter,
-    clearOne:level90ClearNotification,
-    clearAll:level90ClearAllNotifications,
-    unreadCount:()=>level90NotificationInboxItems.length
+    markOneRead:level90MarkNotificationRead,
+    markAllRead:level90MarkAllNotificationsRead,
+    unreadCount:level90NotificationUnreadCount,
+    visibleCount:()=>level90NotificationInboxItems.length
   };`,context);
   return {
     context,elements,writes,invocations,toasts,views,
@@ -291,11 +293,18 @@ async function run() {
   assert.equal(keyRecoveryHarness.elements.get("#testNotificationButton").disabled,false);
   assert.ok(keyRecoveryHarness.writes.some(write=>write.table === "level90_push_subscriptions" && write.kind === "upsert"));
 
+  const todayMorning = new Date();
+  todayMorning.setHours(6,0,2,0);
+  const todayEvening = new Date();
+  todayEvening.setHours(18,0,2,0);
+  const yesterday = new Date(todayMorning);
+  yesterday.setDate(yesterday.getDate()-1);
   const inboxHarness = notificationContext({
     smartRuleVersion:3,
     historyItems:[
-      {id:"notification-a",rule_key:"morning_brief",title:"Morning briefing",body:"Five quests are ready.",status:"sent",created_at:"2099-08-25T06:00:00.000Z",sent_at:"2099-08-25T06:00:02.000Z"},
-      {id:"notification-b",rule_key:"streak_rescue",title:"Protect your streak 🔥",body:"One quest needs you.",status:"pending",sent_count:1,created_at:"2099-08-25T18:00:00.000Z",sent_at:"2099-08-25T18:00:02.000Z"}
+      {id:"notification-a",rule_key:"morning_brief",title:"Morning briefing",body:"Five quests are ready.",status:"sent",created_at:todayMorning.toISOString(),sent_at:todayMorning.toISOString()},
+      {id:"notification-b",rule_key:"streak_rescue",title:"Protect your streak 🔥",body:"One quest needs you.",status:"pending",sent_count:1,created_at:todayEvening.toISOString(),sent_at:todayEvening.toISOString()},
+      {id:"notification-old",rule_key:"evening_recap",title:"Yesterday",body:"This should not be in today's list.",status:"sent",created_at:yesterday.toISOString(),sent_at:yesterday.toISOString()}
     ]
   });
   await inboxHarness.context.notificationApi.openInbox();
@@ -303,26 +312,31 @@ async function run() {
   await inboxHarness.context.notificationApi.refresh();
   await inboxHarness.context.notificationApi.enable();
   assert.equal(inboxHarness.context.notificationApi.unreadCount(),2);
+  assert.equal(inboxHarness.context.notificationApi.visibleCount(),2,"the inbox should exclude notifications from previous days");
   assert.equal(inboxHarness.elements.get("#notificationUnreadBadge").textContent,"2");
   assert.equal(inboxHarness.elements.get("#notificationUnreadBadge").hidden,false);
   assert.equal(inboxHarness.elements.get("#notificationCenterButton").classList.contains("is-disabled"),false);
   await inboxHarness.context.notificationApi.openInbox();
   assert.equal(inboxHarness.views.at(-1),"notifications","a connected bell should open the unread inbox");
   assert.equal(inboxHarness.context.notificationApi.unreadCount(),2,"opening the inbox must not clear its badge");
-  await inboxHarness.context.notificationApi.clearOne("notification-a");
+  await inboxHarness.context.notificationApi.markOneRead("notification-a");
   assert.equal(inboxHarness.context.notificationApi.unreadCount(),1);
+  assert.equal(inboxHarness.context.notificationApi.visibleCount(),2,"read notifications must remain visible today");
   assert.equal(inboxHarness.elements.get("#notificationUnreadBadge").textContent,"1");
-  const clearOneToast = inboxHarness.toasts.at(-1);
-  assert.equal(clearOneToast.options.actionLabel,"Undo");
-  clearOneToast.options.onAction();
-  assert.equal(inboxHarness.context.notificationApi.unreadCount(),2,"Undo should restore an individually cleared notification");
-  await inboxHarness.context.notificationApi.clearAll();
+  assert.match(inboxHarness.elements.get("#notificationInboxList").innerHTML,/notification-inbox-item is-read/);
+  assert.match(inboxHarness.elements.get("#notificationInboxList").innerHTML,/>Read<\/span>/);
+  const markOneToast = inboxHarness.toasts.at(-1);
+  assert.equal(markOneToast.options.actionLabel,"Undo");
+  markOneToast.options.onAction();
+  assert.equal(inboxHarness.context.notificationApi.unreadCount(),2,"Undo should return one notification to unread");
+  await inboxHarness.context.notificationApi.markAllRead();
   assert.equal(inboxHarness.context.notificationApi.unreadCount(),0);
+  assert.equal(inboxHarness.context.notificationApi.visibleCount(),2,"marking all read must not remove today's notifications");
   assert.equal(inboxHarness.elements.get("#notificationUnreadBadge").hidden,true);
-  const clearAllToast = inboxHarness.toasts.at(-1);
-  assert.equal(clearAllToast.options.actionLabel,"Undo");
-  clearAllToast.options.onAction();
-  assert.equal(inboxHarness.context.notificationApi.unreadCount(),2,"Undo should restore all cleared notifications");
+  const markAllToast = inboxHarness.toasts.at(-1);
+  assert.equal(markAllToast.options.actionLabel,"Undo");
+  markAllToast.options.onAction();
+  assert.equal(inboxHarness.context.notificationApi.unreadCount(),2,"Undo should return all notifications to unread");
   assert.equal(inboxHarness.elements.get("#notificationUnreadBadge").textContent,"2");
 
   await runServiceWorkerTests();

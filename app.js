@@ -763,12 +763,11 @@ function renderHeader() {
   const day = journeyDay(today);
   const currentRank = rankForLevel(p.lvl);
   document.body.dataset.rankTier = String(currentRank.level);
-  setMetricValue("#levelNumber",p.lvl);
+  setMetricValue("#headerLevelLabel",`Level ${p.lvl}`);
   $("#profileNameInput").value = state.profileName;
   $("#characterLevelTitle").textContent = `Level ${p.lvl}`;
-  renderAscentRidge(p.lvl,p.pct,{maxed:p.maxed});
   $("#journeyDayLabel").textContent = `Day ${day}`;
-  $("#dateLabel").textContent = new Intl.DateTimeFormat(undefined,{weekday:"long",day:"numeric",month:"long"}).format(today);
+  $("#dateLabel").textContent = new Intl.DateTimeFormat("en-GB",{weekday:"long",day:"numeric",month:"long"}).format(today);
   applyTheme();
   renderLevelRoad(p.lvl);
 }
@@ -1639,10 +1638,6 @@ function toggleComplete(id, button) {
       if (finalClear) showDailyClearMoment(xpForQuest(q),{delay:newLevel > oldLevel ? 1750 : 0});
       else if (newLevel <= oldLevel) showToast(count > 1 ? `Cleared again · +${xpForQuest(q)} XP · ×${count} today` : `Quest cleared · +${xpForQuest(q)} XP`);
     };
-    if (newLevel > oldLevel && !reducedMotion) {
-      animateRouteToSummit().then(renderCompletedState);
-      return;
-    }
     renderCompletedState();
   };
   if (reducedMotion) completeTransition();
@@ -1703,8 +1698,9 @@ function toggleHistoryCompletion(id) {
 function xpPop(anchor, xp) {
   if (prefersReducedMotion() || !anchor) return;
   const r = anchor.getBoundingClientRect();
-  const orb = $("#levelOrb");
-  const target = orb.getBoundingClientRect();
+  const targetElement = $("#profileGreetingBtn");
+  if (!targetElement) return;
+  const target = targetElement.getBoundingClientRect();
   const el = document.createElement("div");
   el.className = "xp-flight";
   el.textContent = `+${xp} XP`;
@@ -1713,11 +1709,7 @@ function xpPop(anchor, xp) {
   el.style.setProperty("--travel-x",`${target.left + target.width/2 - (r.left + r.width/2)}px`);
   el.style.setProperty("--travel-y",`${target.top + target.height/2 - (r.top + r.height/2)}px`);
   document.body.appendChild(el);
-  animateAscentEnergy();
-  setTimeout(()=>{
-    orb.classList.remove("charging"); void orb.offsetWidth; orb.classList.add("charging");
-  },520);
-  setTimeout(()=>{el.remove();orb.classList.remove("charging")},1050);
+  setTimeout(()=>el.remove(),1050);
 }
 
 function animateAscentEnergy() {
@@ -1780,13 +1772,6 @@ function showLevelUp(level) {
   o.classList.remove("show");
   void o.offsetWidth;
   o.classList.add("show");
-  const world=$("#ascentWorld");
-  world?.classList.remove("ridge-revealed");
-  if (world) {
-    void world.offsetWidth;
-    world.classList.add("ridge-revealed");
-    window.setTimeout(()=>world.classList.remove("ridge-revealed"),1800);
-  }
 }
 function hideToast() {
   const toast=$("#toast");
@@ -2267,7 +2252,7 @@ function bindEvents() {
   });
 
   $("#menuBtn").addEventListener("click",openSettingsPage);
-  $("#profileGreetingBtn").addEventListener("click",openSettingsPage);
+  $("#profileGreetingBtn").addEventListener("click",()=>showView("today",{direction:"back"}));
   $("#closeSettings").addEventListener("click",closeSettingsPage);
   $("#closeNotifications").addEventListener("click",closeNotificationsPage);
   $("#profileNameInput").addEventListener("input",e=>{
