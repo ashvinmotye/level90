@@ -807,9 +807,11 @@ body.light .drag-handle { color:var(--accent); }
 .stoic-week-detail-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
 .stoic-week-detail-head strong { display:block; margin-top:5px; font-size:14px; }
 .stoic-save-state { flex:0 0 auto; display:inline-flex; align-items:center; min-height:28px; padding:5px 9px; border:1px solid rgb(var(--accent-2-rgb) / .2); border-radius:999px; background:rgb(var(--accent-2-rgb) / .08); color:var(--accent-2); font-size:8px; font-weight:900; }
-.stoic-save-state[data-state="saving"] { color:var(--gold); border-color:rgb(var(--gold-rgb) / .24); background:rgb(var(--gold-rgb) / .08); }
+.stoic-save-state[data-state="unsaved"] { color:var(--gold); border-color:rgb(var(--gold-rgb) / .24); background:rgb(var(--gold-rgb) / .08); }
 .stoic-reflection-fields { display:grid; gap:12px; }
 .stoic-reflection-fields textarea { min-height:78px; }
+.stoic-week-actions { display:flex; justify-content:flex-end; margin-top:14px; }
+.stoic-save-button { min-width:96px; }
 .stoic-setup-dialog .form-error { min-height:16px; margin:-5px 0 10px; color:var(--danger); font-size:9px; }
 
 .bottom-nav {
@@ -2198,8 +2200,8 @@ textarea:focus,
 }
 
 .auth-screen {
-  place-items:start stretch;
-  padding-top:20px;
+  place-items:center;
+  padding:calc(24px + env(safe-area-inset-top)) 18px calc(24px + env(safe-area-inset-bottom));
 }
 
 .auth-card {
@@ -2212,13 +2214,15 @@ textarea:focus,
   background:transparent;
   box-shadow:none;
   backdrop-filter:none;
-  text-align:left;
+  margin-inline:auto;
+  text-align:center;
 }
 
 .auth-card h1,
 .auth-card > p {
-  margin-left:0;
-  text-align:left;
+  margin-left:auto;
+  margin-right:auto;
+  text-align:center;
 }
 
 .auth-mark {

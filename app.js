@@ -17,8 +17,6 @@ let notificationsReturnView = "today";
 let selectedStoicYear = null;
 let selectedStoicWeek = null;
 let confirmationResolve = null;
-let pendingStoicSave = null;
-let stoicSaveTimer = null;
 let showcaseMode = false;
 const viewScrollPositions = new Map();
 const PALETTES = ["arctic","jade","aurora","rose"];
@@ -383,7 +381,6 @@ function showView(view,options={}) {
   const viewChanged = activeView !== nextView;
   if (viewChanged) {
     viewScrollPositions.set(previousView,Math.max(0,Number(window.scrollY) || 0));
-    if (previousView === "character") flushStoicWeekSave();
   }
   if (nextView === "settings" && activeView !== "settings" && options.remember !== false) settingsReturnView = activeView;
   if (nextView === "notifications" && activeView !== "notifications" && options.remember !== false) notificationsReturnView = activeView;
@@ -1336,6 +1333,9 @@ function renderStoicWeekDetail(ageYear,weekIndex) {
       <label>What did I handle well?<textarea data-stoic-field="control" maxlength="${STOIC_TEXT_LIMITS.control}" placeholder="Name the choices that reflected your character.">${escapeHtml(record.control || "")}</textarea></label>
       <label>Where did I react instead of choose?<textarea data-stoic-field="reaction" maxlength="${STOIC_TEXT_LIMITS.reaction}" placeholder="Observe it without turning the review into punishment.">${escapeHtml(record.reaction || "")}</textarea></label>
       <label>One correction for the next week<textarea data-stoic-field="correction" maxlength="${STOIC_TEXT_LIMITS.correction}" placeholder="Keep the correction specific and within your control.">${escapeHtml(record.correction || "")}</textarea></label>
+    </div>
+    <div class="stoic-week-actions">
+      <button id="saveStoicWeekButton" class="primary-btn stoic-save-button" type="button" disabled>Save</button>
     </div>`;
 }
 
@@ -1354,7 +1354,6 @@ function renderStoicYearView() {
 }
 
 function selectStoicYear(ageYear,weekIndex=null) {
-  flushStoicWeekSave();
   const position=stoicPositionForDate(state.stoicCalendar.birthDate,state.stoicCalendar.horizonYears,new Date());
   selectedStoicYear=Math.max(0,Math.min(state.stoicCalendar.horizonYears-1,Number(ageYear)));
   selectedStoicWeek=weekIndex===null
@@ -1410,7 +1409,7 @@ function setStoicSaveState(status) {
   const indicator=$("#stoicSaveState");
   if (!indicator) return;
   indicator.dataset.state=status;
-  indicator.textContent=status === "saving" ? "Saving…" : "Saved";
+  indicator.textContent=status === "unsaved" ? "Unsaved changes" : "Saved";
 }
 
 function updateStoicReflectionMarker(recordKey) {
@@ -1425,36 +1424,23 @@ function updateStoicReflectionMarker(recordKey) {
   button.setAttribute("aria-label",`Week ${week+1}${reflected ? ", reflection added" : ""}`);
 }
 
-function saveStoicWeekField(recordKey,field,value) {
-  if (!Object.hasOwn(STOIC_TEXT_LIMITS,field)) return;
-  const record={
-    intention:"",control:"",reaction:"",correction:"",
-    ...(state.stoicCalendar.weeks[recordKey] || {})
-  };
-  record[field]=normalizeStoicText(value,STOIC_TEXT_LIMITS[field]).trim();
+function saveStoicWeekReflection() {
+  const container=$("[data-stoic-record]",$("#stoicWeekDetail"));
+  if (!container) return;
+  const recordKey=container.dataset.stoicRecord;
+  const record={intention:"",control:"",reaction:"",correction:""};
+  $$('[data-stoic-field]',container).forEach(field=>{
+    const key=field.dataset.stoicField;
+    if (Object.hasOwn(STOIC_TEXT_LIMITS,key)) record[key]=normalizeStoicText(field.value,STOIC_TEXT_LIMITS[key]).trim();
+  });
   record.updatedAt=new Date().toISOString();
   if (record.intention || record.control || record.reaction || record.correction) state.stoicCalendar.weeks[recordKey]=record;
   else delete state.stoicCalendar.weeks[recordKey];
   save();
   updateStoicReflectionMarker(recordKey);
   setStoicSaveState("saved");
-}
-
-function flushStoicWeekSave() {
-  if (!pendingStoicSave) return;
-  window.clearTimeout(stoicSaveTimer);
-  const pending=pendingStoicSave;
-  pendingStoicSave=null;
-  stoicSaveTimer=null;
-  saveStoicWeekField(pending.recordKey,pending.field,pending.value);
-}
-
-function scheduleStoicWeekSave(recordKey,field,value) {
-  pendingStoicSave={recordKey,field,value};
-  window.clearTimeout(stoicSaveTimer);
-  setStoicSaveState("saving");
-  updateStoicReflectionMarker(recordKey);
-  stoicSaveTimer=window.setTimeout(flushStoicWeekSave,450);
+  $("#saveStoicWeekButton").disabled=true;
+  showToast("Stoic reflection saved");
 }
 
 function renderCharacter() {
@@ -2195,7 +2181,6 @@ function bindEvents() {
     }
     const stoicWeek=e.target.closest("[data-stoic-week]");
     if(stoicWeek){
-      flushStoicWeekSave();
       selectedStoicWeek=Number(stoicWeek.dataset.stoicWeek);
       renderStoicYearView();
     }
@@ -2214,10 +2199,13 @@ function bindEvents() {
   $("#closeStoicLifeDialog").addEventListener("click",()=>$("#stoicLifeDialog").close());
   $("#stoicWeekDetail").addEventListener("input",e=>{
     const field=e.target.closest("[data-stoic-field]");
-    const container=e.target.closest("[data-stoic-record]");
-    if(field && container) scheduleStoicWeekSave(container.dataset.stoicRecord,field.dataset.stoicField,field.value);
+    if (!field) return;
+    setStoicSaveState("unsaved");
+    $("#saveStoicWeekButton").disabled=false;
   });
-  $("#stoicWeekDetail").addEventListener("change",flushStoicWeekSave);
+  $("#stoicWeekDetail").addEventListener("click",e=>{
+    if (e.target.closest("#saveStoicWeekButton")) saveStoicWeekReflection();
+  });
 
   $$(".filter-chip").forEach(b=>b.addEventListener("click",()=>{
     if(reorderMode) return;
@@ -2253,8 +2241,6 @@ function bindEvents() {
 
   $("#menuBtn").addEventListener("click",openSettingsPage);
   $("#profileGreetingBtn").addEventListener("click",()=>showView("today",{direction:"back"}));
-  $("#closeSettings").addEventListener("click",closeSettingsPage);
-  $("#closeNotifications").addEventListener("click",closeNotificationsPage);
   $("#profileNameInput").addEventListener("input",e=>{
     state.profileName=e.target.value.trimStart();
     save();
