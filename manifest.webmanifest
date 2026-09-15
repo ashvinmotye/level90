@@ -4,8 +4,8 @@
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#193546",
-  "theme_color": "#193546",
+  "background_color": "#191919",
+  "theme_color": "#191919",
   "description": "Complete real-life quests, earn XP and keep climbing toward Level 90.",
   "icons": [
     {

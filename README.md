@@ -2,6 +2,20 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 59 Monochrome Palette
+
+- Uses `#191919` and `#fff` as the only solid interface colours in dark and light modes.
+- Converts muted text, dividers, fields and disabled states to neutral translucent greys with readable contrast.
+- Removes the retired coloured palette CSS so legacy saved palette values cannot restore coloured accents.
+- Converts progress, warning, confirmation and destructive states to the same contrast-led monochrome system.
+- Bumps the PWA asset and cache versions so installed copies receive the palette update.
+
+## Version 58 App Icon
+
+- Replaces the PWA, maskable, Apple touch and favicon artwork with the supplied monochrome Level90 icon.
+- Aligns the app shell and manifest colour with the icon's `#191919` background.
+- Bumps the PWA asset and cache versions so installed copies receive the icon update.
+
 ## Version 56 Sequential Date Row Alignment
 
 - Keeps Sunday 13 September · Day 34 together as one sequential, left-aligned line.

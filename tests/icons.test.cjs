@@ -22,7 +22,7 @@ const appIconSizes = new Map([
   ["icon-master.png",[1024,1024]],
   ["icon-512.png",[512,512]],
   ["icon-192.png",[192,192]],
-  ["apple-touch-icon-v39.png",[180,180]],
+  ["apple-touch-icon-v40.png",[180,180]],
   ["apple-touch-icon.png",[180,180]],
   ["favicon-32.png",[32,32]],
   ["icon-maskable-512.png",[512,512]],
@@ -32,14 +32,15 @@ for (const [fileName,expected] of appIconSizes) {
   assert.deepEqual(pngDimensions(fileName),expected,`${fileName} has the wrong dimensions`);
 }
 
-const appIconSource = fs.readFileSync(path.join(root,"icons","icon-source.png"));
+const appIconSource = fs.readFileSync(path.join(root,"icons","icon-source.svg"));
 assert.equal(
   crypto.createHash("sha256").update(appIconSource).digest("hex"),
-  "11ec9ffa1763b9f894d642b6f3e244d022699f197de455494017d441a11e22b7",
+  "701d7336bf647ffdeedfd6e5a9e371b2ea9fdf98a3fbcaa15d2fa00fa10078e8",
   "the supplied Level90 source artwork must remain unchanged"
 );
-assert.match(html,/apple-touch-icon-v39\.png/,"iOS should request the current cache-busting Apple Touch icon filename");
-assert.equal(manifest.background_color,"#193546","manifest background should match the supplied icon");
+assert.match(html,/apple-touch-icon-v40\.png/,"iOS should request the current cache-busting Apple Touch icon filename");
+assert.equal(manifest.background_color,"#191919","manifest background should match the supplied icon");
+assert.equal(manifest.theme_color,"#191919","manifest theme should match the supplied icon");
 assert.ok(manifest.icons.some(icon=>icon.src === "./icons/icon-512.png" && icon.purpose === "any"),"manifest should include the standard Level90 icon");
 assert.ok(manifest.icons.some(icon=>icon.src === "./icons/icon-maskable-512.png" && icon.purpose === "maskable"),"manifest should include the safe-zone Level90 icon");
 
