@@ -2627,7 +2627,6 @@ body.light {
 }
 
 .calendar-legend .dot.done { background:var(--score-strong); }
-.calendar-legend .dot.partial { background:var(--score-progress); }
 .calendar-legend .dot.future { background:var(--week-zero); }
 .history-calendar-grid .calendar-day.empty { background:var(--idle-day); }
 .history-calendar-grid .calendar-day.done,
@@ -2637,7 +2636,6 @@ body.light {
   -webkit-text-fill-color:#fff !important;
 }
 .history-calendar-grid .calendar-day.done { background:var(--score-strong); }
-.history-calendar-grid .calendar-day.partial { background:var(--score-progress); }
 .history-calendar-grid .calendar-day.done i,
 .history-calendar-grid .calendar-day.partial i { color:rgb(255 255 255 / .88); }
 .history-calendar-grid .calendar-day.today:not(.selected) { box-shadow:inset 0 0 0 1px var(--text); }
@@ -2670,3 +2668,37 @@ body.light {
 .stoic-zoom-week.tracked.grade-0 { color:var(--text); }
 body.light .stoic-zoom-week.tracked.grade-0 { color:#191919; }
 .stoic-week-cell.reflected { outline-color:var(--text); }
+
+/* Version 61 · History distinguishes today's progress from completed past days. */
+:root {
+  --history-progress-bg:rgb(59 130 246 / .24);
+  --history-progress-border:rgb(96 165 250 / .54);
+  --history-progress-text:#bfdbfe;
+  --history-below-bg:rgb(255 255 255 / .19);
+  --history-below-dot:#a1a1aa;
+}
+body.light {
+  --history-progress-bg:rgb(59 130 246 / .17);
+  --history-progress-border:rgb(37 99 235 / .45);
+  --history-progress-text:#1d4ed8;
+  --history-below-bg:rgb(25 25 25 / .14);
+  --history-below-dot:#71717a;
+}
+.calendar-legend .dot.partial {
+  background:var(--history-progress-bg);
+  border:1px solid var(--history-progress-border);
+}
+.calendar-legend .dot.below-target { background:var(--history-below-dot); }
+.calendar-legend .dot.future { background:transparent; border:1px solid var(--line); }
+.history-calendar-grid .calendar-day.partial {
+  background:var(--history-progress-bg);
+  border-color:var(--history-progress-border);
+  color:var(--history-progress-text);
+  -webkit-text-fill-color:var(--history-progress-text) !important;
+}
+.history-calendar-grid .calendar-day.partial i { color:inherit; }
+.history-calendar-grid .calendar-day.below-target {
+  background:var(--history-below-bg);
+  color:var(--text);
+  -webkit-text-fill-color:var(--text) !important;
+}

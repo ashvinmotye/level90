@@ -2,6 +2,13 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 61 History Calendar Statuses
+
+- Marks only the current day with activity below 80 as In progress, using a light transparent blue in both themes.
+- Displays past active days below 80 in neutral gray, distinct from days with no activity; updates the calendar legend accordingly.
+- Keeps 80+ score days green and the Stoic week-strength palette unchanged.
+- Bumps PWA asset and cache versions. No Supabase changes are needed.
+
 ## Version 60 Progress Colors and Copy
 
 - Removes Ridge labels from quests and Character, and renames the Character milestone to Next Rank. The retired Today ridge renderer is removed.

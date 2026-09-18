@@ -867,6 +867,7 @@ function renderHistoryCalendar() {
   const mondayOffset = (first.getDay()+6)%7;
   const start = parseLocalDate(state.startedOn);
   const today = parseLocalDate(localDateKey());
+  const todayKey = localDateKey(today);
   $("#historyMonthLabel").textContent = new Intl.DateTimeFormat(undefined,{month:"long",year:"numeric"}).format(first);
   let html = Array.from({length:mondayOffset},()=>`<span class="calendar-spacer"></span>`).join("");
   for(let day=1;day<=lastDay;day++){
@@ -875,8 +876,8 @@ function renderHistoryCalendar() {
     const score = dailyScoreFor(date);
     const hasActivity = completedXpForDate(date)>0;
     const disabled = date < start || date > today;
-    const cls = score>=80 ? "done" : hasActivity ? "partial" : "empty";
-    html += `<button class="calendar-day ${cls}${key===selectedHistoryDate?" selected":""}${key===localDateKey()?" today":""}" data-history-date="${key}" ${disabled?"disabled":""} title="${key}: ${score}/100"><span>${day}</span>${hasActivity?`<i>${score}/100</i>`:""}</button>`;
+    const cls = score>=80 ? "done" : hasActivity ? (key===todayKey ? "partial" : "below-target") : "empty";
+    html += `<button class="calendar-day ${cls}${key===selectedHistoryDate?" selected":""}${key===todayKey?" today":""}" data-history-date="${key}" ${disabled?"disabled":""} title="${key}: ${score}/100"><span>${day}</span>${hasActivity?`<i>${score}/100</i>`:""}</button>`;
   }
   $("#historyCalendar").innerHTML = html;
   const startMonth = new Date(start.getFullYear(),start.getMonth(),1);

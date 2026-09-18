@@ -24,6 +24,6 @@ assert.doesNotMatch(app,/scheduleStoicWeekSave|flushStoicWeekSave|stoicSaveTimer
 assert.match(css,/\.stoic-week-actions \{[^}]*justify-content:flex-end/);
 assert.match(css,/\.auth-screen \{\s*place-items:center;\s*padding:calc\(24px \+ env\(safe-area-inset-top\)\)/);
 assert.match(css,/\.auth-card \{[\s\S]{0,320}margin-inline:auto;[\s\S]{0,80}text-align:center;/);
-assert.match(worker,/const CACHE = "level90-v60";/);
+assert.match(worker,/const CACHE = "level90-v61";/);
 
 console.log("Level90 Version 59 manual-save and layout tests passed");
