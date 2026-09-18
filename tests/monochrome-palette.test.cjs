@@ -13,8 +13,12 @@ assert.match(css,/body\.light,[\s\S]*--bg:#fff;[\s\S]*--text:#191919;[\s\S]*--mu
 assert.match(css,/--minimal-action:#fff;[\s\S]*--minimal-action-text:#191919;/);
 assert.match(css,/--minimal-action:#191919;[\s\S]*--minimal-action-text:#fff;/);
 
-const hexColors = [...css.matchAll(/#[0-9a-f]{3,8}\b/gi)].map(match=>match[0].toLowerCase());
-assert.deepEqual([...new Set(hexColors)].sort(),["#191919","#fff"],"CSS hex colors must remain monochrome");
+const interfaceCss = css.split("/* Version 60 · Score and week strength scale */")[0];
+const hexColors = [...interfaceCss.matchAll(/#[0-9a-f]{3,8}\b/gi)].map(match=>match[0].toLowerCase());
+assert.deepEqual([...new Set(hexColors)].sort(),["#191919","#fff"],"general interface colors stay monochrome");
+assert.match(css,/--score-strong:#15803d;/);
+assert.match(css,/--score-progress:#b45309;/);
+assert.match(css,/--week-moderate:#2563eb;/);
 assert.doesNotMatch(css,/rgb\(255 118 146|rgba\(255,209,102|rgba\(3,7,18/,"legacy coloured accents must be removed");
 
 console.log("Level90 Version 59 monochrome palette tests passed");

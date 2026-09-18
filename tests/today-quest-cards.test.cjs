@@ -31,10 +31,10 @@ assert.match(app,/class="tile-decrement-action" data-undo-completion/);
 assert.match(app,/class="tile-repeat-action" data-complete/);
 assert.doesNotMatch(app,/data-toggle-today-tools/);
 assert.doesNotMatch(app,/function toggleTodayCardTools\(/);
-assert.match(app,/Ridge \$\{ridgeIndex\}/);
+assert.doesNotMatch(app,/Ridge \$\{ridgeIndex\}/);
 
-assert.match(html,/styles\.css\?v=59/);
-assert.match(serviceWorker,/level90-v59/);
+assert.match(html,/styles\.css\?v=60/);
+assert.match(serviceWorker,/level90-v60/);
 assert.match(readme,/## Version 49 Direct Actions and Interface Consistency/);
 
 console.log("Level90 Version 49 UI action tests passed");

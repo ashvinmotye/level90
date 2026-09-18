@@ -20,8 +20,8 @@ assert.doesNotMatch(html,/id="ascentRouteProgress"/);
 assert.doesNotMatch(html,/id="ascentEnergy"/);
 assert.match(html,/>Life Terrain</);
 assert.match(html,/>LEVEL REACHED</);
-assert.match(html,/styles\.css\?v=59/);
-assert.match(html,/app\.js\?v=59/);
+assert.match(html,/styles\.css\?v=60/);
+assert.match(html,/app\.js\?v=60/);
 
 assert.match(css,/\/\* Version 47 · Ascension Lines \*\//);
 assert.match(css,/\.ascent-world/);
@@ -30,7 +30,7 @@ assert.match(css,/\.ascent-world\.energy-climbing \.ascent-energy/);
 assert.match(css,/@media \(min-width:900px\) \{[\s\S]*\.today-layout \{\s*display:block;/);
 assert.match(css,/@media \(max-width: 520px\)[\s\S]*\.today-quest-grid \{ grid-template-columns:minmax\(0,1fr\)/);
 assert.match(css,/\.quest-progress-stats > span \{[^}]*border:0/);
-assert.match(css,/\.character-ridge-node/);
+assert.match(css,/\.character-level-node/);
 assert.match(css,/\.life-terrain-panel/);
 
 assert.match(app,/function buildShowcaseState\(/);
@@ -39,10 +39,10 @@ assert.match(app,/function exitLevel90Showcase\(/);
 assert.match(app,/if \(showcaseMode\) \{[\s\S]*lastSavedStateJson/);
 assert.match(app,/function animateAscentEnergy\(/);
 assert.match(app,/route\.style\.strokeDasharray/);
-assert.match(app,/data-ridge="\$\{ridgeIndex\}"/);
+assert.doesNotMatch(app,/data-ridge=/);
 assert.match(cloud,/function level90RevealShowcase\(/);
 assert.match(cloud,/!window\.level90ShowcaseActive/);
-assert.match(serviceWorker,/level90-v59/);
+assert.match(serviceWorker,/level90-v60/);
 assert.match(readme,/## Version 47 Ascension Lines/);
 
 console.log("Level90 Version 47 Ascension Lines tests passed");

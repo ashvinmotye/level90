@@ -2,6 +2,14 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 60 Progress Colors and Copy
+
+- Removes Ridge labels from quests and Character, and renames the Character milestone to Next Rank. The retired Today ridge renderer is removed.
+- Distinguishes History days with green for 80+ score, amber for in-progress activity, and neutral gray for no activity. Today and selected dates retain independent outlines.
+- Shows Stoic week strengths as neutral gray for zero, amber for 1–2, blue for 3–4, and green for 5+ strong days, in both the full calendar and selected-year grid.
+- Adds spaces around the age-range dash and fixes text/icon contrast on solid quest buttons in light and dark themes.
+- Bumps the PWA asset and cache versions. This release changes only app files; no Supabase migration or Edge Function deployment is needed.
+
 ## Version 59 Monochrome Palette
 
 - Uses `#191919` and `#fff` as the only solid interface colours in dark and light modes.

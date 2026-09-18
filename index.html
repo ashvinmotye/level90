@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;800;900&amp;family=Rubik+Doodle+Shadow&amp;display=swap" />
-  <link rel="stylesheet" href="./styles.css?v=59" />
+  <link rel="stylesheet" href="./styles.css?v=60" />
 </head>
 <body>
   <svg class="aura-icon-sprite" aria-hidden="true" focusable="false">
@@ -278,12 +278,12 @@
           <p>Your XP reveals where your finite time is going. Strengthen the terrain that matters.</p>
         </div>
         <div class="panel next-rank-card terrain-panel">
-          <span class="kicker">NEXT RIDGE</span>
+          <span class="kicker">NEXT RANK</span>
           <strong id="nextMilestoneTitle">Momentum Builder</strong>
           <p id="nextMilestoneText">Reach Level 5 to unlock this rank.</p>
         </div>
         <div class="panel character-road-card terrain-panel">
-          <div class="level-road-label"><span>ASCENT MAP</span><small>Level 90 is the ultimate ridge</small></div>
+          <div class="level-road-label"><span>ASCENT MAP</span><small>Level 90 is the final level</small></div>
           <div id="levelRoad" class="level-road"></div>
         </div>
         <div id="characterStats" class="character-list"></div>
@@ -312,7 +312,7 @@
             <div class="stoic-inline-year-head">
               <div>
                 <span class="kicker">SELECTED LIFE YEAR</span>
-                <h4 id="stoicYearTitle">Age 0–1</h4>
+                <h4 id="stoicYearTitle">Age 0 – 1</h4>
                 <small id="stoicYearDates" class="stoic-year-dates">Date range</small>
               </div>
               <button id="stoicShowLifeBtn" class="secondary-btn" type="button">Show Life</button>
@@ -624,9 +624,10 @@
     <div id="stoicCalendarGrid" class="stoic-life-grid" aria-label="Life calendar. Select a year to inspect its weeks."></div>
     <div class="stoic-legend" aria-label="Calendar legend">
       <span><i class="elapsed"></i>Before tracking</span>
+      <span><i class="tracked grade-0"></i>0 strong days</span>
       <span><i class="tracked grade-1"></i>1–2 strong days</span>
-      <span><i class="tracked grade-2"></i>3–4</span>
-      <span><i class="tracked grade-3"></i>5+</span>
+      <span><i class="tracked grade-2"></i>3–4 strong days</span>
+      <span><i class="tracked grade-3"></i>5+ strong days</span>
       <span><i class="future"></i>Future</span>
     </div>
     <p class="stoic-horizon-note">This is a chosen planning horizon, not a prediction of lifespan.</p>
@@ -666,8 +667,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3" crossorigin="anonymous" defer></script>
-  <script src="./cloud.js?v=59" defer></script>
-  <script src="./notifications.js?v=59" defer></script>
-  <script src="./app.js?v=59" defer></script>
+  <script src="./cloud.js?v=60" defer></script>
+  <script src="./notifications.js?v=60" defer></script>
+  <script src="./app.js?v=60" defer></script>
 </body>
 </html>

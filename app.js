@@ -8,7 +8,6 @@ let reorderMode = false;
 let questDragState = null;
 let selectedHistoryDate = null;
 let historyMonth = null;
-let ascentEnergyAnimation = null;
 let completionMotionBusy = false;
 let lastSavedStateJson = "";
 let activeView = "today";
@@ -705,54 +704,6 @@ function renderAll() {
   requestNameIfNeeded();
 }
 
-function ascentRidgeForLevel(level) {
-  const safeLevel=Math.max(1,Math.round(Number(level) || 1));
-  const startX=24+(safeLevel*5)%20;
-  const startY=446+(safeLevel*7)%28;
-  const middleX=150+(safeLevel*37)%78;
-  const middleY=288+(safeLevel*23)%96;
-  const controlOneX=66+(safeLevel*29)%92;
-  const controlOneY=350+(safeLevel*31)%82;
-  const controlTwoX=252+(safeLevel*41)%104;
-  const controlTwoY=158+(safeLevel*17)%112;
-  const endX=350+(safeLevel*13)%68;
-  const endY=54+(safeLevel*19)%62;
-  return {
-    path:`M${startX} ${startY}C${controlOneX} ${controlOneY} ${middleX-34} ${middleY+22} ${middleX} ${middleY}S${controlTwoX} ${controlTwoY} ${endX} ${endY}`,
-    waypoints:[[startX,startY],[endX,endY]]
-  };
-}
-
-function renderAscentRidge(level,progress,{maxed=false}={}) {
-  const ridge=ascentRidgeForLevel(level);
-  const base=$("#ascentRouteBase");
-  const route=$("#ascentRouteProgress");
-  const world=$("#ascentWorld");
-  const stage=$("#ascentStage");
-  const routeProgress=maxed ? 100 : Math.max(0,Math.min(100,Math.round(progress)));
-  const routeChanged=route?.getAttribute("d")!==ridge.path;
-  if (base) base.setAttribute("d",ridge.path);
-  if (route) {
-    if (routeChanged) route.classList.add("route-resetting");
-    route.setAttribute("d",ridge.path);
-    route.style.strokeDasharray=`${routeProgress} 100`;
-    if (routeChanged) requestAnimationFrame(()=>route.classList.remove("route-resetting"));
-  }
-  $$(".ascent-waypoint",$("#ascentRouteMap")).forEach((waypoint,index)=>{
-    const [x,y]=ridge.waypoints[index] || ridge.waypoints[ridge.waypoints.length-1];
-    waypoint.setAttribute("cx",String(x));
-    waypoint.setAttribute("cy",String(y));
-  });
-  if (stage) {
-    stage.setAttribute("aria-valuenow",String(routeProgress));
-    stage.setAttribute("aria-valuetext",`${routeProgress}% through Level ${level}`);
-  }
-  if (world) {
-    world.style.setProperty("--ascent-progress",`${routeProgress}%`);
-    world.dataset.ascentState=maxed ? "ascended" : progress>=75 ? "near-ridge" : "climbing";
-  }
-}
-
 function renderHeader() {
   const xp = totalXp();
   const p = levelProgress(xp);
@@ -831,7 +782,6 @@ function questCard(q, todayMode=false, dateKey=localDateKey()) {
   const streak = q.type === "recurring" ? questStreak(q,parseLocalDate(dateKey)) : null;
   const streakBadge = todayMode && streak ? `<span class="tile-streak" title="Current streak: ${streak.current} · Best streak: ${streak.best}" aria-label="Current streak ${streak.current}; best streak ${streak.best}"><span aria-hidden="true">·</span>${auraIcon("fire","streak-icon")} ${streak.current}</span>` : "";
   const consistency = !todayMode ? questConsistency(q,parseLocalDate(dateKey)) : null;
-  const ridgeIndex = Math.max(0,state.categories.findIndex(item=>item.id===q.categoryId))+1;
   const questProgress = streak && consistency ? `
       <div class="quest-progress-stats">
         <span class="quest-progress-streak" title="Current streak: ${streak.current} · Best streak: ${streak.best}" aria-label="Current streak ${streak.current}; best streak ${streak.best}">${auraIcon("fire","streak-icon")} <strong>${streak.current}</strong> streak</span>
@@ -842,7 +792,7 @@ function questCard(q, todayMode=false, dateKey=localDateKey()) {
     q.schedule?.mode === "daily" ? "Every day" :
     `Repeats ${weekdayText(q.schedule?.days || [])}`;
   if(todayMode) return `
-    <article class="quest-card today-tile ridge-${ridgeIndex} ${done ? "completed" : ""}" data-id="${q.id}" data-ridge="${ridgeIndex}">
+    <article class="quest-card today-tile ${done ? "completed" : ""}" data-id="${q.id}">
       <button class="tile-hit" ${done ? `data-undo-completion="${q.id}"` : `data-complete="${q.id}"`} aria-label="${done ? `Remove one completion from ${escapeHtml(q.title)}` : `Complete ${escapeHtml(q.title)}`}">
         <span class="today-completion-medallion ${done ? "is-complete" : ""}" aria-hidden="true">
           <span class="today-completion-mark"></span>
@@ -851,7 +801,7 @@ function questCard(q, todayMode=false, dateKey=localDateKey()) {
       </button>
       <div class="tile-copy">
         <div class="quest-title">${escapeHtml(q.title)}</div>
-        <div class="tile-category">${escapeHtml(cat.name)} <span aria-hidden="true">·</span> Ridge ${ridgeIndex}${streakBadge}</div>
+        <div class="tile-category">${escapeHtml(cat.name)}${streakBadge}</div>
       </div>
       <div class="tile-reward">
         <div class="tile-xp">+${d.xp} XP</div>
@@ -862,7 +812,7 @@ function questCard(q, todayMode=false, dateKey=localDateKey()) {
       </div>
     </article>`;
   return `
-  <article class="quest-card ridge-${ridgeIndex} ${reorderMode ? "reorder-item" : ""} ${done ? "completed" : ""}" data-id="${q.id}" data-ridge="${ridgeIndex}">
+  <article class="quest-card ${reorderMode ? "reorder-item" : ""} ${done ? "completed" : ""}" data-id="${q.id}">
     <div class="quest-card-content">
       <div class="quest-title">${escapeHtml(q.title)}</div>
       <div class="quest-meta">
@@ -1343,7 +1293,7 @@ function renderStoicYearView() {
   if (selectedStoicYear===null) return;
   const position=stoicPositionForDate(state.stoicCalendar.birthDate,state.stoicCalendar.horizonYears,new Date());
   const trackingStart=stoicTrackingStartDate();
-  $("#stoicYearTitle").textContent=`Age ${selectedStoicYear}–${selectedStoicYear+1}`;
+  $("#stoicYearTitle").textContent=`Age ${selectedStoicYear} – ${selectedStoicYear+1}`;
   const year=stoicYearBounds(state.stoicCalendar.birthDate,selectedStoicYear);
   $("#stoicYearDates").textContent=formatStoicDateRange(year.start,addDays(year.endExclusive,-1));
   $("#stoicYearWeekGrid").innerHTML=Array.from({length:52},(_,week)=>{
@@ -1450,11 +1400,11 @@ function renderCharacter() {
   $("#nextMilestoneText").textContent = overallLevel >= maxLevel()
     ? "You reached Level 90. Every quest now strengthens the character you built."
     : `Reach Level ${nextRank.level} to unlock this rank.`;
-  $("#characterStats").innerHTML = state.categories.map((c,index) => {
+  $("#characterStats").innerHTML = state.categories.map(c => {
     const xp = categoryXp(c.id), p = levelProgress(xp);
-    return `<div class="character-row" data-ridge="${index+1}">
+    return `<div class="character-row">
       <div class="character-top">
-        <strong><i class="character-ridge-node" aria-hidden="true"></i>${escapeHtml(c.icon)} ${escapeHtml(c.name)}</strong><span>RIDGE ${p.lvl} · ${xp} XP</span>
+        <strong><i class="character-level-node" aria-hidden="true"></i>${escapeHtml(c.icon)} ${escapeHtml(c.name)}</strong><span>LEVEL ${p.lvl} · ${xp} XP</span>
       </div>
       <div class="character-progress"><i style="width:${p.pct}%"></i></div>
     </div>`;

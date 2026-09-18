@@ -17,7 +17,7 @@ assert.match(html,/id="toastAction"[^>]*hidden/);
 assert.match(html,/id="interactionAnnouncer"[^>]*role="status"/);
 assert.match(html,/id="view-today"[^>]*tabindex="-1"/);
 assert.match(html,/data-view="today" aria-current="page"/);
-assert.match(html,/styles\.css\?v=59/);
+assert.match(html,/styles\.css\?v=60/);
 assert.match(html,/id="confirmationDialog"[^>]*aria-labelledby="confirmationTitle"/);
 assert.doesNotMatch(html,/id="appearanceOrbPreview"/,"the retired appearance preview should not be rendered");
 assert.match(html,/id="dailyClearMoment"/);
@@ -69,7 +69,7 @@ assert.match(css,/\.quest-card\.quest-saved-highlight/);
 assert.match(css,/\.toast \{[\s\S]*?min-height:38px/);
 assert.match(css,/\.toast-action \{[^}]*min-height:32px/);
 assert.match(css,/\.toast-action::after \{[^}]*inset:-6px/);
-assert.match(serviceWorker,/level90-v59/);
+assert.match(serviceWorker,/level90-v60/);
 assert.match(backlog,/## Delivered in Version 45 — P1/);
 assert.match(backlog,/## Delivered in Version 46 — P2/);
 
