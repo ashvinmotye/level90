@@ -14,7 +14,7 @@ function loadRuleApi(environment={}) {
   let source = fs.readFileSync(functionPath,"utf8").replace(/^import .*;\s*$/gm,"");
   source += `\nglobalThis.smartRuleApi={
     timeMinutes,minuteLabel,isQuietMinute,zonedParts,dateKeyAdd,weekdayForDateKey,
-    questScheduledOn,questPlannedOn,streakBeforeToday,median,adaptiveTriggerMinute,
+    questScheduledOn,questOptionalOn,questPlannedOn,streakBeforeToday,median,adaptiveTriggerMinute,
     summaryDue,evaluateStreakRescue,notificationSummaryStats,morningBrief,eveningRecap,rescueCopy,
     validDateKey,stoicPositionForDateKey,stoicJournalHasEntry,evaluateStoicReflection
   };`;
@@ -149,6 +149,19 @@ async function run() {
   assert.equal(scoreWithOneOff.scoreToday,100,"completed one-off XP must not change the recurring daily score");
   assert.equal(scoreWithOneOff.plannedToday,2,"one-off quests should remain visible in summary quest counts");
   assert.equal(scoreWithOneOff.completedToday,2,"completed one-off quests should remain visible in summary quest counts");
+
+  const optionalQuest = dailyQuest({
+    id:"q_optional",title:"Optional stretch",difficulty:"easy",
+    schedule:{mode:"weekdays",days:[1],optional:true}
+  });
+  assert.equal(api.questOptionalOn(optionalQuest,"2026-08-23"),true,"an enabled weekday quest is optional on an unscheduled day");
+  assert.equal(api.questOptionalOn(optionalQuest,"2026-08-24"),false,"the quest is mandatory on its scheduled day");
+  const scoreWithOptional = api.notificationSummaryStats(
+    preference(),[quest,optionalQuest],[completion("2026-08-23",17),completion("2026-08-23",18,"q_optional")],new Date("2026-08-23T21:00:00.000Z")
+  );
+  assert.equal(scoreWithOptional.scoreToday,150,"completed optional XP can raise the daily score above 100");
+  assert.equal(scoreWithOptional.plannedToday,1,"unscheduled optional quests are not mandatory summary quests");
+  assert.equal(scoreWithOptional.completedToday,1,"optional completions do not distort the required completion count");
 
   const grouped = api.rescueCopy(priority.candidates,"adaptive");
   assert.match(grouped.title,/2 streaks/);

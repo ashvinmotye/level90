@@ -400,7 +400,7 @@ function level90ProfileComparable(source) {
     theme:source.theme || "dark",
     palette:source.palette || "arctic",
     levelFont:source.levelFont || "default",
-    schemaVersion:Number(source.schemaVersion) || 6,
+    schemaVersion:Number(source.schemaVersion) || 7,
     stoicCalendar:level90StoicComparable(source.stoicCalendar)
   };
 }

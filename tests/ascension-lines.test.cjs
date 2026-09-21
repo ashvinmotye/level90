@@ -20,8 +20,8 @@ assert.doesNotMatch(html,/id="ascentRouteProgress"/);
 assert.doesNotMatch(html,/id="ascentEnergy"/);
 assert.match(html,/>Life Terrain</);
 assert.match(html,/>LEVEL REACHED</);
-assert.match(html,/styles\.css\?v=61/);
-assert.match(html,/app\.js\?v=61/);
+assert.match(html,/styles\.css\?v=62/);
+assert.match(html,/app\.js\?v=62/);
 
 assert.match(css,/\/\* Version 47 · Ascension Lines \*\//);
 assert.match(css,/\.ascent-world/);
@@ -42,7 +42,7 @@ assert.match(app,/route\.style\.strokeDasharray/);
 assert.doesNotMatch(app,/data-ridge=/);
 assert.match(cloud,/function level90RevealShowcase\(/);
 assert.match(cloud,/!window\.level90ShowcaseActive/);
-assert.match(serviceWorker,/level90-v61/);
+assert.match(serviceWorker,/level90-v62/);
 assert.match(readme,/## Version 47 Ascension Lines/);
 
 console.log("Level90 Version 47 Ascension Lines tests passed");

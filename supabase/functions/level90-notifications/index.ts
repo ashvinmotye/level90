@@ -37,7 +37,7 @@ type QuestRecord = {
   title:string;
   difficulty:string;
   quest_type:string;
-  schedule:{mode?:string;days?:number[]} | null;
+  schedule:{mode?:string;days?:number[];optional?:boolean} | null;
   active:boolean;
   sort_order:number;
   created_on:string;
@@ -248,6 +248,11 @@ function questScheduledOn(quest:QuestRecord,dateKey:string) {
   return false;
 }
 
+function questOptionalOn(quest:QuestRecord,dateKey:string) {
+  if (!quest.active || quest.quest_type !== "recurring" || dateKey < quest.created_on) return false;
+  return quest.schedule?.mode === "weekdays" && quest.schedule?.optional === true && !questScheduledOn(quest,dateKey);
+}
+
 function questPlannedOn(quest:QuestRecord,dateKey:string,completionDates:Set<string>) {
   if (!quest.active || dateKey < quest.created_on) return false;
   if (quest.quest_type === "recurring") return questScheduledOn(quest,dateKey);
@@ -388,8 +393,10 @@ function notificationSummaryStats(preference:SmartPreference,quests:QuestRecord[
   const score = (dateKey:string) => {
     const plannedQuests = planned(dateKey).filter(quest=>quest.quest_type === "recurring");
     const plannedXp = plannedQuests.reduce((sum,quest)=>sum+(difficultyXp[quest.difficulty] || 10),0);
-    const earnedXp = plannedQuests.filter(quest=>completed(quest,dateKey)).reduce((sum,quest)=>sum+(difficultyXp[quest.difficulty] || 10),0);
-    return plannedXp ? Math.min(100,Math.round(earnedXp/plannedXp*100)) : 0;
+    const optionalCompleted = quests.filter(quest=>questOptionalOn(quest,dateKey) && completed(quest,dateKey));
+    const earnedXp = [...plannedQuests.filter(quest=>completed(quest,dateKey)),...optionalCompleted]
+      .reduce((sum,quest)=>sum+(difficultyXp[quest.difficulty] || 10),0);
+    return plannedXp ? Math.round(earnedXp/plannedXp*100) : 0;
   };
   const todayQuests = planned(localDate);
   const totalXp = completions.reduce((sum,completion)=>{
@@ -808,7 +815,7 @@ Deno.serve(async request=>{
   const {data:{user},error:userError} = await supabase.auth.getUser();
   if (userError || !user) return json({error:"Your Level90 session is not valid."},401);
 
-  if (payload.action === "config") return json({publicKey,smartRuleVersion:3});
+  if (payload.action === "config") return json({publicKey,smartRuleVersion:4});
   if (payload.action === "catchup") {
     if (!secretKey) return json({error:"Supabase server key is unavailable for notification catch-up."},503);
     const admin = createClient(supabaseUrl,secretKey,{auth:{persistSession:false,autoRefreshToken:false}});

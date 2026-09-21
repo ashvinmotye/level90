@@ -150,7 +150,7 @@ function startLevelNumberGlow() {
 }
 function freshState() {
   return {
-    schemaVersion: 6,
+    schemaVersion: 7,
     startedOn: localDateKey(),
     quests: structuredClone(CONFIG.quests),
     categories: structuredClone(CONFIG.categories),
@@ -260,7 +260,7 @@ function migrateState() {
   state.categories ||= structuredClone(CONFIG.categories);
   state.completions ||= {};
   state.startedOn ||= localDateKey();
-  state.schemaVersion = 6;
+  state.schemaVersion = 7;
   state.theme ||= "dark";
   if (!PALETTES.includes(state.palette)) state.palette = "arctic";
   if (!LEVEL_FONTS.includes(state.levelFont)) state.levelFont = "default";
@@ -276,6 +276,15 @@ function migrateState() {
     q.id ||= uid();
     q.createdOn ||= earliestCompletionKey(q.id) || state.startedOn;
     q.createdAt ||= migrationTimestamp;
+    if (q.type === "oneoff") q.schedule = {mode:"once"};
+    else if (q.schedule?.mode === "weekdays") {
+      const schedule = {
+        mode:"weekdays",
+        days:[...new Set((q.schedule.days || []).map(Number).filter(day=>Number.isInteger(day) && day>=0 && day<=6))]
+      };
+      if (q.schedule.optional) schedule.optional=true;
+      q.schedule=schedule;
+    } else q.schedule = {mode:"daily"};
     delete q.icon;
   });
   Object.entries(state.completions).forEach(([dateKey,day])=>{
@@ -608,6 +617,14 @@ function questConsistency(q, asOf=new Date()) {
 function plannedQuestsFor(date) {
   return state.quests.filter(q => isScheduledOn(q,date));
 }
+function isOptionalQuestOn(q,date) {
+  if (!q?.active || q.type !== "recurring" || q.schedule?.mode !== "weekdays" || !q.schedule.optional) return false;
+  if (q.createdOn && localDateKey(date) < q.createdOn) return false;
+  return !isScheduledOn(q,date);
+}
+function optionalQuestsFor(date) {
+  return state.quests.filter(q=>isOptionalQuestOn(q,date));
+}
 function scoreQuestsFor(date) {
   return plannedQuestsFor(date).filter(q => q.type === "recurring");
 }
@@ -617,7 +634,10 @@ function completedXpForDate(date) {
 }
 function completedScoreXpForDate(date) {
   const key = localDateKey(date);
-  const eligibleIds = new Set(scoreQuestsFor(date).map(quest=>quest.id));
+  const eligibleIds = new Set([
+    ...scoreQuestsFor(date).map(quest=>quest.id),
+    ...optionalQuestsFor(date).filter(quest=>isCompleted(quest.id,key)).map(quest=>quest.id)
+  ]);
   return Object.entries(state.completions?.[key] || {}).reduce((sum,[id,value]) => {
     const record = value && eligibleIds.has(id) ? completionRecord(id,key) : null;
     return sum + (record?.xpAwarded || 0);
@@ -629,7 +649,7 @@ function plannedXpForDate(date) {
 function dailyScoreFor(date) {
   const planned = plannedXpForDate(date);
   if (!planned) return 0;
-  return Math.min(100,Math.round((completedScoreXpForDate(date) / planned) * 100));
+  return Math.round((completedScoreXpForDate(date) / planned) * 100);
 }
 function strongDayCount(asOf=new Date()) {
   const asOfKey = localDateKey(asOf);
@@ -752,29 +772,37 @@ function renderToday() {
   const today = new Date();
   const key = localDateKey(today);
   const qs = plannedQuestsFor(today);
+  const optional = optionalQuestsFor(today);
   const available = qs.filter(q=>!isCompleted(q.id,key));
-  const completed = qs.filter(q=>isCompleted(q.id,key));
+  const availableOptional = optional.filter(q=>!isCompleted(q.id,key));
+  const optionalIds = new Set(optional.map(q=>q.id));
+  const completed = [...qs,...optional].filter(q=>isCompleted(q.id,key));
   setMetricValue("#todayXp",completedXpForDate(today));
   setMetricValue("#dailyScore",dailyScoreFor(today));
   setMetricValue("#momentumScore",`${momentum()}%`);
   setMetricValue("#availableQuestCount",available.length);
+  setMetricValue("#optionalQuestCount",availableOptional.length);
   setMetricValue("#completedQuestCount",completed.reduce((sum,q)=>sum+completionCount(q.id,key),0));
 
   const availableList = $("#availableQuests");
+  const optionalList = $("#optionalTodayQuests");
+  const optionalSection = $("#optionalTodaySection");
   const completedList = $("#completedTodayQuests");
   const completedSection = $("#completedTodaySection");
   if (!qs.length) {
     availableList.innerHTML = `<div class="empty-state">No quests scheduled today. Create one and give the day a target.</div>`;
   } else if (!available.length) {
-    availableList.innerHTML = `<div class="empty-state all-cleared">All quests completed today ✨</div>`;
+    availableList.innerHTML = `<div class="empty-state all-cleared">All scheduled quests completed today ✨</div>`;
   } else {
     availableList.innerHTML = available.map(q => questCard(q, true, key)).join("");
   }
-  completedList.innerHTML = completed.map(q => questCard(q, true, key)).join("");
+  optionalList.innerHTML = availableOptional.map(q=>questCard(q,true,key,{optional:true})).join("");
+  optionalSection.classList.toggle("hidden",!availableOptional.length);
+  completedList.innerHTML = completed.map(q => questCard(q,true,key,{optional:optionalIds.has(q.id)})).join("");
   completedSection.classList.toggle("hidden", !completed.length);
 }
 
-function questCard(q, todayMode=false, dateKey=localDateKey()) {
+function questCard(q, todayMode=false, dateKey=localDateKey(),options={}) {
   const cat = category(q.categoryId);
   const d = difficulty(q.difficulty);
   const done = isCompleted(q.id,dateKey);
@@ -790,9 +818,9 @@ function questCard(q, todayMode=false, dateKey=localDateKey()) {
       </div>` : "";
   const repeat = q.type === "oneoff" ? "One-off mission" :
     q.schedule?.mode === "daily" ? "Every day" :
-    `Repeats ${weekdayText(q.schedule?.days || [])}`;
+    `Repeats ${weekdayText(q.schedule?.days || [])}${q.schedule?.optional ? " · Optional on other days" : ""}`;
   if(todayMode) return `
-    <article class="quest-card today-tile ${done ? "completed" : ""}" data-id="${q.id}">
+    <article class="quest-card today-tile ${options.optional ? "optional-tile" : ""} ${done ? "completed" : ""}" data-id="${q.id}">
       <button class="tile-hit" ${done ? `data-undo-completion="${q.id}"` : `data-complete="${q.id}"`} aria-label="${done ? `Remove one completion from ${escapeHtml(q.title)}` : `Complete ${escapeHtml(q.title)}`}">
         <span class="today-completion-medallion ${done ? "is-complete" : ""}" aria-hidden="true">
           <span class="today-completion-mark"></span>
@@ -801,7 +829,7 @@ function questCard(q, todayMode=false, dateKey=localDateKey()) {
       </button>
       <div class="tile-copy">
         <div class="quest-title">${escapeHtml(q.title)}</div>
-        <div class="tile-category">${escapeHtml(cat.name)}${streakBadge}</div>
+        <div class="tile-category">${escapeHtml(cat.name)}${options.optional ? `<span class="optional-tile-label">Optional</span>` : ""}${streakBadge}</div>
       </div>
       <div class="tile-reward">
         <div class="tile-xp">+${d.xp} XP</div>
@@ -937,7 +965,7 @@ function renderDayReview() {
 function reviewQuestRow(q,date,dateKey,editableDate) {
   const done = isCompleted(q.id,dateKey);
   const currentQuest = state.quests.find(item=>item.id===q.id) || null;
-  const canEdit = editableDate && currentQuest && isScheduledOn(currentQuest,date);
+  const canEdit = editableDate && currentQuest && (isScheduledOn(currentQuest,date) || isOptionalQuestOn(currentQuest,date));
   const detail = canEdit
     ? (done ? `${completionTimeLabel(q.id,dateKey)} · Tap to reopen` : "Tap to mark completed")
     : (done ? completionTimeLabel(q.id,dateKey) : "Not completed");
@@ -1612,7 +1640,7 @@ function toggleHistoryCompletion(id) {
   }
   const date = parseLocalDate(key);
   const q = state.quests.find(item=>item.id===id);
-  if (!q || !isScheduledOn(q,date)) return;
+  if (!q || (!isScheduledOn(q,date) && !isOptionalQuestOn(q,date))) return;
   const oldLevel = levelFromXp(totalXp());
   const change = toggleQuestCompletionForDate(id,key,completionFallbackTimestamp(key));
   if (!change) return;
@@ -1838,10 +1866,19 @@ function openQuestDialog(quest=null) {
     b.classList.toggle("selected",selected);
     b.setAttribute("aria-pressed",String(selected));
   });
+  $("#optionalQuestToggle").checked=Boolean(editing?.schedule?.optional);
   $("#scheduleFields").classList.toggle("hidden",type==="oneoff");
   $("#weekdayPicker").classList.toggle("hidden",schedule!=="weekdays");
+  syncOptionalQuestControl();
   renderDifficulty();
   $("#questDialog").showModal();
+}
+function syncOptionalQuestControl() {
+  const type=$("#questDialog").dataset.type || "recurring";
+  const schedule=$("#questDialog").dataset.schedule || "daily";
+  const eligible=type==="recurring" && schedule==="weekdays";
+  $("#optionalQuestField").classList.toggle("hidden",!eligible);
+  if (!eligible) $("#optionalQuestToggle").checked=false;
 }
 function renderDifficulty() {
   const p=$("#difficultyPicker");
@@ -1888,7 +1925,7 @@ function saveQuest(e) {
     categoryId:$("#questCategory").value,
     difficulty:$("#questDialog").dataset.difficulty || "medium",
     type,
-    schedule: mode==="weekdays" ? {mode,days} : {mode},
+    schedule: mode==="weekdays" ? {mode,days,...($("#optionalQuestToggle").checked ? {optional:true} : {})} : {mode},
   };
   let savedQuest=existing;
   if(existing){ Object.assign(existing,questData); delete existing.icon; }
@@ -2066,6 +2103,7 @@ function bindEvents() {
       });
       $("#weekdayPicker").classList.add("hidden");
     }
+    syncOptionalQuestControl();
   }));
   $$(".segment[data-schedule]").forEach(b=>b.addEventListener("click",()=>{
     $$(".segment[data-schedule]").forEach(x=>{
@@ -2075,6 +2113,7 @@ function bindEvents() {
     });
     $("#questDialog").dataset.schedule=b.dataset.schedule;
     $("#weekdayPicker").classList.toggle("hidden",b.dataset.schedule!=="weekdays");
+    syncOptionalQuestControl();
   }));
   $$("#weekdayPicker button").forEach(b=>b.addEventListener("click",()=>{
     const selected=!b.classList.contains("selected");

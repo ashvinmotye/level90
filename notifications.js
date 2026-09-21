@@ -596,8 +596,8 @@ async function level90LoadSmartNotificationSettings() {
     level90DisableSmartSettings("Signed out","Sign in to manage smart reminders.");
     return;
   }
-  if (level90NotificationSmartRuleVersion < 3) {
-    level90DisableSmartSettings("Update required","Run the Stoic-reminder migration and deploy the updated Level90 notification Edge Function.");
+  if (level90NotificationSmartRuleVersion < 4) {
+    level90DisableSmartSettings("Update required","Deploy the included Level90 notification Edge Function so optional-quest scores stay accurate.");
     return;
   }
   const {data:preference,error} = await level90AuthClient
@@ -945,7 +945,7 @@ async function level90CatchupNotifications(force=false) {
   } catch {
     return;
   }
-  if (level90NotificationSmartRuleVersion < 3) return;
+  if (level90NotificationSmartRuleVersion < 4) return;
   const key = level90NotificationCatchupKey(user.id);
   const lastCheck = Number(key ? localStorage.getItem(key) : 0) || 0;
   if (!force && Date.now()-lastCheck < 15*60000) return;

@@ -2702,3 +2702,75 @@ body.light {
   color:var(--text);
   -webkit-text-fill-color:var(--text) !important;
 }
+
+/* Version 62 · Optional quests on unscheduled days */
+.today-optional-section,
+.today-completed-section {
+  margin-top:34px;
+  padding-top:2px;
+}
+.today-optional-section .optional-heading,
+.today-completed-section .completed-heading { margin-top:0; }
+.optional-tile { border-style:dashed; }
+.optional-tile-label {
+  display:inline-flex;
+  align-items:center;
+  min-height:18px;
+  padding:2px 6px;
+  border:1px solid var(--line);
+  color:var(--text);
+  font-size:7px;
+  font-weight:900;
+  letter-spacing:.12em;
+}
+.optional-quest-field {
+  margin:-4px 0 18px;
+  padding:13px 0;
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+}
+.optional-quest-field label {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:14px;
+  margin:0;
+  cursor:pointer;
+}
+.optional-quest-field strong,
+.optional-quest-field small { display:block; }
+.optional-quest-field strong { color:var(--text); font-size:11px; }
+.optional-quest-field small { margin-top:4px; color:var(--muted); font-size:9px; font-weight:500; line-height:1.45; }
+.optional-quest-field input {
+  appearance:none;
+  position:relative;
+  width:42px;
+  height:24px;
+  margin:0;
+  border:1px solid var(--line);
+  border-radius:0;
+  background:var(--surface-input);
+  cursor:pointer;
+}
+.optional-quest-field input::before {
+  content:"";
+  position:absolute;
+  top:4px;
+  left:4px;
+  width:14px;
+  height:14px;
+  background:var(--muted);
+  transition:transform .18s ease,background .18s ease;
+}
+.optional-quest-field input:checked {
+  border-color:var(--minimal-action);
+  background:var(--minimal-action);
+}
+.optional-quest-field input:checked::before {
+  background:var(--minimal-action-text);
+  transform:translateX(18px);
+}
+.optional-quest-field input:focus-visible {
+  outline:2px solid var(--text);
+  outline-offset:3px;
+}

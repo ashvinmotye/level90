@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;800;900&amp;family=Rubik+Doodle+Shadow&amp;display=swap" />
-  <link rel="stylesheet" href="./styles.css?v=61" />
+  <link rel="stylesheet" href="./styles.css?v=62" />
 </head>
 <body>
   <svg class="aura-icon-sprite" aria-hidden="true" focusable="false">
@@ -194,6 +194,16 @@
           <button id="quickAddBtn" class="pill-btn">＋ New quest</button>
         </div>
         <div id="availableQuests" class="quest-list today-quest-grid"></div>
+
+        <section id="optionalTodaySection" class="today-optional-section hidden" aria-labelledby="optionalTodayHeading">
+          <div class="section-heading optional-heading">
+            <div>
+              <span class="kicker">EXTRA OPPORTUNITIES</span>
+              <h3 id="optionalTodayHeading">Optional today <span id="optionalQuestCount" class="section-count">0</span></h3>
+            </div>
+          </div>
+          <div id="optionalTodayQuests" class="quest-list today-quest-grid"></div>
+        </section>
 
         <section id="completedTodaySection" class="today-completed-section hidden" aria-labelledby="completedTodayHeading">
           <div class="section-heading completed-heading">
@@ -534,6 +544,12 @@
           <button type="button" data-day="6">S</button>
           <button type="button" data-day="0">S</button>
         </div>
+        <div id="optionalQuestField" class="optional-quest-field hidden">
+          <label for="optionalQuestToggle">
+            <span><strong>Appear as optional</strong><small>Show this quest on unscheduled days. It will not be required, but completing it adds XP and can raise the day’s score above 100.</small></span>
+            <input id="optionalQuestToggle" type="checkbox" role="switch" />
+          </label>
+        </div>
       </div>
 
       <button id="questSubmitBtn" class="primary-btn wide" type="submit">Create quest</button>
@@ -668,8 +684,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3" crossorigin="anonymous" defer></script>
-  <script src="./cloud.js?v=61" defer></script>
-  <script src="./notifications.js?v=61" defer></script>
-  <script src="./app.js?v=61" defer></script>
+  <script src="./cloud.js?v=62" defer></script>
+  <script src="./notifications.js?v=62" defer></script>
+  <script src="./app.js?v=62" defer></script>
 </body>
 </html>

@@ -2,6 +2,15 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 62 Optional Quests
+
+- Adds **Appear as optional** to recurring quests that repeat on selected days. The control is hidden for daily recurring and one-off quests.
+- Shows unscheduled enabled quests in a new **Optional today** section between Available today and Completed today; completed optional quests move into Completed today.
+- Keeps optional quests outside the required daily loadout, completion counts, streak-rescue reminders and daily-clear requirement on unscheduled days.
+- Awards normal XP for optional completions and adds one completion’s configured XP to the daily score numerator, allowing scores above 100 without repeat clears inflating the score.
+- Stores the flag inside the existing quest schedule JSON, so local backup, import/export and cloud synchronization include it without a database migration.
+- Bumps the PWA asset and cache versions. Redeploy the included `level90-notifications` Edge Function so notification summaries use the same above-100 optional-score calculation; no SQL migration is required.
+
 ## Version 61 History Calendar Statuses
 
 - Marks only the current day with activity below 80 as In progress, using a light transparent blue in both themes.

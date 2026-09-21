@@ -223,7 +223,7 @@ async function run() {
   assert.equal(iosSupport.installRequired,true);
 
   const smartHarness = notificationContext({
-    smartRuleVersion:3,
+    smartRuleVersion:4,
     historyItems:[{
       id:"notification-a",rule_key:"morning_brief",title:"Level90 morning briefing 🔥",
       body:"Yesterday: 80%. Today: 5 quests.",status:"sent",
@@ -283,7 +283,7 @@ async function run() {
   assert.equal(smartWrite.record.quiet_start,"22:00");
   assert.equal(smartHarness.elements.get("#smartNotificationStatus").textContent,"Active");
 
-  const keyRecoveryHarness = notificationContext({smartRuleVersion:3});
+  const keyRecoveryHarness = notificationContext({smartRuleVersion:4});
   await keyRecoveryHarness.context.notificationApi.refresh();
   keyRecoveryHarness.context.Notification.permission = "granted";
   vm.runInContext("level90NotificationPublicKey = null;",keyRecoveryHarness.context);
@@ -300,7 +300,7 @@ async function run() {
   const yesterday = new Date(todayMorning);
   yesterday.setDate(yesterday.getDate()-1);
   const inboxHarness = notificationContext({
-    smartRuleVersion:3,
+    smartRuleVersion:4,
     historyItems:[
       {id:"notification-a",rule_key:"morning_brief",title:"Morning briefing",body:"Five quests are ready.",status:"sent",created_at:todayMorning.toISOString(),sent_at:todayMorning.toISOString()},
       {id:"notification-b",rule_key:"streak_rescue",title:"Protect your streak 🔥",body:"One quest needs you.",status:"pending",sent_count:1,created_at:todayEvening.toISOString(),sent_at:todayEvening.toISOString()},

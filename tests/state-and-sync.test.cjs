@@ -66,7 +66,7 @@ function runAppStateTests() {
     state = {
       schemaVersion:1,startedOn:"2026-08-17",theme:"dark",palette:"arctic",levelFont:"unknown",profileName:"",
       categories:[{id:"body",name:"Body",icon:"💪",description:""}],
-      quests:[{id:"q_daily",title:"Daily quest",categoryId:"body",difficulty:"hard",type:"recurring",schedule:{mode:"daily"},active:true,createdOn:"2026-08-17"}],
+      quests:[{id:"q_daily",title:"Daily quest",categoryId:"body",difficulty:"hard",type:"recurring",schedule:{mode:"daily",optional:true},active:true,createdOn:"2026-08-17"}],
       completions:{
         "2026-08-17":{q_daily:true},
         "2026-08-18":{q_daily:"2026-08-18T08:00:00.000Z"},
@@ -84,6 +84,7 @@ function runAppStateTests() {
       legacyCount:state.completions["2026-08-17"].q_daily.count,
       invalidDifficulty:state.completions["2026-08-19"].q_daily.difficulty,
       invalidDifficultyXp:state.completions["2026-08-19"].q_daily.xpAwarded,
+      dailyOptionalRemoved:!Object.hasOwn(state.quests[0].schedule,"optional"),
       streak:questStreak(state.quests[0],parseLocalDate("2026-08-22")),
       consistency:questConsistency(state.quests[0],parseLocalDate("2026-08-22"))
     };
@@ -141,6 +142,25 @@ function runAppStateTests() {
       completedOneOffStillEarnsXp:completedXpForDate(parseLocalDate("2026-08-22")),
       recurringPlannedXp:plannedXpForDate(parseLocalDate("2026-08-22")),
       recurringCompletedXp:completedScoreXpForDate(parseLocalDate("2026-08-22"))
+    };
+    const requiredQuest = {id:"q_required",title:"Required",categoryId:"body",difficulty:"hard",type:"recurring",schedule:{mode:"daily"},active:true,createdOn:"2026-08-17"};
+    const optionalQuest = {id:"q_optional",title:"Optional",categoryId:"body",difficulty:"easy",type:"recurring",schedule:{mode:"weekdays",days:[1],optional:true},active:true,createdOn:"2026-08-17"};
+    state.quests = [requiredQuest,optionalQuest];
+    state.completions = {"2026-08-22":{q_optional:normalizeCompletionRecord({},optionalQuest,"2026-08-22")}};
+    const optionalScoreBeforeRequired = dailyScoreFor(parseLocalDate("2026-08-22"));
+    addQuestCompletionForDate("q_optional","2026-08-22","2026-08-22T10:00:00.000Z");
+    const optionalScoreAfterRepeat = dailyScoreFor(parseLocalDate("2026-08-22"));
+    addQuestCompletionForDate("q_required","2026-08-22","2026-08-22T11:00:00.000Z");
+    globalThis.optionalScoreResult = {
+      optionalOnUnscheduledDay:optionalQuestsFor(parseLocalDate("2026-08-22")).map(quest=>quest.id),
+      plannedOnUnscheduledDay:plannedQuestsFor(parseLocalDate("2026-08-22")).map(quest=>quest.id),
+      optionalNotDuplicatedOnScheduledDay:optionalQuestsFor(parseLocalDate("2026-08-24")).length===0,
+      scheduledDayIncludesQuest:plannedQuestsFor(parseLocalDate("2026-08-24")).some(quest=>quest.id==="q_optional"),
+      optionalScoreBeforeRequired,optionalScoreAfterRepeat,
+      scoreAfterRequired:dailyScoreFor(parseLocalDate("2026-08-22")),
+      scoreXpAfterRequired:completedScoreXpForDate(parseLocalDate("2026-08-22")),
+      optionalCompletionCount:completionCount("q_optional","2026-08-22"),
+      optionalCardMarked:questCard(optionalQuest,true,"2026-08-22",{optional:true}).includes("optional-tile-label")
     };
     state.completions = {"2026-08-22":{q_deleted:{completedAt:"2026-08-22T08:00:00.000Z",questTitle:"Archived quest",categoryId:"body",difficulty:"hard",xpAwarded:40}}};
     state.quests = [];
@@ -226,7 +246,8 @@ function runAppStateTests() {
     recurringPlannedXp:40,
     recurringCompletedXp:0
   });
-  assert.equal(context.stateTestResult.schemaVersion,6);
+  assert.equal(context.stateTestResult.schemaVersion,7);
+  assert.equal(context.stateTestResult.dailyOptionalRemoved,true);
   assert.equal(context.stateTestResult.levelFont,"default");
   assert.deepEqual(JSON.parse(JSON.stringify(context.stateTestResult.stoicCalendar)),{birthDate:"",horizonYears:90,weeks:{}});
   assert.deepEqual(JSON.parse(JSON.stringify(context.stoicPositionResult)),{year:36,week:0,index:1872,totalWeeks:4680,withinHorizon:true});
@@ -237,6 +258,12 @@ function runAppStateTests() {
   assert.equal(context.stateTestResult.invalidDifficulty,"easy");
   assert.equal(context.stateTestResult.invalidDifficultyXp,10);
   assert.deepEqual({...context.deletedHistoryResult},{totalXp:40,dayXp:40,title:"Archived quest"});
+  assert.deepEqual(JSON.parse(JSON.stringify(context.optionalScoreResult)),{
+    optionalOnUnscheduledDay:["q_optional"],plannedOnUnscheduledDay:["q_required"],
+    optionalNotDuplicatedOnScheduledDay:true,scheduledDayIncludesQuest:true,
+    optionalScoreBeforeRequired:25,optionalScoreAfterRepeat:25,scoreAfterRequired:125,
+    scoreXpAfterRequired:50,optionalCompletionCount:2,optionalCardMarked:true
+  });
   assert.deepEqual(JSON.parse(JSON.stringify(context.repeatCompletionResult)),{
     beforeUndo:{count:2,completionXp:20,dayXp:20,totalXp:20,categoryXp:20,scoreXp:10,dailyScore:50,hasCountBadge:true,hasRepeatAction:true,hasUndo:true},
     afterOneUndo:{count:1,xp:10},afterTwoUndos:{count:0,completed:false},restoredFromUndo:{count:2,xp:20},
