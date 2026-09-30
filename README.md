@@ -2,6 +2,14 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 63 Always-Optional Quests
+
+- Allows a recurring quest using **Days** to be saved with no required weekdays when **Appear as optional** is enabled.
+- Shows a zero-required-day quest in **Optional today** every day, while keeping it outside required completion counts, streaks, consistency and reminders.
+- Labels this schedule **Optional every day** and explains the empty-day option directly in the quest editor.
+- Preserves normal XP and above-100 score credit when the optional quest is completed.
+- Bumps the PWA asset and cache versions. No Supabase migration or Edge Function deployment is needed.
+
 ## Version 62 Optional Quests
 
 - Adds **Appear as optional** to recurring quests that repeat on selected days. The control is hidden for daily recurring and one-off quests.

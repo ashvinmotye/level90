@@ -563,8 +563,15 @@ function isRecurringScheduledOn(q, date) {
   return false;
 }
 
+function isAlwaysOptionalQuest(q) {
+  return q?.type === "recurring" &&
+    q.schedule?.mode === "weekdays" &&
+    q.schedule?.optional === true &&
+    !(q.schedule.days || []).length;
+}
+
 function questStreak(q, asOf=new Date()) {
-  if (q.type !== "recurring") return null;
+  if (q.type !== "recurring" || isAlwaysOptionalQuest(q)) return null;
 
   const todayKey = localDateKey(asOf);
   const today = parseLocalDate(todayKey);
@@ -591,7 +598,7 @@ function questStreak(q, asOf=new Date()) {
 }
 
 function questConsistency(q, asOf=new Date()) {
-  if (q.type !== "recurring") return null;
+  if (q.type !== "recurring" || isAlwaysOptionalQuest(q)) return null;
 
   const asOfKey = localDateKey(asOf);
   const firstCompletion = earliestCompletionKey(q.id);
@@ -818,6 +825,7 @@ function questCard(q, todayMode=false, dateKey=localDateKey(),options={}) {
       </div>` : "";
   const repeat = q.type === "oneoff" ? "One-off mission" :
     q.schedule?.mode === "daily" ? "Every day" :
+    isAlwaysOptionalQuest(q) ? "Optional every day" :
     `Repeats ${weekdayText(q.schedule?.days || [])}${q.schedule?.optional ? " · Optional on other days" : ""}`;
   if(todayMode) return `
     <article class="quest-card today-tile ${options.optional ? "optional-tile" : ""} ${done ? "completed" : ""}" data-id="${q.id}">
@@ -1914,7 +1922,8 @@ function saveQuest(e) {
   const type=$("#questDialog").dataset.type || "recurring";
   const mode= type==="oneoff" ? "once" : ($("#questDialog").dataset.schedule || "daily");
   const days=$$("#weekdayPicker button.selected").map(b=>Number(b.dataset.day));
-  if(type==="recurring" && mode==="weekdays" && !days.length){
+  const optional=type==="recurring" && mode==="weekdays" && $("#optionalQuestToggle").checked;
+  if(type==="recurring" && mode==="weekdays" && !days.length && !optional){
     showToast("Choose at least one day");
     return;
   }
@@ -1925,7 +1934,7 @@ function saveQuest(e) {
     categoryId:$("#questCategory").value,
     difficulty:$("#questDialog").dataset.difficulty || "medium",
     type,
-    schedule: mode==="weekdays" ? {mode,days,...($("#optionalQuestToggle").checked ? {optional:true} : {})} : {mode},
+    schedule: mode==="weekdays" ? {mode,days,...(optional ? {optional:true} : {})} : {mode},
   };
   let savedQuest=existing;
   if(existing){ Object.assign(existing,questData); delete existing.icon; }

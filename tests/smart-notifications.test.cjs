@@ -163,6 +163,19 @@ async function run() {
   assert.equal(scoreWithOptional.plannedToday,1,"unscheduled optional quests are not mandatory summary quests");
   assert.equal(scoreWithOptional.completedToday,1,"optional completions do not distort the required completion count");
 
+  const alwaysOptionalQuest = dailyQuest({
+    id:"q_always_optional",title:"Always optional",difficulty:"easy",
+    schedule:{mode:"weekdays",days:[],optional:true}
+  });
+  assert.equal(api.questOptionalOn(alwaysOptionalQuest,"2026-08-23"),true,"an empty required-day list stays optional on Sunday");
+  assert.equal(api.questOptionalOn(alwaysOptionalQuest,"2026-08-24"),true,"an empty required-day list stays optional on Monday");
+  const scoreWithAlwaysOptional = api.notificationSummaryStats(
+    preference(),[quest,alwaysOptionalQuest],[completion("2026-08-23",17),completion("2026-08-23",18,"q_always_optional")],new Date("2026-08-23T21:00:00.000Z")
+  );
+  assert.equal(scoreWithAlwaysOptional.scoreToday,150,"an always-optional completion can raise the daily score above 100");
+  assert.equal(scoreWithAlwaysOptional.plannedToday,1,"an always-optional quest is never required in notification summaries");
+  assert.equal(scoreWithAlwaysOptional.completedToday,1,"an always-optional completion does not distort the required completion count");
+
   const grouped = api.rescueCopy(priority.candidates,"adaptive");
   assert.match(grouped.title,/2 streaks/);
   assert.match(grouped.body,/Move/);
