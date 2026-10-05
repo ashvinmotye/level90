@@ -2,6 +2,13 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 64 iOS Field Focus
+
+- Prevents iPhone and iPad Safari from zooming the page when a text field, date field, number field, time field, select or textarea receives focus.
+- Keeps editable controls at iOS's 16px focus threshold while preserving the existing sizes of switches, buttons and file controls.
+- Retains normal pinch-to-zoom and browser accessibility instead of restricting the viewport.
+- Bumps the PWA asset and cache versions. No Supabase changes are needed.
+
 ## Version 63 Always-Optional Quests
 
 - Allows a recurring quest using **Days** to be saved with no required weekdays when **Appear as optional** is enabled.

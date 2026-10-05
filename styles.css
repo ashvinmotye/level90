@@ -2774,3 +2774,12 @@ body.light {
   outline:2px solid var(--text);
   outline-offset:3px;
 }
+
+/* Version 64 · Prevent iOS focus zoom without disabling user zoom. */
+@supports (-webkit-touch-callout:none) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="color"]),
+  select,
+  textarea {
+    font-size:16px !important;
+  }
+}
