@@ -13,7 +13,7 @@ create table if not exists public.level90_profiles (
     check (palette in ('arctic', 'jade', 'aurora', 'rose')),
   level_font text not null default 'default'
     check (level_font in ('default', 'moirai-one', 'rubik-lines', 'zen-tokyo-zoo')),
-  schema_version smallint not null default 6
+  schema_version smallint not null default 8
     check (schema_version >= 1),
   stoic_calendar jsonb not null default '{"birthDate":"","horizonYears":90,"weeks":{}}'::jsonb
     constraint level90_profiles_stoic_calendar_object
@@ -86,6 +86,7 @@ create table if not exists public.level90_completions (
     check (xp_awarded >= 0),
   completion_count integer not null default 1
     check (completion_count between 1 and 999),
+  was_optional boolean not null default false,
   client_updated_at timestamptz not null,
   deleted_at timestamptz,
   created_at timestamptz not null default now(),

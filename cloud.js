@@ -400,7 +400,7 @@ function level90ProfileComparable(source) {
     theme:source.theme || "dark",
     palette:source.palette || "arctic",
     levelFont:source.levelFont || "default",
-    schemaVersion:Number(source.schemaVersion) || 7,
+    schemaVersion:Number(source.schemaVersion) || 8,
     stoicCalendar:level90StoicComparable(source.stoicCalendar)
   };
 }
@@ -551,6 +551,7 @@ function level90CloudRow(operation) {
     user_id:userId,id:operation.id,quest_id:record.questId,completion_date:record.dateKey,
     completed_at:completion.completedAt,quest_title:completion.questTitle,category_id:completion.categoryId || null,
     difficulty:completion.difficulty,xp_awarded:completion.xpAwarded,completion_count:completion.count,
+    was_optional:completion.wasOptional === true,
     client_updated_at:operation.clientUpdatedAt,deleted_at:operation.deletedAt
   };
 }
@@ -633,7 +634,8 @@ function level90ApplyCloudSnapshot(snapshot,options={}) {
       categoryId:row.category_id || "",
       difficulty:row.difficulty,
       xpAwarded:row.xp_awarded,
-      count:row.completion_count
+      count:row.completion_count,
+      wasOptional:row.was_optional
     },state.quests.find(quest=>quest.id===row.quest_id) || null,row.completion_date);
   });
 
@@ -647,7 +649,7 @@ async function level90FetchCloudSnapshot() {
     level90AuthClient.from("level90_profiles").select("user_id, started_on, profile_name, theme, palette, level_font, schema_version, stoic_calendar, client_updated_at, updated_at"),
     level90AuthClient.from("level90_categories").select("id, name, icon, description, sort_order, client_created_at, client_updated_at, deleted_at, updated_at").order("sort_order",{ascending:true}),
     level90AuthClient.from("level90_quests").select("id, title, category_id, difficulty, quest_type, schedule, active, sort_order, created_on, client_created_at, client_updated_at, deleted_at, updated_at").order("sort_order",{ascending:true}),
-    level90AuthClient.from("level90_completions").select("id, quest_id, completion_date, completed_at, quest_title, category_id, difficulty, xp_awarded, completion_count, client_updated_at, deleted_at, updated_at").order("completion_date",{ascending:true})
+    level90AuthClient.from("level90_completions").select("id, quest_id, completion_date, completed_at, quest_title, category_id, difficulty, xp_awarded, completion_count, was_optional, client_updated_at, deleted_at, updated_at").order("completion_date",{ascending:true})
   ]);
   for (const response of [profile,categories,quests,completions]) if (response.error) throw response.error;
   return {profile:profile.data || [],categories:categories.data || [],quests:quests.data || [],completions:completions.data || []};

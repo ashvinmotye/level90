@@ -2,6 +2,15 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 65 History Completion Detail
+
+- Shows a visible `×N` count in History whenever the same quest was completed more than once on the selected day.
+- Separates optional completions from scheduled quests in the daily History review.
+- Keeps the scheduled clear ratio independent of optional completions while including all earned XP in the day's XP total.
+- Records whether a completion was optional when it was earned, so later schedule changes do not rewrite its History classification.
+- Makes yesterday's History correction remove one repeat clear at a time and preserves Undo.
+- Run `supabase/migrations/20261006_add_level90_optional_completion_history.sql` once before deploying. No Edge Function redeployment is required.
+
 ## Version 64 iOS Field Focus
 
 - Prevents iPhone and iPad Safari from zooming the page when a text field, date field, number field, time field, select or textarea receives focus.

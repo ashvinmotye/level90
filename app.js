@@ -150,7 +150,7 @@ function startLevelNumberGlow() {
 }
 function freshState() {
   return {
-    schemaVersion: 7,
+    schemaVersion: 8,
     startedOn: localDateKey(),
     quests: structuredClone(CONFIG.quests),
     categories: structuredClone(CONFIG.categories),
@@ -260,7 +260,7 @@ function migrateState() {
   state.categories ||= structuredClone(CONFIG.categories);
   state.completions ||= {};
   state.startedOn ||= localDateKey();
-  state.schemaVersion = 7;
+  state.schemaVersion = 8;
   state.theme ||= "dark";
   if (!PALETTES.includes(state.palette)) state.palette = "arctic";
   if (!LEVEL_FONTS.includes(state.levelFont)) state.levelFont = "default";
@@ -500,7 +500,10 @@ function normalizeCompletionRecord(value,quest,dateKey) {
     categoryId: typeof source.categoryId === "string" ? source.categoryId : (quest?.categoryId || ""),
     difficulty: difficultyId,
     xpAwarded: Number.isFinite(awarded) && awarded >= 0 ? Math.round(awarded) : difficulty(difficultyId).xp,
-    count:Number.isFinite(requestedCount) ? Math.max(1,Math.min(999,Math.round(requestedCount))) : 1
+    count:Number.isFinite(requestedCount) ? Math.max(1,Math.min(999,Math.round(requestedCount))) : 1,
+    wasOptional:typeof source.wasOptional === "boolean"
+      ? source.wasOptional
+      : questScheduleOptionalOn(quest,parseLocalDate(dateKey))
   };
 }
 
@@ -561,6 +564,11 @@ function isRecurringScheduledOn(q, date) {
   if (mode === "daily") return true;
   if (mode === "weekdays") return (q.schedule.days || []).includes(date.getDay());
   return false;
+}
+
+function questScheduleOptionalOn(q,date) {
+  if (!q || q.type !== "recurring" || q.schedule?.mode !== "weekdays" || q.schedule?.optional !== true) return false;
+  return !(q.schedule.days || []).includes(date.getDay());
 }
 
 function isAlwaysOptionalQuest(q) {
@@ -625,9 +633,9 @@ function plannedQuestsFor(date) {
   return state.quests.filter(q => isScheduledOn(q,date));
 }
 function isOptionalQuestOn(q,date) {
-  if (!q?.active || q.type !== "recurring" || q.schedule?.mode !== "weekdays" || !q.schedule.optional) return false;
+  if (!q?.active) return false;
   if (q.createdOn && localDateKey(date) < q.createdOn) return false;
-  return !isScheduledOn(q,date);
+  return questScheduleOptionalOn(q,date);
 }
 function optionalQuestsFor(date) {
   return state.quests.filter(q=>isOptionalQuestOn(q,date));
@@ -953,39 +961,62 @@ function renderDayReview() {
   const start = parseLocalDate(state.startedOn);
   const day = daysBetween(date,start) + 1;
   const quests = questsForReview(date);
-  const completed = quests.filter(q=>isCompleted(q.id,dateKey));
+  const optionalCompleted = quests.filter(q=>completionRecord(q.id,dateKey)?.wasOptional === true);
+  const optionalIds = new Set(optionalCompleted.map(q=>q.id));
+  const scheduled = quests.filter(q=>!optionalIds.has(q.id));
+  const scheduledCompleted = scheduled.filter(q=>isCompleted(q.id,dateKey));
+  const completed = [...scheduledCompleted,...optionalCompleted];
   const todayKey = localDateKey();
   const editable = isEditableHistoryDate(dateKey);
   $("#reviewDayLabel").textContent = day >= 1 ? `JOURNEY DAY ${day}` : "BEFORE THIS JOURNEY";
   $("#reviewDateLabel").textContent = dateKey === todayKey ? "Today" : new Intl.DateTimeFormat(undefined,{weekday:"long",month:"long",day:"numeric"}).format(date);
   setMetricValue("#reviewScore",dailyScoreFor(date));
   setMetricValue("#reviewXp",completed.reduce((sum,q)=>sum+completionXp(q.id,dateKey),0));
-  setMetricValue("#reviewClears",`${completed.length}/${quests.length}`);
+  setMetricValue("#reviewClears",`${scheduledCompleted.length}/${scheduled.length}`);
   $("#historyEditNotice").classList.toggle("hidden",!editable);
   $("#reviewQuestList").innerHTML = quests.length
-    ? quests.map(q=>reviewQuestRow(q,date,dateKey,editable)).join("")
+    ? [
+        reviewQuestSection("Scheduled quests",scheduled,date,dateKey,editable),
+        reviewQuestSection("Optional completions",optionalCompleted,date,dateKey,editable,{optional:true})
+      ].join("")
     : `<div class="empty-state compact">No quests were scheduled for this day.</div>`;
 
   $("#previousDayBtn").disabled = date <= start;
   $("#nextDayBtn").disabled = date >= parseLocalDate(localDateKey());
 }
 
+function reviewQuestSection(title,quests,date,dateKey,editableDate,options={}) {
+  if (!quests.length) return "";
+  return `<section class="review-quest-section ${options.optional ? "optional" : ""}" aria-label="${escapeHtml(title)}">
+    <div class="review-quest-section-head">
+      <h4>${escapeHtml(title)}</h4>
+      <span>${quests.length}</span>
+    </div>
+    <div class="review-quest-list">${quests.map(q=>reviewQuestRow(q,date,dateKey,editableDate)).join("")}</div>
+  </section>`;
+}
+
 function reviewQuestRow(q,date,dateKey,editableDate) {
   const done = isCompleted(q.id,dateKey);
+  const record = done ? completionRecord(q.id,dateKey) : null;
+  const count = record?.count || 0;
+  const wasOptional = record?.wasOptional === true;
   const currentQuest = state.quests.find(item=>item.id===q.id) || null;
   const canEdit = editableDate && currentQuest && (isScheduledOn(currentQuest,date) || isOptionalQuestOn(currentQuest,date));
   const detail = canEdit
-    ? (done ? `${completionTimeLabel(q.id,dateKey)} · Tap to reopen` : "Tap to mark completed")
+    ? (done ? `${completionTimeLabel(q.id,dateKey)} · ${count > 1 ? "Tap to remove one clear" : "Tap to reopen"}` : "Tap to mark completed")
     : (done ? completionTimeLabel(q.id,dateKey) : "Not completed");
   const end = canEdit
     ? `<span class="review-edit-action">${done ? "UNDO" : "ADD"}</span>`
     : `<span class="review-xp">${done ? `+${completionXp(q.id,dateKey)} XP` : "—"}</span>`;
+  const repeatCount = count > 1 ? `<span class="review-repeat-count" aria-label="${count} completions">×${count}</span>` : "";
   const content = `
     <span class="review-check">${done ? "✓" : "○"}</span>
-    <div><strong>${escapeHtml(q.title)}</strong><small>${escapeHtml(detail)}</small></div>
+    <div><span class="review-quest-title"><strong>${escapeHtml(q.title)}</strong>${repeatCount}</span><small>${escapeHtml(detail)}</small></div>
     ${end}`;
-  if (!canEdit) return `<div class="review-quest ${done ? "done" : "missed"}">${content}</div>`;
-  return `<button type="button" class="review-quest editable ${done ? "done" : "missed"}" data-history-complete="${q.id}" aria-pressed="${done}" aria-label="${done ? "Reopen" : "Mark completed"} ${escapeHtml(q.title)} for yesterday">${content}</button>`;
+  const classes = `review-quest ${wasOptional ? "optional " : ""}${done ? "done" : "missed"}`;
+  if (!canEdit) return `<div class="${classes}">${content}</div>`;
+  return `<button type="button" class="${classes} editable" data-history-complete="${q.id}" aria-pressed="${done}" aria-label="${done ? "Remove one completion from" : "Mark completed"} ${escapeHtml(q.title)} for yesterday${count > 1 ? `; ${count} completions recorded` : ""}">${content}</button>`;
 }
 
 function commitQuestDragOrder(ids) {
@@ -1650,17 +1681,22 @@ function toggleHistoryCompletion(id) {
   const q = state.quests.find(item=>item.id===id);
   if (!q || (!isScheduledOn(q,date) && !isOptionalQuestOn(q,date))) return;
   const oldLevel = levelFromXp(totalXp());
-  const change = toggleQuestCompletionForDate(id,key,completionFallbackTimestamp(key));
+  const previousRecord = completionRecord(id,key);
+  const change = previousRecord
+    ? removeQuestCompletionForDate(id,key)
+    : addQuestCompletionForDate(id,key,completionFallbackTimestamp(key));
   if (!change) return;
   save();
   const newLevel = levelFromXp(totalXp());
   renderAll();
-  if (!change.wasDone && newLevel > oldLevel) showLevelUp(newLevel);
-  else showToast(change.wasDone ? "Yesterday's correction removed" : `Yesterday corrected · +${xpForQuest(q)} XP`,{
+  if (!previousRecord && newLevel > oldLevel) showLevelUp(newLevel);
+  else showToast(previousRecord
+    ? (change.count > 0 ? `One clear removed · ×${change.count} remains` : "Yesterday's correction removed")
+    : `Yesterday corrected · +${xpForQuest(q)} XP`,{
     actionLabel:"Undo",
     duration:6000,
     onAction:()=>{
-      restoreCompletionSnapshot(id,key,change.previousRecord);
+      restoreCompletionSnapshot(id,key,previousRecord);
       save();
       renderAll();
       showToast(change.wasDone ? "Yesterday's completion restored" : "Yesterday's correction undone");

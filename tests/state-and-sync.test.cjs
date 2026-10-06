@@ -7,9 +7,13 @@ const vm = require("node:vm");
 
 const root = path.resolve(__dirname,"..");
 const completionMigration = fs.readFileSync(path.join(root,"supabase","migrations","20260903_add_level90_completion_counts.sql"),"utf8");
+const optionalHistoryMigration = fs.readFileSync(path.join(root,"supabase","migrations","20261006_add_level90_optional_completion_history.sql"),"utf8");
 
 assert.match(completionMigration,/add column if not exists completion_count integer not null default 1/);
 assert.match(completionMigration,/check \(completion_count between 1 and 999\)/);
+assert.match(optionalHistoryMigration,/add column if not exists was_optional boolean not null default false/);
+assert.match(optionalHistoryMigration,/set was_optional = true/);
+assert.match(optionalHistoryMigration,/extract\(dow from completion\.completion_date\)/);
 
 function fakeElement() {
   return {
@@ -164,7 +168,17 @@ function runAppStateTests() {
       scoreAfterRequired:dailyScoreFor(parseLocalDate("2026-08-22")),
       scoreXpAfterRequired:completedScoreXpForDate(parseLocalDate("2026-08-22")),
       optionalCompletionCount:completionCount("q_optional","2026-08-22"),
-      optionalCardMarked:questCard(optionalQuest,true,"2026-08-22",{optional:true}).includes("optional-tile-label")
+      optionalCardMarked:questCard(optionalQuest,true,"2026-08-22",{optional:true}).includes("optional-tile-label"),
+      optionalHistoryFlag:completionRecord("q_optional","2026-08-22").wasOptional,
+      requiredHistoryFlag:completionRecord("q_required","2026-08-22").wasOptional
+    };
+    optionalQuest.schedule={mode:"daily"};
+    selectedHistoryDate="2026-08-22";
+    renderDayReview();
+    globalThis.historyReviewResult = {
+      markup:document.querySelector("#reviewQuestList").innerHTML,
+      clears:document.querySelector("#reviewClears").textContent,
+      xp:document.querySelector("#reviewXp").textContent
     };
     const alwaysOptionalQuest = {id:"q_always_optional",title:"Always optional",categoryId:"body",difficulty:"easy",type:"recurring",schedule:{mode:"weekdays",days:[],optional:true},active:true,createdOn:"2026-08-17"};
     state.quests = [requiredQuest,alwaysOptionalQuest];
@@ -264,7 +278,7 @@ function runAppStateTests() {
     recurringPlannedXp:40,
     recurringCompletedXp:0
   });
-  assert.equal(context.stateTestResult.schemaVersion,7);
+  assert.equal(context.stateTestResult.schemaVersion,8);
   assert.equal(context.stateTestResult.dailyOptionalRemoved,true);
   assert.equal(context.stateTestResult.emptyOptionalPreserved,true);
   assert.equal(context.stateTestResult.levelFont,"default");
@@ -281,8 +295,14 @@ function runAppStateTests() {
     optionalOnUnscheduledDay:["q_optional"],plannedOnUnscheduledDay:["q_required"],
     optionalNotDuplicatedOnScheduledDay:true,scheduledDayIncludesQuest:true,
     optionalScoreBeforeRequired:25,optionalScoreAfterRepeat:25,scoreAfterRequired:125,
-    scoreXpAfterRequired:50,optionalCompletionCount:2,optionalCardMarked:true
+    scoreXpAfterRequired:50,optionalCompletionCount:2,optionalCardMarked:true,
+    optionalHistoryFlag:true,requiredHistoryFlag:false
   });
+  assert.equal(context.historyReviewResult.clears,"1/1","optional completions must not change the scheduled clear ratio");
+  assert.equal(context.historyReviewResult.xp,"60","history XP must include repeat optional clears");
+  assert.ok(context.historyReviewResult.markup.indexOf("Scheduled quests") < context.historyReviewResult.markup.indexOf("Optional completions"));
+  assert.match(context.historyReviewResult.markup,/class="review-quest optional done"[\s\S]*Optional/);
+  assert.match(context.historyReviewResult.markup,/class="review-repeat-count" aria-label="2 completions">×2<\/span>/);
   assert.deepEqual(JSON.parse(JSON.stringify(context.alwaysOptionalResult)),{
     optionalOnSunday:["q_always_optional"],optionalOnMonday:["q_always_optional"],
     plannedOnSunday:["q_required"],plannedOnMonday:["q_required"],
@@ -310,7 +330,7 @@ async function runCloudTests() {
     normalizeCompletionRecord:(value,quest)=>({
       completedAt:value.completedAt,questTitle:value.questTitle || quest?.title || "Deleted quest",
       categoryId:value.categoryId || quest?.categoryId || "",difficulty:value.difficulty || quest?.difficulty || "easy",
-      xpAwarded:Number(value.xpAwarded) || 0,count:Math.max(1,Number(value.count) || 1)
+      xpAwarded:Number(value.xpAwarded) || 0,count:Math.max(1,Number(value.count) || 1),wasOptional:value.wasOptional === true
     }),
     migrateState(){},save(){},renderAll(){},showToast(){},requestNameIfNeeded(){}
   });
@@ -330,7 +350,7 @@ async function runCloudTests() {
   const questB = {...questA,id:"q_b",title:"Quest B"};
   const base = {schemaVersion:6,startedOn:"2026-08-17",profileName:"Ashvin",theme:"dark",palette:"arctic",levelFont:"default",categories:[],quests:[questA,questB],completions:{}};
   const completed = structuredClone(base);
-  completed.completions = {"2026-08-22":{q_a:{completedAt:"2026-08-22T08:00:00.000Z",questTitle:"Quest A",categoryId:"body",difficulty:"easy",xpAwarded:10,count:2}}};
+  completed.completions = {"2026-08-22":{q_a:{completedAt:"2026-08-22T08:00:00.000Z",questTitle:"Quest A",categoryId:"body",difficulty:"easy",xpAwarded:10,count:2,wasOptional:true}}};
   context.state = completed;
 
   context.cloudApi.queueLevel90StateChanges(base,completed);
@@ -338,6 +358,7 @@ async function runCloudTests() {
   assert.equal(completionOps.length,1);
   assert.equal(completionOps[0].deletedAt,null);
   assert.equal(completionOps[0].record.completion.count,2);
+  assert.equal(completionOps[0].record.completion.wasOptional,true);
 
   const stoicChanged = {...structuredClone(base),schemaVersion:4,stoicCalendar:{birthDate:"1990-08-27",horizonYears:90,weeks:{"36:00":{intention:"Act on what is mine.",control:"",reaction:"",correction:"",updatedAt:"2026-08-27T08:00:00.000Z"}}}};
   context.cloudApi.queueLevel90StateChanges(base,stoicChanged);
@@ -374,6 +395,7 @@ async function runCloudTests() {
   assert.equal(context.cloudApi.level90LoadSyncQueue().length,0);
   assert.ok(writes.some(write=>write.table === "level90_completions" && write.options.onConflict === "user_id,id"));
   assert.ok(writes.some(write=>write.table === "level90_completions" && write.row.completion_count === 2));
+  assert.ok(writes.some(write=>write.table === "level90_completions" && write.row.was_optional === true));
   assert.ok(writes.filter(write=>write.table === "level90_quests").every(write=>write.options.onConflict === "user_id,id"));
 
   context.state = reordered;
@@ -426,7 +448,7 @@ async function runCloudTests() {
     ],
     completions:[
       {id:"2026-08-22:q_a",quest_id:"q_a",completion_date:"2026-08-22",completed_at:"2026-08-22T10:00:00.000Z",quest_title:"Remote Quest A",category_id:"body",difficulty:"hard",xp_awarded:40,deleted_at:null},
-      {id:"2026-08-22:q_remote",quest_id:"q_remote",completion_date:"2026-08-22",completed_at:"2026-08-22T10:00:00.000Z",quest_title:"Remote Quest",category_id:"remote",difficulty:"easy",xp_awarded:10,completion_count:3,deleted_at:null}
+      {id:"2026-08-22:q_remote",quest_id:"q_remote",completion_date:"2026-08-22",completed_at:"2026-08-22T10:00:00.000Z",quest_title:"Remote Quest",category_id:"remote",difficulty:"easy",xp_awarded:10,completion_count:3,was_optional:true,deleted_at:null}
     ]
   };
   context.cloudApi.level90ApplyCloudSnapshot(snapshot,{protectLocal:true});
@@ -436,6 +458,7 @@ async function runCloudTests() {
   assert.ok(context.state.quests.some(quest=>quest.id === "q_remote"));
   assert.equal(context.state.completions["2026-08-22"].q_remote.xpAwarded,10);
   assert.equal(context.state.completions["2026-08-22"].q_remote.count,3);
+  assert.equal(context.state.completions["2026-08-22"].q_remote.wasOptional,true);
 
   context.cloudApi.level90ApplyCloudSnapshot({
     profile:[],categories:snapshot.categories,
