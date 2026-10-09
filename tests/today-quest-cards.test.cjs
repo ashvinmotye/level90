@@ -24,6 +24,9 @@ assert.match(css,/\.tile-decrement-action,\.tile-repeat-action \{[\s\S]*?width:4
 assert.match(css,/\.filter-row \{[\s\S]*?grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
 assert.match(css,/#markAllNotificationsReadButton \{[\s\S]*?background:transparent/);
 assert.match(css,/\.notification-read-btn \{[\s\S]*?background:transparent/);
+assert.match(css,/\/\* Version 66 · Filled circular quest-section counts\. \*\//);
+assert.match(css,/\.today-missions \.section-count \{[\s\S]*?width:28px;[\s\S]*?height:28px;[\s\S]*?padding:0;[\s\S]*?border-radius:50%;[\s\S]*?background:var\(--minimal-action\);[\s\S]*?color:var\(--minimal-action-text\);/);
+assert.equal((html.match(/class="section-count"/g) || []).length,3);
 
 assert.match(app,/class="today-completion-medallion \$\{done \? "is-complete" : ""\}"/);
 assert.match(app,/\$\{done \? `data-undo-completion="\$\{q\.id\}"` : `data-complete="\$\{q\.id\}"`\}/);
@@ -33,8 +36,8 @@ assert.doesNotMatch(app,/data-toggle-today-tools/);
 assert.doesNotMatch(app,/function toggleTodayCardTools\(/);
 assert.doesNotMatch(app,/Ridge \$\{ridgeIndex\}/);
 
-assert.match(html,/styles\.css\?v=65/);
-assert.match(serviceWorker,/level90-v65/);
+assert.match(html,/styles\.css\?v=66/);
+assert.match(serviceWorker,/level90-v66/);
 assert.match(readme,/## Version 49 Direct Actions and Interface Consistency/);
 
 console.log("Level90 Version 49 UI action tests passed");

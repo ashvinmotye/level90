@@ -14,7 +14,7 @@ assert.doesNotMatch(html,/user-scalable\s*=\s*no|maximum-scale\s*=\s*1/i,"user z
 assert.match(css,/@supports \(-webkit-touch-callout:none\)/,"the focus-size correction should target iOS WebKit");
 assert.match(css,/input:not\(\[type="checkbox"\]\)[\s\S]*select,[\s\S]*textarea \{[\s\S]*font-size:16px !important;/,"editable controls must meet iOS's 16px focus threshold");
 assert.match(css,/:not\(\[type="file"\]\)/,"non-editable file controls should keep their existing appearance");
-assert.match(html,/styles\.css\?v=65/);
-assert.match(worker,/const CACHE = "level90-v65";/);
+assert.match(html,/styles\.css\?v=66/);
+assert.match(worker,/const CACHE = "level90-v66";/);
 
 console.log("Level90 iOS input focus zoom tests passed");

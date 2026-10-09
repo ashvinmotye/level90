@@ -2,6 +2,12 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 66 Circular Quest Counts
+
+- Gives the **Available today**, **Optional today** and **Completed today** counts a filled circular badge.
+- Uses the interface's inverse monochrome colors so the count stays clearly visible in both light and dark themes.
+- Bumps the PWA asset and cache versions. No Supabase migration or Edge Function deployment is needed.
+
 ## Version 65 History Completion Detail
 
 - Shows a visible `×N` count in History whenever the same quest was completed more than once on the selected day.

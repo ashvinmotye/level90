@@ -1,11 +1,11 @@
-const CACHE = "level90-v65";
+const CACHE = "level90-v66";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=65",
-  "./cloud.js?v=65",
-  "./notifications.js?v=65",
-  "./app.js?v=65",
+  "./styles.css?v=66",
+  "./cloud.js?v=66",
+  "./notifications.js?v=66",
+  "./app.js?v=66",
   "./data/initial-data.json",
   "./manifest.webmanifest",
   "./icons/favicon-32.png",
