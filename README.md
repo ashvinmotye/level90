@@ -2,6 +2,15 @@
 
 A local-first personal progression game. There is no deadline: complete real-life quests, earn XP and keep climbing toward the ultimate Level 90 rank.
 
+## Version 67 Holiday Mode
+
+- Adds a **Holiday mode** switch in **Settings → Data & Journey**.
+- While enabled, every active recurring quest and every pending one-off quest moves to **Optional today**. Completions still award XP, but the day has no mandatory quest score.
+- Excludes holiday dates from streak and consistency calculations, preserving progress without increasing streaks for optional clears.
+- Retains completed holiday periods after the switch is turned off, so missed holiday quests never become retroactive streak breaks.
+- Suppresses streak-rescue notifications during Holiday mode and cancels queued rescue deliveries for holiday dates.
+- Run `supabase/migrations/20261010_add_level90_holiday_mode.sql` and redeploy `supabase/functions/level90-notifications` before using Holiday mode across devices.
+
 ## Version 66 Circular Quest Counts
 
 - Gives the **Available today**, **Optional today** and **Completed today** counts a filled circular badge.

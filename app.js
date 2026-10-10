@@ -102,6 +102,51 @@ function addCalendarYearsClamped(date,years) {
 function freshStoicCalendar() {
   return {birthDate:"",horizonYears:STOIC_DEFAULT_HORIZON,weeks:{}};
 }
+function freshHolidayMode() {
+  return {enabled:false,activeFrom:null,periods:[]};
+}
+function normalizeHolidayMode(source) {
+  const input = source && typeof source === "object" ? source : {};
+  const periods = (Array.isArray(input.periods) ? input.periods : [])
+    .map(period=>({
+      start:typeof period?.start === "string" ? period.start : "",
+      end:typeof period?.end === "string" ? period.end : ""
+    }))
+    .filter(period=>isValidLocalDateKey(period.start) && isValidLocalDateKey(period.end) && period.end >= period.start)
+    .sort((a,b)=>a.start.localeCompare(b.start) || a.end.localeCompare(b.end))
+    .reduce((merged,period)=>{
+      const previous = merged.at(-1);
+      if (!previous || period.start > localDateKey(addDays(parseLocalDate(previous.end),1))) {
+        merged.push(period);
+      } else if (period.end > previous.end) previous.end = period.end;
+      return merged;
+    },[]);
+  const enabled = input.enabled === true;
+  const activeFrom = enabled && isValidLocalDateKey(input.activeFrom) ? input.activeFrom : (enabled ? localDateKey() : null);
+  return {enabled,activeFrom,periods};
+}
+function isHolidayDate(date) {
+  const dateKey = typeof date === "string" ? date : localDateKey(date);
+  const holiday = state?.holidayMode || freshHolidayMode();
+  if (holiday.enabled && holiday.activeFrom && dateKey >= holiday.activeFrom) return true;
+  return (holiday.periods || []).some(period=>dateKey >= period.start && dateKey <= period.end);
+}
+function setHolidayMode(enabled,asOf=new Date()) {
+  const dateKey = localDateKey(asOf);
+  const current = normalizeHolidayMode(state.holidayMode);
+  if (enabled === current.enabled) return;
+  if (enabled) {
+    state.holidayMode = {...current,enabled:true,activeFrom:dateKey};
+  } else {
+    const previousKey = localDateKey(addDays(parseLocalDate(dateKey),-1));
+    const periods = [...current.periods];
+    if (current.activeFrom && previousKey >= current.activeFrom) periods.push({start:current.activeFrom,end:previousKey});
+    state.holidayMode = normalizeHolidayMode({enabled:false,periods});
+  }
+  save();
+  renderAll();
+  showToast(enabled ? "Holiday mode on · all quests are optional" : "Holiday mode off · regular schedules restored");
+}
 function normalizeStoicText(value,limit) {
   return typeof value === "string" ? value.slice(0,limit) : "";
 }
@@ -150,7 +195,7 @@ function startLevelNumberGlow() {
 }
 function freshState() {
   return {
-    schemaVersion: 8,
+    schemaVersion: 9,
     startedOn: localDateKey(),
     quests: structuredClone(CONFIG.quests),
     categories: structuredClone(CONFIG.categories),
@@ -159,6 +204,7 @@ function freshState() {
     palette: "arctic",
     levelFont: "default",
     profileName: "",
+    holidayMode:freshHolidayMode(),
     stoicCalendar:freshStoicCalendar()
   };
 }
@@ -260,11 +306,12 @@ function migrateState() {
   state.categories ||= structuredClone(CONFIG.categories);
   state.completions ||= {};
   state.startedOn ||= localDateKey();
-  state.schemaVersion = 8;
+  state.schemaVersion = 9;
   state.theme ||= "dark";
   if (!PALETTES.includes(state.palette)) state.palette = "arctic";
   if (!LEVEL_FONTS.includes(state.levelFont)) state.levelFont = "default";
   state.profileName = typeof state.profileName === "string" ? state.profileName.trim() : "";
+  state.holidayMode = normalizeHolidayMode(state.holidayMode);
   state.stoicCalendar = normalizeStoicCalendar(state.stoicCalendar);
   const migrationTimestamp = new Date().toISOString();
   state.categories.forEach(c=>{
@@ -503,7 +550,7 @@ function normalizeCompletionRecord(value,quest,dateKey) {
     count:Number.isFinite(requestedCount) ? Math.max(1,Math.min(999,Math.round(requestedCount))) : 1,
     wasOptional:typeof source.wasOptional === "boolean"
       ? source.wasOptional
-      : questScheduleOptionalOn(quest,parseLocalDate(dateKey))
+      : isOptionalQuestOn(quest,parseLocalDate(dateKey))
   };
 }
 
@@ -526,6 +573,7 @@ function completionCount(id,dateKey=localDateKey()) {
 function isScheduledOn(q, date) {
   if (!q.active) return false;
   if (q.createdOn && localDateKey(date) < q.createdOn) return false;
+  if (isHolidayDate(date)) return false;
   if (q.type === "oneoff") {
     return !isQuestEverCompleted(q.id) || isCompleted(q.id, localDateKey(date));
   }
@@ -560,6 +608,7 @@ function earliestCompletionKey(id) {
 
 function isRecurringScheduledOn(q, date) {
   if (q.type !== "recurring") return false;
+  if (isHolidayDate(date)) return false;
   const mode = q.schedule?.mode || "daily";
   if (mode === "daily") return true;
   if (mode === "weekdays") return (q.schedule.days || []).includes(date.getDay());
@@ -632,10 +681,17 @@ function questConsistency(q, asOf=new Date()) {
 function plannedQuestsFor(date) {
   return state.quests.filter(q => isScheduledOn(q,date));
 }
+function isHolidayOptionalQuestOn(q,date) {
+  if (!isHolidayDate(date) || !q?.active) return false;
+  const dateKey = localDateKey(date);
+  if (q.createdOn && dateKey < q.createdOn) return false;
+  if (q.type === "oneoff") return !isQuestEverCompleted(q.id) || isCompleted(q.id,dateKey);
+  return q.type === "recurring";
+}
 function isOptionalQuestOn(q,date) {
   if (!q?.active) return false;
   if (q.createdOn && localDateKey(date) < q.createdOn) return false;
-  return questScheduleOptionalOn(q,date);
+  return isHolidayOptionalQuestOn(q,date) || questScheduleOptionalOn(q,date);
 }
 function optionalQuestsFor(date) {
   return state.quests.filter(q=>isOptionalQuestOn(q,date));
@@ -731,12 +787,33 @@ function momentum() {
 
 function renderAll() {
   renderHeader();
+  renderHolidayMode();
   renderToday();
   renderQuestLibrary();
   renderHistory();
   renderCharacter();
   renderDifficulty();
   requestNameIfNeeded();
+}
+
+function renderHolidayMode() {
+  const holiday = normalizeHolidayMode(state.holidayMode);
+  const toggle = $("#holidayModeToggle");
+  const control = $("#holidayModeControl");
+  const status = $("#holidayModeStatus");
+  const banner = $("#holidayModeBanner");
+  if (toggle) toggle.checked = holiday.enabled;
+  if (control) control.classList.toggle("active",holiday.enabled);
+  if (status) {
+    const lastPeriod = holiday.periods.at(-1);
+    status.textContent = holiday.enabled
+      ? `Active since ${new Intl.DateTimeFormat(undefined,{day:"numeric",month:"short",year:"numeric"}).format(parseLocalDate(holiday.activeFrom))}`
+      : lastPeriod
+        ? `Off · Last holiday ended ${new Intl.DateTimeFormat(undefined,{day:"numeric",month:"short",year:"numeric"}).format(parseLocalDate(lastPeriod.end))}`
+        : "Off";
+  }
+  if (banner) banner.hidden = !holiday.enabled;
+  document.body.classList.toggle("holiday-mode",holiday.enabled);
 }
 
 function renderHeader() {
@@ -786,6 +863,7 @@ function renderLevelRoad(level) {
 function renderToday() {
   const today = new Date();
   const key = localDateKey(today);
+  const holiday = isHolidayDate(today);
   const qs = plannedQuestsFor(today);
   const optional = optionalQuestsFor(today);
   const available = qs.filter(q=>!isCompleted(q.id,key));
@@ -804,7 +882,9 @@ function renderToday() {
   const optionalSection = $("#optionalTodaySection");
   const completedList = $("#completedTodayQuests");
   const completedSection = $("#completedTodaySection");
-  if (!qs.length) {
+  if (holiday) {
+    availableList.innerHTML = `<div class="empty-state holiday-empty-state">Holiday mode is active. Every quest is optional today.</div>`;
+  } else if (!qs.length) {
     availableList.innerHTML = `<div class="empty-state">No quests scheduled today. Create one and give the day a target.</div>`;
   } else if (!available.length) {
     availableList.innerHTML = `<div class="empty-state all-cleared">All scheduled quests completed today ✨</div>`;
@@ -2273,6 +2353,8 @@ function bindEvents() {
     state.levelFont=option.dataset.levelFont; applyTheme(); save();
     showToast(`${option.querySelector("strong").textContent} level font activated`);
   });
+
+  $("#holidayModeToggle")?.addEventListener("change",e=>setHolidayMode(e.target.checked));
 
   $("#menuBtn").addEventListener("click",openSettingsPage);
   $("#profileGreetingBtn").addEventListener("click",()=>showView("today",{direction:"back"}));

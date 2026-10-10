@@ -16,7 +16,7 @@ function loadRuleApi(environment={}) {
     timeMinutes,minuteLabel,isQuietMinute,zonedParts,dateKeyAdd,weekdayForDateKey,
     questScheduledOn,questOptionalOn,questPlannedOn,streakBeforeToday,median,adaptiveTriggerMinute,
     summaryDue,evaluateStreakRescue,notificationSummaryStats,morningBrief,eveningRecap,rescueCopy,
-    validDateKey,stoicPositionForDateKey,stoicJournalHasEntry,evaluateStoicReflection
+    validDateKey,isHolidayDateKey,stoicPositionForDateKey,stoicJournalHasEntry,evaluateStoicReflection
   };`;
   const context = vm.createContext({
     console,Date,Intl,Map,Set,Promise,Response,JSON,Object,Math,Number,String,Array,
@@ -91,6 +91,19 @@ async function run() {
   const weekdayQuest = dailyQuest({schedule:{mode:"weekdays",days:[1,2,3,4,5]}});
   const sunday = api.evaluateStreakRescue(preference({min_streak:2}),[weekdayQuest],fallbackHistory,new Date("2026-08-23T19:00:00.000Z"));
   assert.equal(sunday.result,"no_at_risk_streak","quests not scheduled today must stay silent");
+
+  const holidayMode = {enabled:true,activeFrom:"2026-08-23",periods:[{start:"2026-08-19",end:"2026-08-21"}]};
+  assert.equal(api.isHolidayDateKey(holidayMode,"2026-08-20"),true,"closed holiday periods remain excused");
+  assert.equal(api.isHolidayDateKey(holidayMode,"2026-08-23"),true,"the active holiday range begins on its saved start date");
+  assert.equal(api.isHolidayDateKey(holidayMode,"2026-08-22"),false);
+  assert.equal(api.streakBeforeToday(quest,new Set(["2026-08-19","2026-08-22"]),"2026-08-23",holidayMode),1,"holiday dates are skipped rather than breaking a streak");
+  const holidayRescue = api.evaluateStreakRescue(preference(),[quest],history,new Date("2026-08-23T19:00:00.000Z"),holidayMode);
+  assert.equal(holidayRescue.result,"holiday_mode","Holiday mode must suppress streak-rescue alerts");
+  const holidayStats = api.notificationSummaryStats(preference(),[quest],history,new Date("2026-08-23T21:00:00.000Z"),holidayMode);
+  assert.equal(holidayStats.plannedToday,0,"Holiday mode has no mandatory quests");
+  assert.equal(holidayStats.completedToday,0);
+  assert.equal(holidayStats.scoreToday,0);
+  assert.equal(holidayStats.atRiskCount,0);
 
   const longerQuest = dailyQuest({id:"q_move",title:"Move",sort_order:1,created_on:"2026-08-18"});
   const longerHistory = [

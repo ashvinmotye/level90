@@ -2812,3 +2812,60 @@ body.light {
   line-height:1;
   vertical-align:3px;
 }
+
+/* Version 67 · Holiday mode. */
+.holiday-mode-banner {
+  margin:0 0 28px;
+  padding:14px 0;
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+}
+.holiday-mode-banner strong,
+.holiday-mode-banner span { display:block; }
+.holiday-mode-banner strong { font-size:.88rem; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+.holiday-mode-banner span { margin-top:6px; color:var(--muted); font-size:.82rem; line-height:1.5; }
+.holiday-mode-toggle {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  padding:16px 0;
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+  cursor:pointer;
+}
+.holiday-mode-toggle > span,
+.holiday-mode-toggle strong,
+.holiday-mode-toggle small,
+.holiday-mode-toggle em { display:block; }
+.holiday-mode-toggle strong { font-size:.95rem; }
+.holiday-mode-toggle small { margin-top:5px; color:var(--muted); font-size:.8rem; font-weight:500; line-height:1.5; }
+.holiday-mode-toggle em { margin-top:8px; color:var(--muted); font-size:.72rem; font-style:normal; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+.holiday-mode-toggle.active em { color:var(--text); }
+.holiday-mode-toggle input {
+  appearance:none;
+  position:relative;
+  flex:0 0 auto;
+  width:48px;
+  height:28px;
+  margin:0;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:var(--surface-input);
+  cursor:pointer;
+}
+.holiday-mode-toggle input::before {
+  content:"";
+  position:absolute;
+  top:4px;
+  left:4px;
+  width:18px;
+  height:18px;
+  border-radius:50%;
+  background:var(--muted);
+  transition:transform .18s ease,background .18s ease;
+}
+.holiday-mode-toggle input:checked { border-color:var(--minimal-action); background:var(--minimal-action); }
+.holiday-mode-toggle input:checked::before { background:var(--minimal-action-text); transform:translateX(20px); }
+.holiday-mode-toggle input:focus-visible { outline:2px solid var(--text); outline-offset:3px; }
+.holiday-empty-state { color:var(--muted); }

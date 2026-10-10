@@ -8,12 +8,14 @@ const vm = require("node:vm");
 const root = path.resolve(__dirname,"..");
 const completionMigration = fs.readFileSync(path.join(root,"supabase","migrations","20260903_add_level90_completion_counts.sql"),"utf8");
 const optionalHistoryMigration = fs.readFileSync(path.join(root,"supabase","migrations","20261006_add_level90_optional_completion_history.sql"),"utf8");
+const holidayModeMigration = fs.readFileSync(path.join(root,"supabase","migrations","20261010_add_level90_holiday_mode.sql"),"utf8");
 
 assert.match(completionMigration,/add column if not exists completion_count integer not null default 1/);
 assert.match(completionMigration,/check \(completion_count between 1 and 999\)/);
 assert.match(optionalHistoryMigration,/add column if not exists was_optional boolean not null default false/);
 assert.match(optionalHistoryMigration,/set was_optional = true/);
 assert.match(optionalHistoryMigration,/extract\(dow from completion\.completion_date\)/);
+assert.match(holidayModeMigration,/add column if not exists holiday_mode jsonb not null/);
 
 function fakeElement() {
   return {
@@ -87,6 +89,7 @@ function runAppStateTests() {
       schemaVersion:state.schemaVersion,
       levelFont:state.levelFont,
       stoicCalendar:structuredClone(state.stoicCalendar),
+      holidayMode:structuredClone(state.holidayMode),
       legacyXp:state.completions["2026-08-17"].q_daily.xpAwarded,
       legacyCount:state.completions["2026-08-17"].q_daily.count,
       invalidDifficulty:state.completions["2026-08-19"].q_daily.difficulty,
@@ -278,10 +281,11 @@ function runAppStateTests() {
     recurringPlannedXp:40,
     recurringCompletedXp:0
   });
-  assert.equal(context.stateTestResult.schemaVersion,8);
+  assert.equal(context.stateTestResult.schemaVersion,9);
   assert.equal(context.stateTestResult.dailyOptionalRemoved,true);
   assert.equal(context.stateTestResult.emptyOptionalPreserved,true);
   assert.equal(context.stateTestResult.levelFont,"default");
+  assert.deepEqual(JSON.parse(JSON.stringify(context.stateTestResult.holidayMode)),{enabled:false,activeFrom:null,periods:[]});
   assert.deepEqual(JSON.parse(JSON.stringify(context.stateTestResult.stoicCalendar)),{birthDate:"",horizonYears:90,weeks:{}});
   assert.deepEqual(JSON.parse(JSON.stringify(context.stoicPositionResult)),{year:36,week:0,index:1872,totalWeeks:4680,withinHorizon:true});
   assert.deepEqual(JSON.parse(JSON.stringify(context.stoicBoundsResult)),{start:"2026-08-27",end:"2026-09-02",key:"36:00"});
@@ -370,6 +374,11 @@ async function runCloudTests() {
   context.cloudApi.queueLevel90StateChanges(base,fontChanged);
   const fontProfileOp = context.cloudApi.level90LoadSyncQueue().find(item=>item.entity === "profile");
   assert.equal(fontProfileOp.record.levelFont,"rubik-lines");
+
+  const holidayChanged = {...structuredClone(base),holidayMode:{enabled:true,activeFrom:"2026-08-22",periods:[{start:"2026-08-01",end:"2026-08-07"}]}};
+  context.cloudApi.queueLevel90StateChanges(base,holidayChanged);
+  const holidayProfileOp = context.cloudApi.level90LoadSyncQueue().find(item=>item.entity === "profile");
+  assert.deepEqual(JSON.parse(JSON.stringify(holidayProfileOp.record.holidayMode)),holidayChanged.holidayMode);
 
   context.cloudApi.queueLevel90StateChanges(completed,base);
   completionOps = context.cloudApi.level90LoadSyncQueue().filter(item=>item.entity === "completion");
@@ -484,7 +493,7 @@ async function runCloudTests() {
   };
   context.cloudApi.queueLevel90StateChanges(base,context.state);
   const phoneSnapshot = {
-    level90_profiles:[{user_id:"user-a",started_on:"2026-08-01",profile_name:"Phone",theme:"dark",palette:"arctic",level_font:"zen-tokyo-zoo",schema_version:6,stoic_calendar:{birthDate:"1990-08-27",horizonYears:90,weeks:{}}}],
+    level90_profiles:[{user_id:"user-a",started_on:"2026-08-01",profile_name:"Phone",theme:"dark",palette:"arctic",level_font:"zen-tokyo-zoo",schema_version:9,holiday_mode:{enabled:false,activeFrom:null,periods:[{start:"2026-08-10",end:"2026-08-14"}]},stoic_calendar:{birthDate:"1990-08-27",horizonYears:90,weeks:{}}}],
     level90_categories:snapshot.categories,
     level90_quests:[snapshot.quests[1]],
     level90_completions:[snapshot.completions[1]]
@@ -504,6 +513,7 @@ async function runCloudTests() {
   assert.equal(context.state.profileName,"Phone");
   assert.equal(context.state.levelFont,"zen-tokyo-zoo");
   assert.equal(context.state.stoicCalendar.birthDate,"1990-08-27");
+  assert.deepEqual(JSON.parse(JSON.stringify(context.state.holidayMode)),{enabled:false,activeFrom:null,periods:[{start:"2026-08-10",end:"2026-08-14"}]});
   assert.equal(context.cloudApi.level90LoadSyncQueue().filter(item=>item.userId === "user-a").length,0);
   assert.equal(context.localStorage.getItem("level90.cloudMigration.v1.user-a"),"complete");
   const recovery = JSON.parse(context.localStorage.getItem("level90.beforeCloudRestore.v1.user-a"));

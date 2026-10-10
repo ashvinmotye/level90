@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;800;900&amp;family=Rubik+Doodle+Shadow&amp;display=swap" />
-  <link rel="stylesheet" href="./styles.css?v=66" />
+  <link rel="stylesheet" href="./styles.css?v=67" />
 </head>
 <body>
   <svg class="aura-icon-sprite" aria-hidden="true" focusable="false">
@@ -186,6 +186,10 @@
         </div>
 
         <div class="today-missions">
+        <aside id="holidayModeBanner" class="holiday-mode-banner" hidden>
+          <strong>Holiday mode</strong>
+          <span>Every quest is optional. XP still counts, while skipped quests do not affect streaks or consistency.</span>
+        </aside>
         <div class="section-heading">
           <div>
             <span class="kicker">TODAY'S LOADOUT</span>
@@ -478,6 +482,10 @@
               <span class="kicker">DATA &amp; JOURNEY</span>
               <p>Back up, restore or restart your Level90 journey.</p>
             </div>
+            <label id="holidayModeControl" class="holiday-mode-toggle" for="holidayModeToggle">
+              <span><strong>Holiday mode</strong><small>Make every quest optional. Skipped holiday quests will not break streaks or lower consistency.</small><em id="holidayModeStatus">Off</em></span>
+              <input id="holidayModeToggle" type="checkbox" role="switch" />
+            </label>
             <button id="startChallengeBtn" class="settings-btn"><svg class="aura-icon" aria-hidden="true"><use href="#icon-rocket"></use></svg><span>Start a fresh journey</span></button>
             <button id="exportBtn" class="settings-btn"><svg class="aura-icon" aria-hidden="true"><use href="#icon-export"></use></svg><span>Export JSON backup</span></button>
             <label class="settings-btn file-label"><svg class="aura-icon" aria-hidden="true"><use href="#icon-import"></use></svg><span>Import JSON backup</span><input id="importInput" type="file" accept=".json,application/json" hidden /></label>
@@ -684,8 +692,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3" crossorigin="anonymous" defer></script>
-  <script src="./cloud.js?v=66" defer></script>
-  <script src="./notifications.js?v=66" defer></script>
-  <script src="./app.js?v=66" defer></script>
+  <script src="./cloud.js?v=67" defer></script>
+  <script src="./notifications.js?v=67" defer></script>
+  <script src="./app.js?v=67" defer></script>
 </body>
 </html>

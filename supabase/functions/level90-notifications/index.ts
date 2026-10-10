@@ -60,6 +60,11 @@ type StoicCalendar = {
   horizonYears?:number;
   weeks?:Record<string,StoicWeekRecord>;
 };
+type HolidayMode = {
+  enabled?:boolean;
+  activeFrom?:string | null;
+  periods?:Array<{start?:string;end?:string}>;
+};
 type StoicPosition = {year:number;week:number;recordKey:string};
 type StoicReflectionResult = {
   due:boolean;
@@ -188,6 +193,14 @@ function validDateKey(value:string | null | undefined) {
   return date.getUTCFullYear() === Number(match[1]) && date.getUTCMonth() === Number(match[2])-1 && date.getUTCDate() === Number(match[3]);
 }
 
+function isHolidayDateKey(holidayMode:HolidayMode | null | undefined,dateKey:string) {
+  if (!validDateKey(dateKey)) return false;
+  if (holidayMode?.enabled === true && validDateKey(holidayMode.activeFrom) && dateKey >= holidayMode.activeFrom!) return true;
+  return (holidayMode?.periods || []).some(period=>
+    validDateKey(period?.start) && validDateKey(period?.end) && dateKey >= period.start! && dateKey <= period.end!
+  );
+}
+
 function utcDateFromKey(dateKey:string) {
   const [year,month,day] = dateKey.split("-").map(Number);
   return new Date(Date.UTC(year,month-1,day));
@@ -253,18 +266,19 @@ function questOptionalOn(quest:QuestRecord,dateKey:string) {
   return quest.schedule?.mode === "weekdays" && quest.schedule?.optional === true && !questScheduledOn(quest,dateKey);
 }
 
-function questPlannedOn(quest:QuestRecord,dateKey:string,completionDates:Set<string>) {
+function questPlannedOn(quest:QuestRecord,dateKey:string,completionDates:Set<string>,holidayMode:HolidayMode | null=null) {
   if (!quest.active || dateKey < quest.created_on) return false;
+  if (isHolidayDateKey(holidayMode,dateKey)) return false;
   if (quest.quest_type === "recurring") return questScheduledOn(quest,dateKey);
   const completedBefore = [...completionDates].some(completionDate=>completionDate < dateKey);
   return completionDates.has(dateKey) || !completedBefore;
 }
 
-function streakBeforeToday(quest:QuestRecord,completionDates:Set<string>,todayKey:string) {
+function streakBeforeToday(quest:QuestRecord,completionDates:Set<string>,todayKey:string,holidayMode:HolidayMode | null=null) {
   let streak = 0;
   let cursor = dateKeyAdd(todayKey,-1);
   for (let checked=0;checked<5000 && cursor >= quest.created_on;checked+=1) {
-    if (questScheduledOn(quest,cursor)) {
+    if (questScheduledOn(quest,cursor) && !isHolidayDateKey(holidayMode,cursor)) {
       if (!completionDates.has(cursor)) break;
       streak += 1;
     }
@@ -294,8 +308,11 @@ function adaptiveTriggerMinute(preference:SmartPreference,completionTimes:number
   };
 }
 
-function evaluateStreakRescue(preference:SmartPreference,quests:QuestRecord[],completions:CompletionRecord[],now:Date):RuleResult {
+function evaluateStreakRescue(preference:SmartPreference,quests:QuestRecord[],completions:CompletionRecord[],now:Date,holidayMode:HolidayMode | null=null):RuleResult {
   const local = zonedParts(now,preference.timezone || "UTC");
+  if (isHolidayDateKey(holidayMode,local.dateKey)) {
+    return {result:"holiday_mode",candidates:[],atRiskCandidates:[],detail:{local_date:local.dateKey,local_time:minuteLabel(local.minuteOfDay)}};
+  }
   const quietStart = timeMinutes(preference.quiet_start);
   const quietEnd = timeMinutes(preference.quiet_end);
   if (isQuietMinute(local.minuteOfDay,quietStart,quietEnd)) {
@@ -314,7 +331,7 @@ function evaluateStreakRescue(preference:SmartPreference,quests:QuestRecord[],co
     const questCompletions = completionsByQuest.get(quest.id) || [];
     if (questCompletions.some(completion=>completion.completion_date === local.dateKey)) return;
     const completionDates = new Set(questCompletions.map(completion=>completion.completion_date));
-    const streak = streakBeforeToday(quest,completionDates,local.dateKey);
+    const streak = streakBeforeToday(quest,completionDates,local.dateKey,holidayMode);
     if (streak < preference.min_streak) return;
     const completionTimes = questCompletions
       .slice()
@@ -384,11 +401,11 @@ function completionMap(completions:CompletionRecord[]) {
   return byQuest;
 }
 
-function notificationSummaryStats(preference:SmartPreference,quests:QuestRecord[],completions:CompletionRecord[],now:Date):SummaryStats {
+function notificationSummaryStats(preference:SmartPreference,quests:QuestRecord[],completions:CompletionRecord[],now:Date,holidayMode:HolidayMode | null=null):SummaryStats {
   const localDate = zonedParts(now,preference.timezone || "UTC").dateKey;
   const yesterdayDate = dateKeyAdd(localDate,-1);
   const byQuest = completionMap(completions);
-  const planned = (dateKey:string) => quests.filter(quest=>questPlannedOn(quest,dateKey,byQuest.get(quest.id) || new Set()));
+  const planned = (dateKey:string) => quests.filter(quest=>questPlannedOn(quest,dateKey,byQuest.get(quest.id) || new Set(),holidayMode));
   const completed = (quest:QuestRecord,dateKey:string) => byQuest.get(quest.id)?.has(dateKey) || false;
   const score = (dateKey:string) => {
     const plannedQuests = planned(dateKey).filter(quest=>quest.quest_type === "recurring");
@@ -407,10 +424,10 @@ function notificationSummaryStats(preference:SmartPreference,quests:QuestRecord[
   let atRiskCount = 0;
   quests.filter(quest=>quest.quest_type === "recurring").forEach(quest=>{
     const dates = byQuest.get(quest.id) || new Set<string>();
-    let streak = streakBeforeToday(quest,dates,localDate);
-    if (questScheduledOn(quest,localDate) && dates.has(localDate)) streak += 1;
+    let streak = streakBeforeToday(quest,dates,localDate,holidayMode);
+    if (!isHolidayDateKey(holidayMode,localDate) && questScheduledOn(quest,localDate) && dates.has(localDate)) streak += 1;
     strongestStreak = Math.max(strongestStreak,streak);
-    if (questScheduledOn(quest,localDate) && !dates.has(localDate) && streak >= preference.min_streak) atRiskCount += 1;
+    if (!isHolidayDateKey(holidayMode,localDate) && questScheduledOn(quest,localDate) && !dates.has(localDate) && streak >= preference.min_streak) atRiskCount += 1;
   });
   return {
     localDate,yesterdayDate,level,
@@ -509,19 +526,17 @@ async function evaluateSmartUser(admin:DatabaseClient,preference:SmartPreference
     .select("quest_id,completion_date,completed_at,xp_awarded,completion_count")
     .eq("user_id",preference.user_id).is("deleted_at",null);
   if (completionError) throw completionError;
-  let stoicCalendar:StoicCalendar | null = null;
-  if (preference.stoic_reflection_enabled) {
-    const {data:profile,error:profileError} = await admin
-      .from("level90_profiles").select("stoic_calendar")
-      .eq("user_id",preference.user_id).maybeSingle();
-    if (profileError) throw profileError;
-    stoicCalendar = (profile?.stoic_calendar || null) as StoicCalendar | null;
-  }
+  const {data:profile,error:profileError} = await admin
+    .from("level90_profiles").select("stoic_calendar,holiday_mode")
+    .eq("user_id",preference.user_id).maybeSingle();
+  if (profileError) throw profileError;
+  const stoicCalendar = (profile?.stoic_calendar || null) as StoicCalendar | null;
+  const holidayMode = (profile?.holiday_mode || null) as HolidayMode | null;
 
   const allQuests = (quests || []) as QuestRecord[];
   const allCompletions = (completions || []) as CompletionRecord[];
   const local = zonedParts(now,preference.timezone || "UTC");
-  const stats = notificationSummaryStats(preference,allQuests,allCompletions,now);
+  const stats = notificationSummaryStats(preference,allQuests,allCompletions,now,holidayMode);
   const outcomes:string[] = [];
 
   const stoicRule = evaluateStoicReflection(preference,stoicCalendar,now);
@@ -564,7 +579,7 @@ async function evaluateSmartUser(admin:DatabaseClient,preference:SmartPreference
   }
 
   const recurring = allQuests.filter(quest=>quest.quest_type === "recurring");
-  const rule = evaluateStreakRescue(preference,recurring,allCompletions,now);
+  const rule = evaluateStreakRescue(preference,recurring,allCompletions,now,holidayMode);
   const finalDue = preference.rescue_intensity !== "calm" && local.minuteOfDay >= timeMinutes(preference.final_rescue_time);
   const candidates = finalDue ? (rule.atRiskCandidates || []) : (rule.candidates || []);
   if (!candidates.length) {
@@ -672,6 +687,7 @@ async function processPendingDeliveries(admin:DatabaseClient,now:Date,userId:str
   let sent = 0;
   let retried = 0;
   let failed = 0;
+  const holidayModeByUser = new Map<string,HolidayMode | null>();
 
   for (const delivery of deliveries || []) {
     const {data:claim,error:claimError} = await admin
@@ -693,6 +709,17 @@ async function processPendingDeliveries(admin:DatabaseClient,now:Date,userId:str
       await admin.from("level90_notification_deliveries").update({status:"cancelled",last_error:"Notification rule disabled"}).eq("id",delivery.id);
       await syncOutboxStatus(admin,delivery.notification_id);
       continue;
+    }
+    if (notification?.rule_key === "streak_rescue" && notification.local_date) {
+      if (!holidayModeByUser.has(delivery.user_id)) {
+        const {data:profile} = await admin.from("level90_profiles").select("holiday_mode").eq("user_id",delivery.user_id).maybeSingle();
+        holidayModeByUser.set(delivery.user_id,(profile?.holiday_mode || null) as HolidayMode | null);
+      }
+      if (isHolidayDateKey(holidayModeByUser.get(delivery.user_id),notification.local_date)) {
+        await admin.from("level90_notification_deliveries").update({status:"cancelled",last_error:"Holiday mode is active"}).eq("id",delivery.id);
+        await syncOutboxStatus(admin,delivery.notification_id);
+        continue;
+      }
     }
     if (notification?.status === "cancelled") {
       await admin.from("level90_notification_deliveries").update({status:"cancelled",last_error:"Notification cancelled"}).eq("id",delivery.id);
